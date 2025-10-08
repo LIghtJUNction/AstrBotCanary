@@ -2,8 +2,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-from rich.panel import p
-
 class PathsMeta(type):
     load_dotenv()
     _root: Path | None = None
