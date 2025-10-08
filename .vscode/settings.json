@@ -1,0 +1,9 @@
+{
+    "deepscan.enable": true,
+    "cSpell.words": [
+        "Astrbot",
+        "eventbus",
+        "hookspecs",
+        "PLUGINSPEC"
+    ]
+}

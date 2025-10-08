@@ -1,0 +1,40 @@
+[project]
+name = "astrbot-canary"
+version = "0.1.1"
+description = "This is an unofficial support Astrbot."
+readme = "README.md"
+authors = [
+    { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "dotenv>=0.9.9",
+    "jwt>=1.4.0",
+    "orjson>=3.11.3",
+    "pluggy>=1.6.0",
+    "rich>=14.1.0",
+    "robyn>=0.53.0",
+    "tqdm>=4.67.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/astrbot_canary"]
+
+# [project.entry-points."astrbot.plugins"]
+# "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
+
+[project.entry-points."astrbot.modules.loader"]
+"canary_loader" = "astrbot_canary.loader.loader:AstrbotLoader"
+
+[project.entry-points."astrbot.modules.core"]
+"canary_eventbus" = "astrbot_canary.core.eventbus:AstrbotEventBus"
+
+[project.entry-points."astrbot.modules.web"]
+"canary_web" = "astrbot_canary.web:AstrbotWeb"
+
+[project.entry-points."astrbot.modules.tui"]
+"canary_tui" = "astrbot_canary.tui:AstrbotTui"
