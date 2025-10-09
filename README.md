@@ -89,8 +89,8 @@ ORM:sqlalchemy
 本项目已上传至pypi，后续通过pypi进行安装
 
 
-
-
+2. 从pypi安装本项目
+uv tool install 
 
 ---
 
