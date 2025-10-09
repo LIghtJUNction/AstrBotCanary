@@ -86,25 +86,11 @@ ORM:sqlalchemy
 
 1. 安装 Python（建议使用 3.13.8）  
    推荐使用 Microsoft Store 的 Python 管理器或 Windows 的包管理工具（详见下方小贴士）。
+本项目已上传至pypi，后续通过pypi进行安装
 
-2. 克隆仓库并进入目录：
-   ```
-   git clone https://github.com/LIghtJUNction/AstrBotCanary.git
-   cd AstrBotCanary
-   ```
 
-3. 创建虚拟环境并安装依赖（示例）：
-   ```
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
 
-4. 启动（示例）：
-   ```
-   python -m astrbot.server
-   ```
-   > 具体启动命令与配置请参考 `docs/` 或仓库内的 `server` / `dashboard` 模块说明。
+
 
 ---
 
