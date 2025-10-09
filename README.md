@@ -1,41 +1,131 @@
 # AstrBotCanary
-This is not an officially supported Astrbot
-[Astrbot](https://github.com/AstrBotDevs/AstrBot)
-注意：本项目为实验性项目，作为实验性版本
-本项目将采用能采用的最新python版本，使用最新的特性和库
-如要稳定，兼容，请使用官方版本
-目前无法使用3.14的原因如下：
-依赖于Robyn(一个高性能的Web框架)
-Robyn是使用pyo3制作的rust扩展模块
-而pyo3（用于制作Python的rust扩展模块）暂不支持3.14
 
-# 开发进度
-- 目前正在实现WEB模块
+注意：本项目为实验性分支，不是官方 AstrBot 版本。若需要稳定与兼容性更好的版本，请使用官方仓库：https://github.com/AstrBotDevs/AstrBot
 
-# 开发计划（挑选库）
+本项目旨在采用最新的 Python 特性与第三方库进行试验性开发，供社区探索新特性与实现方案之用。
 
-消息分发：https://github.com/celery/kombu
+---
 
+## 目录
+- [关于](#关于)
+- [状态说明 / 兼容性](#状态说明--兼容性)
+- [为何暂时不支持 Python 3.14](#为何暂时不支持-python-314)
+- [开发进度](#开发进度)
+- [开发计划 / 依赖选型](#开发计划--依赖选型)
+- [文档](#文档)
+- [系统支持](#系统支持)
+- [快速使用（Windows）](#快速使用windows)
+- [小贴士 (TIPS)](#小贴士-tips)
+- [贡献与联系](#贡献与联系)
+- [许可](#许可)
 
-# DOCS
-[docs](./docs)
-在本项目语境下，模块和插件是不同的概念
-模块是项目的核心组成部分
-插件是社区制作的功能扩展/附加组件
+---
 
-# 支持情况
-- 仅支持Windows预编译版本（包含拓展模块）
-- 其他系统需自行编译
+## 关于
+AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特性和高性能 Web 运行时的开发者。通过引入像 Robyn、Rust 扩展等新技术，探索更高的性能和更简洁的实现路径。
 
-- 需要Python 3.13.8+
+本分支可能包含不稳定、API 变更或依赖还在适配阶段的实现，不建议在生产环境直接替换官方版本。
 
+---
 
-# TIPS
+## 状态说明 / 兼容性
+- 项目性质：实验性（Canary）
+- 当前进度：WEB 模块正在实现中
+- 最低 Python 要求（当前）：Python 3.13.8+
+- 目前仅提供 Windows 预编译包（包含扩展模块）；其他系统需要自行编译依赖。
 
-卸载python luncher
-下载[BETA版本的python 安装管理器](https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN)
-py install 3.13.8 ( uv 可下载的版本不齐全 )
+---
 
-uv python list 查看可用版本
+## 为何暂时不支持 Python 3.14
+本项目使用 Robyn（高性能 Web 框架），并且 Robyn 依赖通过 PyO3 编写的 Rust 扩展模块。当前 PyO3 对 Python 3.14 的支持尚不完善，因此本项目暂时以 3.13.8 作为兼容目标。一旦 PyO3 / Robyn 支持 Python 3.14，会在后续版本中尽快切换或发布兼容分支。
 
-uv sync 同步本项目
+---
+
+## 开发进度
+- 正在实现：WEB 模块（核心路由、鉴权、前端静态托管等）
+- 待实现 / 计划：
+  - 插件系统与插件 API
+  - 更完善的配置管理与持久化
+  - Windows 以外平台的二进制或构建脚本
+
+---
+
+## 开发计划（依赖 / 选型示例）
+- 消息分发（示例候选）：Kombu（https://github.com/celery/kombu）
+- Web 框架：Robyn（Rust + PyO3 驱动，高并发探索）
+- 数据 / 插件：待评估（可能结合现有 AstrBot 生态）
+
+> 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
+
+---
+
+## 文档
+项目文档位于 `docs/`（仓库内）。  
+在本项目语境下，区分：
+- 模块（Module）：项目的核心功能组件
+- 插件（Plugin）：由社区或第三方提供的扩展功能
+
+请参考 `docs/` 获取更详细的开发与使用说明。
+
+---
+
+## 系统支持
+- Windows：提供预编译版本（包含扩展模块）
+- Linux / macOS：需要自行编译 Rust / PyO3 扩展与相关依赖
+
+推荐使用 Python 3.13.8（或仓库指定的受支持版本）来获得最佳兼容性。
+
+---
+
+## 快速使用（Windows）
+下面为最小化的上手提示，仅供参考：
+
+1. 安装 Python（建议使用 3.13.8）  
+   推荐使用 Microsoft Store 的 Python 管理器或 Windows 的包管理工具（详见下方小贴士）。
+
+2. 克隆仓库并进入目录：
+   ```
+   git clone https://github.com/LIghtJUNction/AstrBotCanary.git
+   cd AstrBotCanary
+   ```
+
+3. 创建虚拟环境并安装依赖（示例）：
+   ```
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+4. 启动（示例）：
+   ```
+   python -m astrbot.server
+   ```
+   > 具体启动命令与配置请参考 `docs/` 或仓库内的 `server` / `dashboard` 模块说明。
+
+---
+
+## 小贴士 (TIPS)
+- 若使用 Windows，推荐使用 Microsoft 的 Python 安装管理器（应用商店或 `uv`/`py` 管理工具）来管理多个 Python 版本。示例：  
+  - 安装 Microsoft Store 的 Python 管理器（BETA 版）：https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN  
+  - 使用该管理器安装：`py install 3.13.8`
+  - 查看可用版本：`uv python list`
+  - 同步项目版本（若使用 uv 管理）：`uv sync`
+
+- Windows 以外平台需要自己编译 Rust / PyO3 扩展，建议安装 Rust toolchain（rustup）并按照扩展 README 中的构建说明操作。
+
+---
+
+## 贡献与联系
+欢迎贡献代码、Issue、PR 与讨论。  
+请在提交前阅读仓库中的贡献指南（若有）与 `CODE_OF_CONDUCT`。
+
+项目主页 / 参考： https://github.com/AstrBotDevs/AstrBot  
+仓库维护者：LIghtJUNction
+
+---
+
+## 许可
+本仓库遵循原项目所采用的许可证（请在仓库中查看 LICENSE 文件以确定具体许可条款）。
+
+---
+
