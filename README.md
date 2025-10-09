@@ -43,16 +43,14 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 
 ## 开发进度
 - 正在实现：WEB 模块（核心路由、鉴权、前端静态托管等）
-- 待实现 / 计划：
-  - 插件系统与插件 API
-  - 更完善的配置管理与持久化
-  - Windows 以外平台的二进制或构建脚本
+
 
 ---
 
 ## 开发计划（依赖 / 选型示例）
 - 消息分发（示例候选）：Kombu（https://github.com/celery/kombu）
 - Web 框架：Robyn（Rust + PyO3 驱动，高并发探索）
+- TUI 框架：Textual
 - 数据类型验证：pydantic，pydantic-settings
 - 数据库 ：sqlite
 ORM:sqlalchemy
