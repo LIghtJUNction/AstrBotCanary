@@ -30,15 +30,8 @@ Robyn是使用pyo3制作的rust扩展模块
 
 卸载python luncher
 下载[BETA版本的python 安装管理器](https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN)
-py install 3.13.8
+py install 3.13.8 ( uv 可下载的版本不齐全 )
 
 uv python list 查看可用版本
 
 uv sync 同步本项目
-
-请使用Release版本的3.14.0 ,uv python install可能安装的是alpha版本.
-annotationlib（新库）缺少一些函数，从而导致pydantic-settings无法正常工作.
-(缺少：get_annotate_from_class_namespace)
-可能会导致错误.
-
-
