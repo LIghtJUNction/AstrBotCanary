@@ -17,9 +17,6 @@
 "my_loader" = "my_pkg.loader.loader:my_Loader"
 请你使用BASE模块提供的模块开发API 来实现模块
 
-
-
-
 ## 插件：Plugin
 约定：插件一般指社区制作的功能扩展/附加组件
 加载器模块将负责加载插件
@@ -27,7 +24,6 @@ AstrbotCanary支持热插拔插件，将兼容Astrbot插件
 插件由加载器模块加载
 加载器基于pluggy实现，支持新版插件，同时兼容Astrbot旧版插件
 插件种类多且杂，请查看加载器模块定义的规范
-
 
 ## 根模块
 根模块是项目的核心模块

@@ -15,6 +15,8 @@ import pluggy
 ASTRBOT_CANARY_HOOK_NS = "astrbot_canary"
 # 定义插件规范
 PLUGINSPEC = pluggy.HookspecMarker(ASTRBOT_CANARY_HOOK_NS)
+# 定义插件实现
+PLUGINIMPL = pluggy.HookimplMarker(ASTRBOT_CANARY_HOOK_NS)
 
 @dataclass
 class LoaderInfo:

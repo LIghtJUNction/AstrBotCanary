@@ -1,3 +1,12 @@
+"""
+title: AstrbotCanary root -- 根模块
+version: v1.0.0
+status: dev
+authors: [LIghtJUNction]
+owners: [LIghtJUNction]
+created: 2025-10-09
+updated: 2025-10-09
+"""
 from importlib.metadata import EntryPoint
 import logging
 import sys
