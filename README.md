@@ -53,7 +53,11 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 ## 开发计划（依赖 / 选型示例）
 - 消息分发（示例候选）：Kombu（https://github.com/celery/kombu）
 - Web 框架：Robyn（Rust + PyO3 驱动，高并发探索）
-- 数据 / 插件：待评估（可能结合现有 AstrBot 生态）
+- 数据类型验证：pydantic，pydantic-settings
+- 数据库 ：sqlite
+ORM:sqlalchemy
+
+- 
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
@@ -126,6 +130,8 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 
 ## 许可
 本仓库遵循原项目所采用的许可证（请在仓库中查看 LICENSE 文件以确定具体许可条款）。
+本项目采用与Astrbot相同的许可证:
+GPLV3
 
 ---
 
