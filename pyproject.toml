@@ -6,14 +6,20 @@ readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.13.8"
 dependencies = [
+    "aiofiles>=24.1.0",
+    "aiohttp>=3.13.0",
+    "asyncio>=4.0.0",
+    "click>=8.3.0",
     "dotenv>=0.9.9",
     "jwt>=1.4.0",
-    "orjson>=3.11.3",
     "pluggy>=1.6.0",
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.11.0",
     "rich>=14.1.0",
-    "robyn>=0.53.0",
+    "robyn>=0.72.2",
+    "toml>=0.10.2",
     "tqdm>=4.67.1",
 ]
 
@@ -24,14 +30,31 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/astrbot_canary"]
 
+# [tool.uv.sources]
+# orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}
+# pyo3最新支持到3.13
+# 等后续pyo3支持到14后直接升级到14
+
+# 对于插件项目：
 # [project.entry-points."astrbot.plugins"]
 # "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
 
+[project.entry-points."astrbot.modules.API"]
+"canary_modules_api" = "astrbot_canary.base:AstrbotModuleAPI"
+
+# 以下为加载器模块入口点
 [project.entry-points."astrbot.modules.loader"]
 "canary_loader" = "astrbot_canary.loader.loader:AstrbotLoader"
 
+# 以下为插件加载器提供的API入口点，为了实现最大兼容性
+# 插件开发者应当使用这些入口点调用API
+# 这样即便更换了插件加载器，也能保证插件的最大兼容性.
+[project.entry-points."astrbot.modules.loader.API"]
+"canary_loader_api" = "astrbot_canary.loader.loader:AstrbotLoaderAPI"
+
+# 插件可以通过寻找这些入口点来调用核心功能，并可以依据需要混合使用不同版本的实现
 [project.entry-points."astrbot.modules.core"]
-"canary_eventbus" = "astrbot_canary.core.eventbus:AstrbotEventBus"
+# 
 
 [project.entry-points."astrbot.modules.web"]
 "canary_web" = "astrbot_canary.web:AstrbotWeb"

@@ -9,7 +9,9 @@ updated: 2025-10-08
 """
 from importlib.metadata import EntryPoint, EntryPoints
 
-from ..base import AstrbotBaseModule
+# 使用API声明：使用入口点：canary_modules_api
+# 此写法仅供内置模块使用，模块开发者自定义模块应该从入口点导入所需API类
+from ..base import AstrbotModuleAPI
 from .specs import LoaderInfo
 
 from pluggy import PluginManager
@@ -18,7 +20,7 @@ from tqdm import tqdm
 
 logger = getLogger("AstrbotCanary.Loader")
 
-class AstrbotLoader(AstrbotBaseModule):
+class AstrbotLoader(AstrbotModuleAPI.AstrbotBaseModule):
     """
     AstrbotCanary加载器
     """
@@ -31,7 +33,7 @@ class AstrbotLoader(AstrbotBaseModule):
     pm : PluginManager
 
     # 模块类引用字典
-    modules: dict[str, AstrbotBaseModule | None] = {}
+    modules: dict[str, AstrbotModuleAPI.AstrbotBaseModule | None] = {}
     # None表示这个模块加载失败，但还是记录下来
 
     # 模块类路径：类引用
@@ -71,25 +73,25 @@ class AstrbotLoader(AstrbotBaseModule):
 
 
     @classmethod
-    def LoadModule(cls, group: str | list[str] = "astrbot.modules.core", name: str = "canary_eventbus") -> AstrbotBaseModule | None:
+    def LoadModule(cls, group: str | list[str] = "astrbot.modules.core", name: str = "canary_eventbus", args : list[str] = []) -> AstrbotModuleAPI.AstrbotBaseModule | None:
         """加载指定模块
         """
-        from ..base import Utils
+
         if isinstance(group, list):
             group = ".".join(group)
 
-        ep: EntryPoint | None = Utils.load_from_entrypoint(group, name)
+        ep: EntryPoint | None = AstrbotModuleAPI.Utils.load_from_entrypoint(group, name)
         if ep is None:
             logger.error(f"Cannot find module entry point '{name}' in group '{group}'")
             return
         try:
             module_cls: type = ep.load()
-            if not issubclass(module_cls, AstrbotBaseModule):
+            if not issubclass(module_cls, AstrbotModuleAPI.AstrbotBaseModule):
                 logger.error(f"Module '{name}' does not inherit from AstrbotBaseModule")
                 return
-            module: AstrbotBaseModule = module_cls()
+            module: AstrbotModuleAPI.AstrbotBaseModule = module_cls()
             module.Awake()
-            module.Start([])
+            module.Start(args=args)
             logger.info(f"Loaded module: {name} from {ep.value}")
             return module
         except Exception:

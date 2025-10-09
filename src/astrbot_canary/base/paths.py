@@ -2,7 +2,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-from rich.panel import p
+from logging import getLogger
+logger = getLogger("astrbot_canary.base.paths")
 
 class PathsMeta(type):
     load_dotenv()
@@ -11,15 +12,11 @@ class PathsMeta(type):
     def root(cls) -> Path:
         """Astrbot 根目录
         """
-        if cls._root is not None:
-            return cls._root
-        else:
-            if "ASTRBOT_ROOT" in os.environ:
-                cls._root = Path(os.environ["ASTRBOT_ROOT"]).expanduser().resolve()
-            else:
-                cls._root = Path("~/.astrbot/").expanduser().resolve()
-            
-            return cls._root
+        if cls._root is None:
+            from astrbot_canary.base.config import AstrbotConfig
+            config = AstrbotConfig()
+            cls._root = config.ROOT.expanduser().resolve()
+        return cls._root
     
     @root.setter
     def root(cls, value: str | Path) -> None:
@@ -49,9 +46,17 @@ class Paths(metaclass=PathsMeta):
         刷新路径缓存
         """
         load_dotenv()
-        if os.environ.get("ASTRBOT_ROOT") is not None:
-            PathsMeta.root = Path(os.environ["ASTRBOT_ROOT"]).expanduser().resolve()
+        ASTRBOT_ROOT = os.getenv("ASTRBOT_ROOT") 
+        if ASTRBOT_ROOT is not None:
+            PathsMeta.root = Path(ASTRBOT_ROOT).expanduser().resolve()
         
+
+    @classmethod
+    def getDir(cls, name: str) -> Path:
+        """
+        获取指定目录路径
+        """
+        return cls.root / name
 
 
 if __name__ == "__main__":
@@ -59,3 +64,9 @@ if __name__ == "__main__":
     print(Paths.root)
     print(Paths.metadata)
     print(Paths.plugins)
+    print(Paths.logs)
+    print(Paths.getDir("test/struct\\hhhu///hbhjbjh\\\\efef"))
+    # n = 10000
+    # for _ in range(n):
+    #    _path = f"dir{_}"
+    #    print(Paths.getDir(_path))

@@ -8,7 +8,8 @@ created: 2025-10-08
 updated: 2025-10-08
 """
 # 命名空间Name Space
-from dataclasses import dataclass
+# 能用pydantic就用pydantic的了，保持一致
+from pydantic.dataclasses import dataclass
 import pluggy
 
 ASTRBOT_CANARY_HOOK_NS = "astrbot_canary"
@@ -46,7 +47,6 @@ class PluginSpec:
     def Start(self):
         """在Awake之后调用"""
         pass
-
 
 
 """

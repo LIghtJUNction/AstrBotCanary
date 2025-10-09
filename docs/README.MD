@@ -2,15 +2,22 @@
 [spec](./spec)
 
 # 名词约定
-## 根模块
-根模块是项目的核心模块
-作为项目启动的入口
-
 ## 模块：Module
 约定：模块一般指项目核心组件
 只要实现了模块接口
 允许任意替换
 模块需要继承自`AstrbotBaseModule`抽象基类
+模块总类有限，且应当从入口点加载
+模块不一定需要在本项目中实现，本项目实现的模块作为默认回退
+模块的入口点应该这样定义（加载器模块为例）：
+[project.entry-points."astrbot.modules.loader"]
+"canary_loader" = "astrbot_canary.loader.loader:AstrbotLoader"
+
+如果新增模块：
+"my_loader" = "my_pkg.loader.loader:my_Loader"
+请你使用BASE模块提供的模块开发API 来实现模块
+
+
 
 
 ## 插件：Plugin
@@ -20,6 +27,18 @@ AstrbotCanary支持热插拔插件，将兼容Astrbot插件
 插件由加载器模块加载
 加载器基于pluggy实现，支持新版插件，同时兼容Astrbot旧版插件
 插件种类多且杂，请查看加载器模块定义的规范
+
+
+## 根模块
+根模块是项目的核心模块
+作为项目启动的入口
+
+## BASE：模块
+BASE模块是项目的基础模块
+BASE模块提供的任何工具/类/函数/常量都应该仅供模块使用
+插件不应该直接调用BASE模块内的任何内容
+
+
 
 ## 规范注释
 规范注释有助于他人阅读和理解代码
@@ -37,6 +56,7 @@ AstrbotCanary支持热插拔插件，将兼容Astrbot插件
 笔记本文件后缀名为`.ipynb`
 介绍：笔记本简单点说是支持运行代码的markdown文档，很适合写教程
 笔记本还可以直接在浏览器中运行
+本项目的教程/指南将使用笔记本编写
 
 ## 子解释器
 子解释器是Python 3.14新增的功能：https://docs.python.org/zh-cn/3/library/concurrent.interpreters.html
@@ -52,3 +72,17 @@ AstrbotCanary支持热插拔插件，将兼容Astrbot插件
 请声明入口点：astrbot.plugins
 加载器模块自动加载这些入口点
 入口点必须是一个类
+
+## 解耦
+解耦是指模块/插件之间不直接依赖
+而是通过约定的接口/抽象基类/入口点进行交互
+例如本项目，将插件与加载器解耦
+插件不直接依赖加载器
+而是动态调用加载器提供的API入口点
+然而动态调用API入口点这些操作也不太方便
+
+因此本项目提供一个独立的，与本项目解耦的Helper库
+仅提供一些封装好的便捷函数，供插件开发者使用
+比如模块调试等有用功能
+
+模块不应该使用Helper库，而应该使用BASE包内的工具类，基类

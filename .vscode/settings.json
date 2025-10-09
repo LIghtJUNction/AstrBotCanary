@@ -1,9 +1,18 @@
 {
     "deepscan.enable": true,
     "cSpell.words": [
+        "aiofiles",
+        "aiohttp",
         "Astrbot",
+        "asyncio",
+        "dotenv",
         "eventbus",
         "hookspecs",
-        "PLUGINSPEC"
+        "orjson",
+        "pluggy",
+        "PLUGINSPEC",
+        "pydantic",
+        "tqdm",
+        "webroot"
     ]
 }
