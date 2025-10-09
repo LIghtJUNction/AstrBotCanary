@@ -2,9 +2,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-from logging import getLogger
-logger = getLogger("astrbot_canary.base.paths")
-
 class PathsMeta(type):
     load_dotenv()
     _root: Path | None = None
