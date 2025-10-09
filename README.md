@@ -12,6 +12,10 @@ Robyn是使用pyo3制作的rust扩展模块
 # 开发进度
 - 目前正在实现WEB模块
 
+# 开发计划（挑选库）
+
+消息分发：https://github.com/celery/kombu
+
 
 # DOCS
 [docs](./docs)
