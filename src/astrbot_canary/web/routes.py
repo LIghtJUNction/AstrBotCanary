@@ -1,19 +1,33 @@
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
+from pydantic import BaseModel
 from robyn import Robyn
+
+
+class AuthData(BaseModel):
+    token: str
+    username: str
+    change_pwd_hint: str | None = None
+
+
 
 class AstrbotWebRoutes:
     app: Robyn | None = None
+    routes : dict[str, Callable[..., Awaitable[Any]]] = {}
     @classmethod
-    def initialize(cls, app: Robyn):
+    def initialize(cls, app: Robyn , frontend: Path):
         cls.app = app
-        # 类型：路径 -> 异步handler函数
-        routes : dict[str, Callable[..., Awaitable[Any]]] = {}
+        cls.app.serve_directory("/", str(frontend), index_file="index.html" , show_files_listing=True)
 
-        @app.get("/")
-        async def index():
-            routes["/"] = index
-            return {"message": "Hello, Astrbot Canary Web!"}
+        # @cls.app.before_request()
         
 
+        # @cls.app.after_request()
+
+
+        @app.get("/api")
+        async def index():
+            cls.routes["/api"] = index
+            return {"message": "Hello, Astrbot Canary Web!"}
         

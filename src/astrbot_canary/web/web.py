@@ -111,12 +111,14 @@ class AstrbotWeb(AstrbotModuleAPI.AstrbotBaseModule):
         """加载官方前端
         """
         logger.info(f"Loading official frontend from {(path / 'dist').resolve()}")
+        frontend = path / "dist"
         logging.getLogger("robyn").setLevel(log_level)
         cls.app = Robyn(__file__)
-        AstrbotWebRoutes.initialize(cls.app)
+        
+        AstrbotWebRoutes.initialize(cls.app, frontend)
         
         cls._initialized = True
-
+        
         cls.app.start()
 
 """Web模块规范
