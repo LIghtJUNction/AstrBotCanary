@@ -54,8 +54,7 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 - 数据类型验证：pydantic，pydantic-settings
 - 数据库 ：sqlite
 ORM:sqlalchemy
-
-- 
+- 插件系统设计：pluggy+入口点发现机制
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
