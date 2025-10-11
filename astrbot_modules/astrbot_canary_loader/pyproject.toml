@@ -12,3 +12,7 @@ dependencies = []
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# 以下为加载器模块入口点
+[project.entry-points."astrbot.modules.loader"]
+"canary_loader" = "astrbot_canary.loader.loader:AstrbotLoader"

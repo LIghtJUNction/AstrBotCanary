@@ -12,3 +12,6 @@ dependencies = []
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[project.entry-points."astrbot.modules.web"]
+"canary_web" = "astrbot_canary_web:AstrbotWeb"
