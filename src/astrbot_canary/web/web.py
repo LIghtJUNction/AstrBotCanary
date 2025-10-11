@@ -43,7 +43,7 @@ class AstrbotWeb(AstrbotModuleAPI.AstrbotBaseModule):
         if not cls.check_webroot(config.webroot):
             if confirm("Webroot does not exist. Create it?",default=True):
                 config.webroot.mkdir(parents=True, exist_ok=True)
-                cls.async_download_official_frontend_to(config.webroot)
+                cls.download_official_frontend_to(config.webroot)
                 # 多一个dist.zip文件
                    
         # 如果包含dist.zip 直接解压并删除
@@ -71,7 +71,7 @@ class AstrbotWeb(AstrbotModuleAPI.AstrbotBaseModule):
 
 
     @classmethod
-    def async_download_official_frontend_to(cls, path: Path):
+    def download_official_frontend_to(cls, path: Path):
         """下载官方前端到指定路径
         """
         # 如果目录非空，则提示用户确认是否清空
