@@ -54,7 +54,7 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 - 数据库 ：sqlite
 ORM:sqlalchemy
 - 插件系统设计：pluggy+入口点发现机制
-- 接口设计：（正在考虑）Zope Interface
+- 接口设计：内置模块adc
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
@@ -101,6 +101,10 @@ uv tool install aStrBoT.-_-_cAnarY
 - Windows 以外平台需要自己编译 Rust / PyO3 扩展，建议安装 Rust toolchain（rustup）并按照扩展 README 中的构建说明操作。
 
 ---
+
+# 开发指南
+uv pip install -e .[all]
+
 
 ## 贡献与联系
 欢迎贡献代码、Issue、PR 与讨论。  

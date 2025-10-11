@@ -8,11 +8,50 @@
         "dotenv",
         "eventbus",
         "hookspecs",
+        "kombu",
         "orjson",
         "pluggy",
         "PLUGINSPEC",
         "pydantic",
+        "sessionmaker",
         "tqdm",
-        "webroot"
-    ]
+        "webroot",
+        "zope"
+    ],
+    "python.analysis.aiHoverSummaries": true,
+    "python.analysis.autoFormatStrings": true,
+    "python.analysis.enableTroubleshootMissingImports": true,
+    "python.analysis.generateWithTypeAnnotation": true,
+    "python.analysis.inlayHints.callArgumentNames": "all",
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.pytestParameters": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.supportDocstringTemplate": true,
+    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.typeEvaluation.deprecateTypingAliases": true,
+    "python.analysis.typeEvaluation.disableBytesTypePromotions": false,
+    "python.analysis.typeEvaluation.enableExperimentalFeatures": false,
+    "python.analysis.typeEvaluation.strictDictionaryInference": true,
+    "python.analysis.typeEvaluation.strictListInference": true,
+    "python.analysis.typeEvaluation.strictSetInference": true,
+    "python.analysis.languageServerMode": "full",
+    "python.analysis.logLevel": "Warning",
+    "python.analysis.diagnosticsSource": "Pylance",
+    "python.analysis.disableTaggedHints": true,
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.aiCodeActions": {
+        "generateDocstring": true,
+        "implementAbstractClasses": true,
+        "generateSymbol": true,
+        "convertFormatString": true
+    },
+
+    "python.analysis.extraPaths": [
+    "./astrbot_modules/astrbot_canary_api/src",
+    "./astrbot_modules/astrbot_canary_loader_api/src",
+    "./astrbot_modules/astrbot_canary_tui/src",
+    "./astrbot_modules/astrbot_canary_web/src",
+]
+
+    
 }

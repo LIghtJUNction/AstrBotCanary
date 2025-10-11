@@ -8,10 +8,6 @@ authors = [
 ]
 requires-python = ">=3.13.8"
 dependencies = [
-    "astrbot-canary-api",
-    "astrbot-canary-loader",
-    "astrbot-canary-loader-api",
-    "astrbot-canary-web",
     "asyncio>=4.0.0",
     "click>=8.3.0",
     "dotenv>=0.9.9",
@@ -21,6 +17,7 @@ dependencies = [
     "rich>=14.1.0",
     "toml>=0.10.2",
     "tqdm>=4.67.1",
+    "astrbot-canary-api",
 ]
 
 [build-system]
@@ -49,11 +46,24 @@ members = [
 [tool.uv.sources]
 astrbot-canary-api = { workspace = true }
 astrbot-canary-web = { workspace = true }
+astrbot-canary-tui = { workspace = true } 
 astrbot-canary-loader = { workspace = true }
 astrbot-canary-loader-api = { workspace = true }
 
+
 # 后续将上述组件改为可选依赖
 
+[project.optional-dependencies]
+
+web = ["astrbot-canary-web"]
+loader = ["astrbot-canary-loader"]
+tui = ["astrbot-canary-tui"]
+
+all = [
+    "astrbot-canary-loader", 
+    "astrbot-canary-tui",
+    "astrbot-canary-web"
+]
 
 # [tool.uv.sources]
 # orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}
@@ -63,9 +73,4 @@ astrbot-canary-loader-api = { workspace = true }
 # 对于插件项目：
 # [project.entry-points."astrbot.plugins"]
 # "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
-
-# # 插件可以通过寻找这些入口点来调用核心功能，并可以依据需要混合使用不同版本的实现
-# [project.entry-points."astrbot.modules.core"]
-
-
 

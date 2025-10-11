@@ -1,13 +1,19 @@
 [project]
 name = "astrbot-canary-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "astrbot module canary api"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 requires-python = ">=3.13.8"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.11.0",
+    "sqlalchemy>=2.0.44",
+    "toml>=0.10.2",
+]
 
 [build-system]
 requires = ["hatchling"]
