@@ -8,8 +8,12 @@ authors = [
 ]
 requires-python = ">=3.13.8"
 dependencies = [
-    "aiofiles>=24.1.0",
+    "aiofiles>=25.1.0",
     "aiohttp>=3.13.0",
+    "astrbot-canary-api",
+    "astrbot-canary-loader",
+    "astrbot-canary-loader-api",
+    "astrbot-canary-web",
     "asyncio>=4.0.0",
     "click>=8.3.0",
     "dotenv>=0.9.9",
@@ -30,6 +34,24 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/astrbot_canary"]
 
+[tool.uv.workspace]
+members = [
+    "astrbot_modules/astrbot_canary_web",
+    "astrbot_modules/astrbot_canary_loader",
+    "astrbot_modules/astrbot_canary_loader_api",
+    "astrbot_modules/astrbot_canary_api",
+    "astrbot_modules/astrbot_canary_tui",
+]
+
+[tool.uv.sources]
+astrbot-canary-api = { workspace = true }
+astrbot-canary-web = { workspace = true }
+astrbot-canary-loader = { workspace = true }
+astrbot-canary-loader-api = { workspace = true }
+
+# 后续将上述组件改为可选依赖
+
+
 # [tool.uv.sources]
 # orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}
 # pyo3最新支持到3.13
@@ -39,8 +61,7 @@ packages = ["src/astrbot_canary"]
 # [project.entry-points."astrbot.plugins"]
 # "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
 
-[project.entry-points."astrbot.modules.API"]
-"canary_modules_api" = "astrbot_canary.base:AstrbotModuleAPI"
+
 
 # 以下为加载器模块入口点
 [project.entry-points."astrbot.modules.loader"]

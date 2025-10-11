@@ -1,0 +1,17 @@
+[project]
+name = "astrbot-canary-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
+]
+requires-python = ">=3.13.8"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.entry-points."astrbot.modules.API"]
+"canary_modules_api" = "astrbot_canary_api:AstrbotModuleAPI"
