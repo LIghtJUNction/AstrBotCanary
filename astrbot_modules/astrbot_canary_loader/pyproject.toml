@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13.8"
 dependencies = [
+    "astrbot-canary-api",
     "astrbot-canary-loader-api",
 ]
 
@@ -17,7 +18,8 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 astrbot-canary-loader-api = { workspace = true }
+astrbot-canary-api = { workspace = true }
 
 # 以下为加载器模块入口点
 [project.entry-points."astrbot.modules.loader"]
-"canary_loader" = "astrbot_canary.loader.loader:AstrbotLoader"
+"canary_loader" = "astrbot_canary_loader:AstrbotLoader"

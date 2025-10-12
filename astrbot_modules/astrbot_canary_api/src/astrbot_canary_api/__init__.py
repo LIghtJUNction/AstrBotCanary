@@ -1,5 +1,5 @@
 from .interface import (
-    IAstrbotFrontendModule, 
+    IAstrbotUIModule, 
     IAstrbotLoaderModule,
     IAstrbotModule,
     IAstrbotConfigEntry,
@@ -8,12 +8,13 @@ from .interface import (
 )
 from .config import AstrbotConfig, AstrbotConfigEntry
 from .paths import AstrbotPaths
-
+from .enum import AstrBotModuleType
+from .db import AstrbotDatabase
 
 
 
 __all__ = [
-    "IAstrbotFrontendModule",
+    "IAstrbotUIModule",
     "IAstrbotLoaderModule",
     "IAstrbotModule",
     "IAstrbotConfigEntry",
@@ -25,4 +26,8 @@ __all__ = [
     "AstrbotConfigEntry",
     # paths
     "AstrbotPaths",
+    # enum
+    "AstrBotModuleType",
+    # db
+    "AstrbotDatabase",
 ]

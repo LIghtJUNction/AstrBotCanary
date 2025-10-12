@@ -5,6 +5,7 @@
         "aiohttp",
         "Astrbot",
         "asyncio",
+        "cumtime",
         "dotenv",
         "eventbus",
         "hookspecs",
@@ -15,6 +16,7 @@
         "pydantic",
         "sessionmaker",
         "tqdm",
+        "tuis",
         "webroot",
         "zope"
     ],

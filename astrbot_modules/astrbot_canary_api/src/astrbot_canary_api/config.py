@@ -3,13 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 import toml
 
 from astrbot_canary_api.interface import IAstrbotConfig, IAstrbotConfigEntry
 
+
 __all__ = ["AstrbotConfig", "AstrbotConfigEntry"]
+
 
 class AstrbotConfigEntry(BaseSettings):
     pypi_name: str = Field(..., description="模块名称")
@@ -52,7 +54,15 @@ class AstrbotConfigEntry(BaseSettings):
                 file_data = toml.load(config_file.open("r", encoding="utf-8"))
                 # 用 pydantic 校验和赋值
                 entry = self.model_validate(file_data)
-                self.value = entry.value
+                val = entry.value
+                # 动态根据默认值类型反序列化
+                if hasattr(self.default, "__class__") and issubclass(type(self.default), BaseModel):
+                    if isinstance(val, dict):
+                        self.value = self.default.__class__.model_validate(val)
+                    else:
+                        self.value = self.default
+                else:
+                    self.value = val
                 self.default = entry.default
                 self.description = entry.description
             except Exception as e:
@@ -63,6 +73,10 @@ class AstrbotConfigEntry(BaseSettings):
         """将配置保存回本地文件"""
         config_file = config_dir / f"{self.group}.{self.name}.toml"
         data = self.model_dump()
+        # 如果 value 是 BaseModel，序列化为 dict
+        if hasattr(self.value, "model_dump"):
+            value_dict = self.value.model_dump()
+            data["value"] = value_dict
         try:
             toml.dump(data, config_file.open("w", encoding="utf-8"))
         except Exception as e:

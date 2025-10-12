@@ -6,6 +6,7 @@ requires-python = ">=3.13.8"
 members = [
     "astrbot-canary",
     "astrbot-canary-api",
+    "astrbot-canary-helper",
     "astrbot-canary-loader",
     "astrbot-canary-loader-api",
     "astrbot-canary-tui",
@@ -39,6 +40,7 @@ version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "astrbot-canary-api" },
+    { name = "astrbot-canary-helper" },
     { name = "asyncio" },
     { name = "click" },
     { name = "dotenv" },
@@ -69,6 +71,7 @@ web = [
 [package.metadata]
 requires-dist = [
     { name = "astrbot-canary-api", editable = "astrbot_modules/astrbot_canary_api" },
+    { name = "astrbot-canary-helper", editable = "astrbot_modules/astrbot_canary_helper" },
     { name = "astrbot-canary-loader", marker = "extra == 'all'", editable = "astrbot_modules/astrbot_canary_loader" },
     { name = "astrbot-canary-loader", marker = "extra == 'loader'", editable = "astrbot_modules/astrbot_canary_loader" },
     { name = "astrbot-canary-tui", marker = "extra == 'all'", editable = "astrbot_modules/astrbot_canary_tui" },
@@ -109,15 +112,24 @@ requires-dist = [
 ]
 
 [[package]]
+name = "astrbot-canary-helper"
+version = "0.1.0"
+source = { editable = "astrbot_modules/astrbot_canary_helper" }
+
+[[package]]
 name = "astrbot-canary-loader"
 version = "0.1.0"
 source = { editable = "astrbot_modules/astrbot_canary_loader" }
 dependencies = [
+    { name = "astrbot-canary-api" },
     { name = "astrbot-canary-loader-api" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "astrbot-canary-loader-api", editable = "astrbot_modules/astrbot_canary_loader_api" }]
+requires-dist = [
+    { name = "astrbot-canary-api", editable = "astrbot_modules/astrbot_canary_api" },
+    { name = "astrbot-canary-loader-api", editable = "astrbot_modules/astrbot_canary_loader_api" },
+]
 
 [[package]]
 name = "astrbot-canary-loader-api"

@@ -1,2 +1,3 @@
-def hello() -> str:
-    return "Hello from astrbot-canary-loader!"
+from .module import AstrbotLoader
+
+__all__ = ["AstrbotLoader"]

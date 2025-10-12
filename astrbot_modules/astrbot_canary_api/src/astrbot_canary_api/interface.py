@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
 
 from sqlalchemy.orm import Session
 
-#region Interfaces
+from astrbot_canary_api.enum import AstrBotModuleType
 
+
+#region Interfaces
 
 #region Module
 @runtime_checkable
@@ -16,6 +17,7 @@ class IAstrbotModule(Protocol):
     """Interface for Astrbot modules."""
     name: ClassVar[str]
     pypi_name: ClassVar[str]
+    module_type: ClassVar[AstrBotModuleType]
     version: ClassVar[str]
     authors: ClassVar[list[str]]
     description: ClassVar[str]
@@ -45,9 +47,9 @@ class IAstrbotLoaderModule(IAstrbotModule, Protocol):
         ...
 
 @runtime_checkable
-class IAstrbotFrontendModule(IAstrbotModule, Protocol):
-    """Interface for Astrbot frontend modules."""
-    frontend_type: ClassVar[str]  # e.g., "web", "tui"
+class IAstrbotUIModule(IAstrbotModule, Protocol):
+    """Interface for Astrbot UI modules."""
+    ...
 
 #endregion
 

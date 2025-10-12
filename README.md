@@ -26,6 +26,27 @@ AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特
 
 本分支可能包含不稳定、API 变更或依赖还在适配阶段的实现，不建议在生产环境直接替换官方版本。
 
+正在开发中... 以下内容为提前规划，暂时不要使用
+
+# 安装
+如果你需要安装在全局，直接uv tool install astrbot_canary即可
+
+如果你希望不要安装在全局，你想安装在某个自定义文件夹内：
+> uv venv .venv --python 3.13.8 （在当前目录新建虚拟环境）
+新建一个.env文件：
+并写入以下内容：
+ASTRBOT_ROOT = "./.astrbot"
+指定astrbot根目录为当前目录下的.astrbot文件夹
+（如果没有，默认是~/.astrbot/）
+
+然后：
+> uv tool install astrbot_canary
+
+如果你希望前端路径自定义？
+你可以修改config/metadata.webroot.toml内的值
+但是一般不建议自定义路径
+
+
 ---
 
 ## 状态说明 / 兼容性

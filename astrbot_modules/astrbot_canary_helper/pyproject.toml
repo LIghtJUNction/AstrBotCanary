@@ -1,0 +1,14 @@
+[project]
+name = "astrbot-canary-helper"
+version = "0.1.0"
+description = "辅助函数和工具,用于辅助AstrBotCanary的开发和维护,包含一些实用的工具"
+readme = "README.md"
+authors = [
+    { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
+]
+requires-python = ">=3.13.8"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -7,21 +7,30 @@ owners: [LIghtJUNction]
 created: 2025-10-09
 updated: 2025-10-11
 """
-import logging
+from logging import INFO, getLogger , basicConfig
+from logging import Logger
 import rich.traceback
+# import cProfile
+from astrbot_canary.core import AstrbotCoreModule
 # 安装错误堆栈追踪器
 rich.traceback.install()
 
-logger = logging.getLogger("astrbot_canary")
-
+logger: Logger = getLogger("astrbot_canary")
 # 设置日志等级
-logging.basicConfig(level=logging.INFO)
+basicConfig(level=INFO)
 
-logger = logging.getLogger("astrbot_canary.loader")
+logger = getLogger("astrbot_canary.loader")
 
-from astrbot_canary.core import AstrbotCoreModule
+def main() -> None:
+    core_module = AstrbotCoreModule()
+    core_module.Awake()
+    core_module.Start()
+    core_module.OnDestroy()
 
-core_module = AstrbotCoreModule()
-core_module.Awake()
-core_module.Start()
-core_module.OnDestroy()
+if __name__ == "__main__":
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+    main()
+    # profiler.disable()
+    # profiler.print_stats(sort="cumtime")
+

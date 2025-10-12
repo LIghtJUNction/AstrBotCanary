@@ -18,6 +18,7 @@ dependencies = [
     "toml>=0.10.2",
     "tqdm>=4.67.1",
     "astrbot-canary-api",
+    "astrbot-canary-helper", # 无特殊功能，简单封装，仅用于简化代码
 ]
 
 [build-system]
@@ -31,7 +32,8 @@ packages = [
     "astrbot_canary_modules/astrbot_canary_loader_api",
     "astrbot_canary_modules/astrbot_canary_api",
     "astrbot_canary_modules/astrbot_canary_web",
-    "astrbot_canary_modules/astrbot_canary_tui"
+    "astrbot_canary_modules/astrbot_canary_tui",
+    "astrbot_canary_modules/astrbot_canary_helper"
 ]
 
 [tool.uv.workspace]
@@ -41,6 +43,7 @@ members = [
     "astrbot_modules/astrbot_canary_loader_api",
     "astrbot_modules/astrbot_canary_api",
     "astrbot_modules/astrbot_canary_tui",
+    "astrbot_modules/astrbot_canary_helper",
 ]
 
 [tool.uv.sources]
@@ -49,6 +52,7 @@ astrbot-canary-web = { workspace = true }
 astrbot-canary-tui = { workspace = true } 
 astrbot-canary-loader = { workspace = true }
 astrbot-canary-loader-api = { workspace = true }
+astrbot-canary-helper = { workspace = true }
 
 
 # 后续将上述组件改为可选依赖
