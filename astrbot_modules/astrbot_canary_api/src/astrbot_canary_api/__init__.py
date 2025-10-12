@@ -20,7 +20,6 @@ from .scheduler import (
     TaskNotFoundError,
     TaskID, # type TaskID: str
     CeleryResultHandle,
-    InMemoryResultHandle,
 )
 from .msgbus import IAstrbotMessageBus, AstrbotMessageBus
 
@@ -51,7 +50,6 @@ __all__ = [
     "CeleryTaskScheduler",
     "ResultHandleProtocol",
     "CeleryResultHandle",
-    "InMemoryResultHandle",
     "TaskTimeoutError",
     "TaskNotFoundError",
     "TaskID",

@@ -1,12 +1,14 @@
 
-from astrbot_canary_api.scheduler import InMemoryResultHandle, CeleryTaskScheduler
+from astrbot_canary_api.scheduler import CeleryResultHandle, CeleryTaskScheduler
 import importlib
 
 
-def test_inmemory_result_handle_metadata():
-    h = InMemoryResultHandle('ok')
+def test_immediate_result_handle_metadata():
+    # When creating a CeleryResultHandle wrapping an immediate result,
+    # the internal id uses the immediate- prefix by default.
+    h = CeleryResultHandle('ok')
     # id should include prefix and be unique-ish
-    assert h.id().startswith('inmemory-')
+    assert h.id().startswith('immediate-')
     assert h.ready() is True
     assert h.get() == 'ok'
     # with_task attaches metadata

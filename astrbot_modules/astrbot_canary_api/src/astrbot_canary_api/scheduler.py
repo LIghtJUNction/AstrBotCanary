@@ -15,7 +15,7 @@ from astrbot_canary_api.interface import (
 )
 __all__ = [
     "CeleryResultHandle",
-    "InMemoryResultHandle", 
+    
     "CeleryTaskScheduler", 
     "TaskTimeoutError", 
     "TaskNotFoundError", 
@@ -24,6 +24,11 @@ __all__ = [
 
 class CeleryResultHandle(ResultHandleProtocol):
     def __init__(self, async_result: Any) -> None:
+        # If caller passed a raw result (not an AsyncResult-like object),
+        # wrap it in the immediate AsyncResult shim so the rest of the
+        # implementation can treat both cases uniformly.
+        if not (hasattr(async_result, 'get') and hasattr(async_result, 'ready')):
+            async_result = _ImmediateAsyncResult(async_result)
         self._r = async_result
         # metadata to mirror InMemoryResultHandle for unified API
         self.metadata: dict[str, Any] = {
@@ -34,7 +39,9 @@ class CeleryResultHandle(ResultHandleProtocol):
             "created_at": time.time(),
         }
     def id(self) -> TaskID:
-        return str(self._r.id)
+        # Defensive: if underlying object has id attribute use it, otherwise
+        # fallback to stringifying the underlying object.
+        return str(getattr(self._r, 'id', self._r))
     def ready(self) -> bool:
         return bool(self._r.ready())
     def get(self, timeout: float | None = None) -> Any:
@@ -54,33 +61,22 @@ class CeleryResultHandle(ResultHandleProtocol):
         self.metadata["kwargs"] = dict(kwargs or {})
         return self
 
-class InMemoryResultHandle(ResultHandleProtocol):
-    """Wrap a direct in-process result so callers can use the same API."""
-    def __init__(self, result: Any, task_id: TaskID | None = None) -> None:
+# Internal helper: create a minimal immediate AsyncResult-like object so
+# CeleryResultHandle can uniformly wrap both real AsyncResult and immediate
+# in-process results without exposing a separate handle class.
+class _ImmediateAsyncResult:
+    def __init__(self, result: Any, task_id: TaskID | None = None, prefix: str = "immediate-") -> None:
         self._result = result
-        # generate a unique id with a uuid prefix for better traceability
-        self._id = task_id or f"inmemory-{uuid.uuid4()}"
+        self.id = task_id or f"{prefix}{uuid.uuid4()}"
         self._ready = True
-        # metadata for debugging/logging
-        self.metadata: dict[str, Any] = {
-            "task_id": str(self._id),
-            "task_name": None,
-            "args": None,
-            "kwargs": None,
-            "created_at": time.time(),
-        }
-    def with_task(self, task_name: str | None, args: Sequence[Any] | None = None, kwargs: Mapping[str, Any] | None = None) -> "InMemoryResultHandle":
-        # attach task metadata and return self for fluent use
-        self.metadata["task_name"] = task_name
-        self.metadata["args"] = tuple(args or ())
-        self.metadata["kwargs"] = dict(kwargs or {})
-        return self
-    def id(self) -> TaskID:
-        return str(self._id)
+
     def ready(self) -> bool:
         return True
+
     def get(self, timeout: float | None = None) -> Any:
         return self._result
+
+
 
 class CeleryTaskScheduler(IAstrbotTaskScheduler):
     """Celery-backed IAstrbotTaskScheduler adapter.
@@ -88,12 +84,38 @@ class CeleryTaskScheduler(IAstrbotTaskScheduler):
     """
     def __init__(self, broker: str | None = None, backend: str | None = None, app: Any | None = None, **opts: Any) -> None:
         # Use Any for app to avoid static type failures when Celery stubs are absent
+        # prefer_local: when True the scheduler will prefer to run tasks
+        # in-process (by calling the task object's run()) when the task is
+        # available locally. This makes the same calling code work in both
+        # single-process and production environments where you may want the
+        # local execution path to be the primary/auxiliary mode.
+        self.prefer_local: bool = bool(opts.pop('prefer_local', True))
+
+        # Optional: import_tasks is a sequence of module names to import so
+        # that tasks defined in those modules are registered on the Celery app.
+        # This avoids having to import consumers manually in calling code.
+        import_tasks = opts.pop('import_tasks', None)
+
         if app is not None:
             self.app: Any = app
         else:
             if broker is None:
                 raise ValueError("broker is required when no Celery app is provided")
             self.app = Celery("astrbot", broker=broker, backend=backend, **opts)
+
+        # Auto-import requested task modules so their @app.task definitions
+        # register with the Celery app. Silent-import failures are allowed to
+        # keep initialization robust; callers should ensure correct module
+        # names when using this feature.
+        if import_tasks:
+            import importlib
+            for mod_name in import_tasks:
+                try:
+                    importlib.import_module(mod_name)
+                except Exception:
+                    # Don't fail init on import error; raise only if strict
+                    # behavior is desired. For now, keep it lenient.
+                    continue
     def send_task(self,
                   name: str,
                   args: Sequence[Any] | None = None,
@@ -113,20 +135,21 @@ class CeleryTaskScheduler(IAstrbotTaskScheduler):
         except Exception:
             eager = False
 
-        # Try to resolve a registered task object by name. If found, use its
-        # apply_async so behavior is consistent between eager (in-process)
-        # and non-eager (worker) modes. Only fall back to app.send_task when
-        # the name is not registered (or when the caller explicitly wants
-        # send_task semantics).
+        # Try to resolve a registered task object by name.
         task_obj = getattr(self.app, 'tasks', {}).get(name)  # type: ignore[attr-defined]
         if task_obj is not None:
-            # eager: prefer direct run to return an in-memory handle
-            if eager:
+            # Decide whether to attempt local execution. Local execution is
+            # attempted when either Celery is configured eager, or when the
+            # scheduler is configured to prefer local execution (prefer_local).
+            prefer_local_now = eager or self.prefer_local
+            if prefer_local_now:
                 run_fn = getattr(task_obj, 'run', None)
                 if callable(run_fn):
                     result = run_fn(*tuple(args), **dict(kwargs))
-                    return InMemoryResultHandle(result).with_task(name, args, kwargs)
-            # non-eager or eager but no run(): dispatch via task.apply_async
+                    imm = _ImmediateAsyncResult(result)
+                    return CeleryResultHandle(imm).with_task(name, args, kwargs)
+
+            # Otherwise, dispatch via task.apply_async (cross-process semantics)
             try:
                 ar = task_obj.apply_async(args=args, kwargs=kwargs, queue=queue)  # type: ignore[attr-defined]
             except Exception:
@@ -170,11 +193,13 @@ class CeleryTaskScheduler(IAstrbotTaskScheduler):
 
             task_obj = getattr(self.app, 'tasks', {}).get(func)  # type: ignore[attr-defined]
             if task_obj is not None:
-                if eager:
+                prefer_local_now = eager or self.prefer_local
+                if prefer_local_now:
                     run_fn = getattr(task_obj, 'run', None)
                     if callable(run_fn):
                         result = run_fn(*tuple(args), **dict(kwargs))
-                        return InMemoryResultHandle(result).with_task(func, args, kwargs)
+                        imm = _ImmediateAsyncResult(result)
+                        return CeleryResultHandle(imm).with_task(func, args, kwargs)
                 ar = task_obj.apply_async(args=args, kwargs=kwargs, queue=queue)  # type: ignore[attr-defined]
                 return CeleryResultHandle(ar)
 
@@ -197,7 +222,8 @@ class CeleryTaskScheduler(IAstrbotTaskScheduler):
                     run_fn = getattr(func, 'run', None)
                     if callable(run_fn):
                         result = run_fn(*tuple(args), **dict(kwargs))
-                        return InMemoryResultHandle(result)
+                        imm = _ImmediateAsyncResult(result)
+                        return CeleryResultHandle(imm)
                 ar = func.apply_async(args=args, kwargs=kwargs, queue=queue)  # type: ignore[attr-defined]
                 return CeleryResultHandle(ar)
             except Exception:
@@ -205,7 +231,8 @@ class CeleryTaskScheduler(IAstrbotTaskScheduler):
                 run_fn = getattr(func, 'run', None)
                 if callable(run_fn):
                     result = run_fn(*tuple(args), **dict(kwargs))
-                    return InMemoryResultHandle(result)
+                    imm = _ImmediateAsyncResult(result)
+                    return CeleryResultHandle(imm)
                 raise
         if registered_only:
             raise RuntimeError("apply_async requires a registered Celery task or task name when registered_only=True")
