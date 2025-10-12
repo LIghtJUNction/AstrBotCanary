@@ -7,13 +7,16 @@ description = "List of modules loaded in the last session"
 loader = [ [ "astrbot.modules.loader", "canary_loader",],]
 web = [ [ "astrbot.modules.web", "canary_web",],]
 tui = [ [ "astrbot.modules.tui", "canary_tui",],]
+unknown = [ [ "", "",],]
 
 [default]
 loader = [ [ "astrbot.modules.loader", "canary_loader",],]
 web = [ [ "astrbot.modules.web", "canary_web",],]
 tui = [ [ "astrbot.modules.tui", "canary_tui",],]
+unknown = [ [ "", "",],]
 
 [value.last_loaded_modules]
 astrbot_canary_loader = [ "loader", "astrbot.modules.loader", "canary_loader",]
+astrbot_canary_web = [ "web", "astrbot.modules.web", "canary_web",]
 
 [default.last_loaded_modules]

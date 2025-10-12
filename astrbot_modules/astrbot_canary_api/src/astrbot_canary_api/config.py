@@ -39,6 +39,7 @@ class AstrbotConfigEntry(BaseSettings):
             default=default,
             description=description
         )
+
         config_file = config_dir / f"{group}.{name}.toml"
         if config_file.exists():
             entry.load(pypi_name, config_dir)

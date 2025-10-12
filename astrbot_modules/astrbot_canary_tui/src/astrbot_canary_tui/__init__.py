@@ -1,2 +1,5 @@
-def hello() -> str:
-    return "Hello from astrbot-canary-tui!"
+from .module import AstrbotCanaryTui
+
+__all__ = [
+    "AstrbotCanaryTui",
+]

@@ -14,4 +14,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.entry-points."astrbot.modules.tui"]
-"canary_tui" = "astrbot_canary_tui:AstrbotTui"
+"canary_tui" = "astrbot_canary_tui:AstrbotCanaryTui"
