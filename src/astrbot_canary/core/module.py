@@ -41,7 +41,7 @@ class AstrbotModuleConfig(BaseModel):
 
 logger = getLogger("astrbot_canary.module.core")
 
-class AstrbotCoreModule(IAstrbotModule):
+class AstrbotCoreModule():
     name = "canary_core"
     pypi_name = "astrbot_canary"
     module_type = AstrBotModuleType.CORE
