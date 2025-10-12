@@ -15,8 +15,10 @@ from click import confirm, prompt
 
 from logging import getLogger
 
-from astrbot_canary_api.enum import AstrBotModuleType
+from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_helper import AstrbotCanaryHelper
+
+from astrbot_canary_api.msgbus import AstrbotMessageBus
 
 # 类型字典
 
@@ -70,18 +72,6 @@ class AstrbotCoreModule(IAstrbotModule):
         logger.info(f"使用的 Astrbot 根目录是 {self.paths.astrbot_root}")
         self.config: AstrbotConfig = AstrbotConfig.getConfig(self.pypi_name)
 
-        # 绑定配置
-        self.cfg_webroot: IAstrbotConfigEntry = self.config.bindEntry(
-            entry=AstrbotConfigEntry.bind(
-                pypi_name=self.pypi_name,
-                group="metadata",
-                name="webroot",
-                default=self.paths.astrbot_root / "webroot",
-                description="webroot directory",
-                config_dir=self.paths.config
-            )
-        )
-
         # 上次启动配置
         self.cfg_modules: IAstrbotConfigEntry = self.config.bindEntry(
             entry=AstrbotConfigEntry.bind(
@@ -93,12 +83,13 @@ class AstrbotCoreModule(IAstrbotModule):
                 config_dir=self.paths.config
             )
         )
+        # 启动消息总线 -- 内存传输器（memory://astrbot）
+        self.msgbus: AstrbotMessageBus = AstrbotMessageBus.getBus("memory://astrbot")
 
-        logger.debug(self.cfg_webroot)
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     def Start(self) -> None:
+
         # 发现所有入口点并输出日志
-  
         loaders: EntryPoints = AstrbotCanaryHelper.getAllEntryPoints(group="astrbot.modules.loader")
         webs: EntryPoints = AstrbotCanaryHelper.getAllEntryPoints(group="astrbot.modules.web")
         tuis: EntryPoints = AstrbotCanaryHelper.getAllEntryPoints(group="astrbot.modules.tui")
@@ -108,7 +99,8 @@ class AstrbotCoreModule(IAstrbotModule):
         logger.info(f"发现的 tui 入口点: {[ (ep.name, getattr(ep, 'group', None)) for ep in tuis ]}")
         logger.info(f"{self.name} v{self.version} has started.")
         # 优先加载上次记录的模块
-        last_modules: dict[str, tuple[str, str, str]] = self.cfg_modules.value.last_loaded_modules
+        last_modules: module_info = self.cfg_modules.value.last_loaded_modules
+        
         logger.info(f"last_modules: {last_modules}")
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
@@ -138,11 +130,12 @@ class AstrbotCoreModule(IAstrbotModule):
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is being destroyed.")
         self.cfg_modules.save(self.paths.config)
+        AstrbotMessageBus.resetBus()
 #endregion
 
 
 #region 模块加载相关
-    def load_last_modules(self, last_modules: dict[str, tuple[str, str, str]]) -> module_load_result:
+    def load_last_modules(self, last_modules: module_info) -> module_load_result:
         """ 返回加载结果字典 """
         result: module_load_result = {}
         for pypi_name, (module_type_str, group, name) in last_modules.items():

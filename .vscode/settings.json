@@ -8,16 +8,26 @@
         "cumtime",
         "dotenv",
         "eventbus",
+        "fanout",
+        "GPLV",
         "hookspecs",
+        "ipynb",
         "kombu",
+        "msgbus",
         "orjson",
         "pluggy",
         "PLUGINSPEC",
         "pydantic",
+        "pypi",
+        "pytest",
+        "rustup",
         "sessionmaker",
         "sqlalchemy",
+        "SVCA",
+        "SVCB",
         "tqdm",
         "tuis",
+        "venv",
         "webroot",
         "zope"
     ],
@@ -54,7 +64,12 @@
     "./astrbot_modules/astrbot_canary_loader_api/src",
     "./astrbot_modules/astrbot_canary_tui/src",
     "./astrbot_modules/astrbot_canary_web/src",
-]
+],
+"python.testing.pytestArgs": [
+    "."
+],
+"python.testing.unittestEnabled": false,
+"python.testing.pytestEnabled": true
 
     
 }

@@ -10,7 +10,7 @@ from .config import AstrbotConfig, AstrbotConfigEntry
 from .paths import AstrbotPaths
 from .enums import AstrBotModuleType
 from .db import AstrbotDatabase
-
+from .models import Message
 
 
 __all__ = [
@@ -30,4 +30,7 @@ __all__ = [
     "AstrBotModuleType",
     # db
     "AstrbotDatabase",
+
+    # models
+    "Message",
 ]

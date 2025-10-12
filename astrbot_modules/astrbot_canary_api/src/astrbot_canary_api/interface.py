@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.orm import Session
 
 from astrbot_canary_api.enums import AstrBotModuleType
 
+from astrbot_canary_api.models import Message
 
 #region Interfaces
 
@@ -271,6 +274,22 @@ class IAstrbotMessageBus(Protocol):
         """异步单次接收：在异步事件循环中等待消息并返回 body 或 None。"""
         ...
 
+
+    def iterate(self, queue: str, accept: list[str] | None = None, timeout: float | None = None) -> AsyncGenerator[Message, None]:
+        """异步迭代器风格的持续接收：
+
+        用法示例：
+            async for msg in bus.iterate("myq"):
+                try:
+                    await handle(msg.body)
+                    msg.ack()
+                except Exception:
+                    raise
+
+        说明：实现可以在内部对同步库使用线程桥接（如 Kombu），并保证 msg.ack() 会在线程侧安全执行。
+        """
+        ...
+
     def close(self) -> None:
         """关闭内部连接/资源。"""
         ...
@@ -363,5 +382,7 @@ class IAstrbotTaskScheduler(Protocol):
     async def async_close(self) -> None:
         """异步释放资源的版本（注意：实现可以选择实现异步或同步 close）。"""
         ...
+
+
 #endregion
 #endregion

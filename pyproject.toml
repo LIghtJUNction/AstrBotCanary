@@ -19,6 +19,8 @@ dependencies = [
     "tqdm>=4.67.1",
     "astrbot-canary-api",
     "astrbot-canary-helper", # 无特殊功能，简单封装，仅用于简化代码
+    "anyio>=4.11.0",
+    "trio>=0.31.0",
 ]
 
 [build-system]
@@ -68,6 +70,19 @@ all = [
     "astrbot-canary-tui",
     "astrbot-canary-web"
 ]
+
+dev = [
+    "astrbot-canary-loader", 
+    "astrbot-canary-tui",
+    "astrbot-canary-web",
+    # 测试相关
+    "pytest-asyncio",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest"
+]
+
+
 
 # [tool.uv.sources]
 # orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}
