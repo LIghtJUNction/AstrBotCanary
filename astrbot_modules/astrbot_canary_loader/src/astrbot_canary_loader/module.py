@@ -9,7 +9,7 @@ from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot_canary.module.loader")
 
-class AstrbotLoader(IAstrbotModule):
+class AstrbotLoader():
     name = "canary_loader"
     pypi_name = "astrbot_canary_loader"
     module_type = AstrBotModuleType.LOADER
