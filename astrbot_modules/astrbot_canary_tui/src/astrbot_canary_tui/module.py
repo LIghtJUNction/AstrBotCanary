@@ -3,7 +3,7 @@ from astrbot_canary_api.enums import AstrBotModuleType
 from logging import getLogger , Logger
 logger: Logger = getLogger("astrbot_canary.module.tui")
 
-class AstrbotCanaryTui(IAstrbotModule):
+class AstrbotCanaryTui():
     name = "canary_tui"
     pypi_name = "astrbot_canary_tui"
     module_type = AstrBotModuleType.TUI
