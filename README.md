@@ -78,6 +78,7 @@ ORM:sqlalchemy
 - 接口设计：Protocols
 
 - 动态验证一个模块是否符合协议
+- 依赖注入：Dependency Injector
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
