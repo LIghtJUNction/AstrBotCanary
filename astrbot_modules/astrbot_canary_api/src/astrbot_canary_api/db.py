@@ -9,9 +9,7 @@ from sqlalchemy.engine import Engine
 from contextlib import contextmanager
 from astrbot_canary_api.interface import IAstrbotDatabase
 
-
-
-class AstrbotDatabase(IAstrbotDatabase):
+class AstrbotDatabase():
 
     database_url: str
     engine: Engine | None
