@@ -75,7 +75,7 @@ ASTRBOT_ROOT = "./.astrbot"
 - 数据库 ：sqlite
 ORM:sqlalchemy
 - 插件系统设计：pluggy+入口点发现机制
-- 接口设计：内置模块adc
+- 接口设计：Protocols
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
