@@ -68,7 +68,7 @@ ASTRBOT_ROOT = "./.astrbot"
 ---
 
 ## 开发计划（依赖 / 选型示例）
-- 消息分发（示例候选）：Kombu（https://github.com/celery/kombu）
+- 消息分发+调度+定时：taskiq!
 - Web 框架：Robyn（Rust + PyO3 驱动，高并发探索）
 - TUI 框架：Textual
 - 数据类型验证：pydantic，pydantic-settings
