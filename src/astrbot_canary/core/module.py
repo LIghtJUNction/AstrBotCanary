@@ -30,13 +30,16 @@ class AstrbotCoreModule(IAstrbotModule):
             if not confirm("你确定要使用推荐的默认路径~/.astrbot 吗？", default=True):
                 custom_astrbot_root_str: str = prompt("请输入你想要的路径（直接回车将使用当前路径）",default=".")
                 custom_astrbot_root = Path(custom_astrbot_root_str).expanduser().resolve()
+                # 非空目录警告
+                logger.info(f"你选择的路径是 {custom_astrbot_root}")
+                if any(custom_astrbot_root.iterdir()):
+                    if not confirm(f"你确定要使用非空目录 {custom_astrbot_root} 吗？", default=False):
+                        logger.info("操作已取消。")
+                        exit(0)
+
                 self.paths.astrbot_root = custom_astrbot_root
 
-
-
-
-
-
+        logger.info(f"使用的 Astrbot 根目录是 {self.paths.astrbot_root}")
         self.config: AstrbotConfig = AstrbotConfig.getConfig(self.pypi_name)
 
         # 绑定配置
