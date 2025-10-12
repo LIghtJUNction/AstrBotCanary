@@ -125,6 +125,8 @@ class AstrbotCoreModule(IAstrbotModule):
 
         logger.info(f"模块唤醒完成，加载结果：{result}")
 
+        logger.info(f"已加载的模块有：{list(self.loaded_modules.keys())}")
+
         # 启动模块Start
         for module in self.loaded_modules.values():
             try:

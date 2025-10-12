@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
 
 from sqlalchemy.orm import Session
 
-from astrbot_canary_api.enum import AstrBotModuleType
+from astrbot_canary_api.enums import AstrBotModuleType
 
 
 #region Interfaces
@@ -191,4 +192,176 @@ class IAstrbotDatabase(Protocol):
 
 #endregion
 
+#region MessageBus
+
+
+@runtime_checkable
+class IAstrbotMessageBus(Protocol):
+    """消息总线接口（抽象）。
+
+    目的：为项目提供一套可替换的消息传输抽象层（既可用 Kombu，也可用其他实现）。
+
+    设计要点：
+    - send/publish: 发布消息到指定通道（exchange/routing_key 或 topic/queue）。
+    - subscribe/receive_once: 提供订阅回调或一次性接收接口，满足同步阻塞或轮询场景。
+    - 实现可以选择阻塞式（drain_events）或基于回调的消费。
+
+    注意：消息体以 dict[str, Any] 为常用格式，具体序列化策略由实现决定（JSON/pickle），跨进程请优先使用 JSON。
+    """
+
+    def send(self,
+             msg: dict[str, Any],
+             exchange: Any | None = None,
+             routing_key: str | None = None,
+             declare: list[Any] | None = None) -> None:
+        """发布一条消息。
+
+        参数：
+        - msg: 要发布的消息（可 JSON 序列化的 dict）。
+        - exchange: 可选，表示目标交换机/通道对象或标识符。
+        - routing_key: 可选，路由键或主题名称。
+        - declare: 可选，声明所需的队列/交换机列表，以确保在虚拟/内存传输中可路由。
+        """
+        ...
+
+    async def async_send(self,
+                         msg: dict[str, Any],
+                         exchange: Any | None = None,
+                         routing_key: str | None = None,
+                         declare: list[Any] | None = None) -> None:
+        """异步版本的 send。实现可以选择在内部使用线程池、异步客户端或直接以同步方式执行并返回。
+
+        说明：接口不强制实现必须使用真正的异步 broker；如果底层为同步库，适配器可在内部将同步调用封装到线程池。
+        """
+        ...
+
+    def publish(self, topic: str, msg: dict[str, Any]) -> None:
+        """按主题/队列名直接发布消息（语义糖），等同于 send(...routing_key=topic)。"""
+        ...
+
+    async def async_publish(self, topic: str, msg: dict[str, Any]) -> None:
+        """异步版本的 publish。"""
+        ...
+
+    def subscribe(self,
+                  queue: str,
+                  callback: Callable[[dict[str, Any], Any], None],
+                  accept: list[str] | None = None) -> None:
+        """注册一个回调，用于接收并处理队列中的消息。
+
+        实现可以选择把回调立即注册并在后台处理（如果实现支持），也可以作为同步接口由调用方驱动。
+        """
+        ...
+
+    async def async_subscribe(self,
+                              queue: str,
+                              callback: Callable[[dict[str, Any], Any], Any],
+                              accept: list[str] | None = None) -> None:
+        """异步订阅：回调可以是协程（async def）或普通函数。
+
+        实现可选择在后台任务或事件循环中注册消费者以异步驱动回调。
+        """
+        ...
+
+    def receive_once(self, queue: str, timeout: float | None = None) -> dict[str, Any] | None:
+        """以阻塞或带超时的方式从队列接收单条消息并返回消息 body；未收到返回 None。"""
+        ...
+
+    async def async_receive_once(self, queue: str, timeout: float | None = None) -> dict[str, Any] | None:
+        """异步单次接收：在异步事件循环中等待消息并返回 body 或 None。"""
+        ...
+
+    def close(self) -> None:
+        """关闭内部连接/资源。"""
+        ...
+
+    async def async_close(self) -> None:
+        """异步关闭资源的版本。"""
+        ...
+
+
+@runtime_checkable
+class IAstrbotTaskScheduler(Protocol):
+    """任务调度/函数执行接口（抽象）。
+
+    说明：此接口用于把“可执行任务”调度到后台 worker（例如 Celery），并提供查询、撤销等操作。
+
+    设计要点：
+    - send_task: 按任务名或注册名派发任务（跨进程）。
+    - apply_async: 直接派发本地可调用对象为任务（实现可能会拒绝未注册的可调用）。
+    - schedule: 支持按 ETA/倒计时或周期调度。
+    - get_result/revoke/inspect_workers: 支持结果查询、撤销和查看 worker 状态。
+    """
+
+    def send_task(self,
+                  name: str,
+                  args: list[Any] | None = None,
+                  kwargs: dict[str, Any] | None = None,
+                  queue: str | None = None,
+                  retry: bool = False,
+                  countdown: int | None = None) -> Any:
+        """按任务名发送任务（返回任务标识或 AsyncResult 相似对象）。"""
+        ...
+
+    async def async_send_task(self,
+                              name: str,
+                              args: list[Any] | None = None,
+                              kwargs: dict[str, Any] | None = None,
+                              queue: str | None = None,
+                              retry: bool = False,
+                              countdown: int | None = None) -> Any:
+        """异步发送任务的版本。"""
+        ...
+
+    def apply_async(self,
+                    func: Callable[..., Any],
+                    args: list[Any] | None = None,
+                    kwargs: dict[str, Any] | None = None,
+                    queue: str | None = None) -> Any:
+        """把本地可调用提交为异步任务（实现可选择是否支持）；返回任务 id/结果句柄。"""
+        ...
+
+    async def async_apply_async(self,
+                                func: Callable[..., Any],
+                                args: list[Any] | None = None,
+                                kwargs: dict[str, Any] | None = None,
+                                queue: str | None = None) -> Any:
+        """异步版本的 apply_async。"""
+        ...
+
+    def schedule(self,
+                 name: str,
+                 eta: Any | None = None,
+                 cron: str | None = None,
+                 args: list[Any] | None = None,
+                 kwargs: dict[str, Any] | None = None) -> Any:
+        """安排未来执行的任务（按 ETA 或 cron 表达式）。"""
+        ...
+
+    def get_result(self, task_id: str, timeout: float | None = None) -> Any:
+        """查询任务结果；超时返回或抛出异常由实现决定。"""
+        ...
+    async def async_get_result(self, task_id: str, timeout: float | None = None) -> Any:
+        """异步查询任务结果。"""
+        ...
+    def revoke(self, task_id: str, terminate: bool = False) -> None:
+        """撤销任务（可选强制终止 worker 执行）。"""
+        ...
+    async def async_revoke(self, task_id: str, terminate: bool = False) -> None:
+        """异步撤销任务。"""
+        ...
+
+    def inspect_workers(self) -> dict[str, Any]:
+        """返回当前 worker 状态的概要（实现可以返回空或有限信息）。"""
+        ...
+    async def async_inspect_workers(self) -> dict[str, Any]:
+        """异步版本的 inspect_workers。"""
+        ...
+    def close(self) -> None:
+        """释放调度器相关资源。"""
+        ...
+    async def async_close(self) -> None:
+        """异步释放资源的版本（注意：实现可以选择实现异步或同步 close）。"""
+        ...
+#endregion
 #endregion

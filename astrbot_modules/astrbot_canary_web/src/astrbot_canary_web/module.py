@@ -1,5 +1,5 @@
 from astrbot_canary_api import IAstrbotModule
-from astrbot_canary_api.enum import AstrBotModuleType
+from astrbot_canary_api.enums import AstrBotModuleType
 from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot_canary.module.web")

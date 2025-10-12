@@ -4,7 +4,7 @@ from astrbot_canary_api import (
     AstrbotPaths,
     AstrbotConfig,
 )
-from astrbot_canary_api.enum import AstrBotModuleType
+from astrbot_canary_api.enums import AstrBotModuleType
 from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot_canary.module.loader")

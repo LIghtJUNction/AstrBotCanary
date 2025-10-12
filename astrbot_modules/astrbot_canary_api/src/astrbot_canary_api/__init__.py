@@ -8,7 +8,7 @@ from .interface import (
 )
 from .config import AstrbotConfig, AstrbotConfigEntry
 from .paths import AstrbotPaths
-from .enum import AstrBotModuleType
+from .enums import AstrBotModuleType
 from .db import AstrbotDatabase
 
 

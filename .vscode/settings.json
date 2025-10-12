@@ -15,6 +15,7 @@
         "PLUGINSPEC",
         "pydantic",
         "sessionmaker",
+        "sqlalchemy",
         "tqdm",
         "tuis",
         "webroot",
