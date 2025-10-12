@@ -4,7 +4,7 @@ from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot_canary.module.web")
 
-class AstrbotCanaryWeb(IAstrbotModule):
+class AstrbotCanaryWeb():
     name = "canary_web"
     pypi_name = "astrbot_canary_web"
     module_type = AstrBotModuleType.WEB
