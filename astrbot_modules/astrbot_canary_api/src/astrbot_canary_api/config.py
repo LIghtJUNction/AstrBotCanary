@@ -94,7 +94,7 @@ class AstrbotConfigEntry(BaseSettings):
     def __str__(self) -> str:
         return f"AstrbotConfigEntry \n {self.pypi_name}:{self.group}.{self.name}={self.value} \n Description: {self.description} \n Default: {self.default}"
 
-class AstrbotConfig(IAstrbotConfig):
+class AstrbotConfig():
     configs: dict[str, dict[str, IAstrbotConfigEntry]] = {}
 
     @classmethod
