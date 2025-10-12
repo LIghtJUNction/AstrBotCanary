@@ -4,7 +4,7 @@ from astrbot_canary_api.interface import IAstrbotPaths
 from pathlib import Path
 from dotenv import load_dotenv
 
-class AstrbotPaths(IAstrbotPaths):
+class AstrbotPaths():
     """Class to manage and provide paths used by Astrbot Canary."""
     load_dotenv()
     astrbot_root: Path = Path(os.getenv("ASTRBOT_ROOT", Path.home() / ".astrbot"))
