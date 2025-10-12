@@ -203,7 +203,7 @@ class AstrbotCoreModule(IAstrbotModule):
         if len(grouped[AstrBotModuleType.LOADER.value]) > 1:
             loader_names = [f"{i}: {ep.name}" for i, ep in enumerate(grouped[AstrBotModuleType.LOADER.value])]
             idx = prompt(
-                f"发现多个 loader 模块，请输入要加载的序号（仅允许单选）：\n" +
+                "发现多个 loader 模块，请输入要加载的序号（仅允许单选）：\n" +
                 "\n".join(loader_names),
                 default="0"
             )
@@ -226,7 +226,7 @@ class AstrbotCoreModule(IAstrbotModule):
         if len(ui_candidates) > 1:
             ui_names = [f"{i}: {ep.name} ({getattr(ep, 'group', '')})" for i, ep in enumerate(ui_candidates)]
             idx = prompt(
-                f"发现多个 UI(web/tui/unknown) 模块，请输入要加载的序号（仅允许单选）：\n" +
+                "发现多个 UI(web/tui/unknown) 模块，请输入要加载的序号（仅允许单选）：\n" +
                 "\n".join(ui_names),
                 default="0"
             )

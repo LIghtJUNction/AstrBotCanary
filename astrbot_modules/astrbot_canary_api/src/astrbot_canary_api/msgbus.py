@@ -10,6 +10,7 @@ from kombu import Connection, Exchange, Queue  # type: ignore
 # 这是由于 kombu 内部annotation不完善导致的类型检查报错，
 # 因此使用# type: ignore 避免 类型检查报错，其余情况禁止使用# type: ignore
 import anyio
+from anyio import to_thread
 import inspect
 
 
@@ -65,7 +66,7 @@ class AstrbotMessageBus(IAstrbotMessageBus):
 
     async def async_send(self, msg: dict[str, Any], exchange: Exchange | None = None,
                          routing_key: str | None = None, declare: list[object] | None = None) -> None:
-        await anyio.to_thread.run_sync(self.send, msg, exchange, routing_key, declare)  # type: ignore
+        await to_thread.run_sync(self.send, msg, exchange, routing_key, declare)  # type: ignore
 
     async def async_publish(self, topic: str, msg: dict[str, Any]) -> None:
         await self.async_send(msg, routing_key=topic)
@@ -91,7 +92,7 @@ class AstrbotMessageBus(IAstrbotMessageBus):
             # ack 交给调用方的回调执行以保持语义一致
             message.ack()  # type: ignore
 
-        await anyio.to_thread.run_sync(self.subscribe, queue, _bridge_cb, accept)  # type: ignore
+        await to_thread.run_sync(self.subscribe, queue, _bridge_cb, accept)  # type: ignore
 
     def receive_once(self, queue: str, timeout: float | None = None) -> dict[str, Any] | None:
         result: dict[str, Any] | None = None
@@ -113,7 +114,7 @@ class AstrbotMessageBus(IAstrbotMessageBus):
         return result
 
     async def async_receive_once(self, queue: str, timeout: float | None = None) -> dict[str, Any] | None:
-        return await anyio.to_thread.run_sync(self.receive_once, queue, timeout)  # type: ignore
+        return await to_thread.run_sync(self.receive_once, queue, timeout)  # type: ignore
 
     # --- async iterator (continuous receive) ---
     async def iterate(self, queue: str, accept: list[str] | None = None, timeout: float | None = None) -> AsyncGenerator[Message, None]:
@@ -162,9 +163,9 @@ class AstrbotMessageBus(IAstrbotMessageBus):
                 def _get_from_queue() -> tuple[dict[str, Any], object]:
                     return msg_q.get()
 
-                raw = await anyio.to_thread.run_sync(_get_from_queue)  # type: ignore
-                body = cast(dict[str, Any], raw[0])
-                message = cast(Any, raw[1])
+                raw: tuple[dict[str, Any], object] = await to_thread.run_sync(_get_from_queue)  # type: ignore
+                body: dict[str, Any] = raw[0]
+                message: object = raw[1]
 
                 # 明确的调度器：把操作放入 ack_q，由后台线程执行
                 def _schedule_ack(msg_obj: object) -> None:
@@ -175,10 +176,10 @@ class AstrbotMessageBus(IAstrbotMessageBus):
 
                 # 在事件循环中调用的包装函数（它会把请求传回后台线程的 ack_q）
                 def _ack_callable() -> None:
-                    anyio.to_thread.run_sync(_schedule_ack, message)  # type: ignore
+                    to_thread.run_sync(_schedule_ack, message)  # type: ignore
 
                 def _reject_callable(requeue: bool = False) -> None:
-                    anyio.to_thread.run_sync(_schedule_reject, message, requeue)  # type: ignore
+                    to_thread.run_sync(_schedule_reject, message, requeue)  # type: ignore
 
                 # 构建 Pydantic Message 实例并显式注解类型
                 msg: Message = Message(
@@ -195,14 +196,14 @@ class AstrbotMessageBus(IAstrbotMessageBus):
         finally:
             stop_event.set()
             # 等待后台线程退出（在后台线程里会定期检查 stop_event）
-            await anyio.to_thread.run_sync(thread.join, 0.1)  # type: ignore
+            await to_thread.run_sync(thread.join, 0.1)  # type: ignore
 
     # --- closing / lifecycle ---
     def close(self) -> None:
         self.conn.close()
 
     async def async_close(self) -> None:
-        await anyio.to_thread.run_sync(self.close)  # type: ignore
+        await to_thread.run_sync(self.close)  # type: ignore
 
     @classmethod
     def getBus(cls, url: str = "memory://astrbot") -> AstrbotMessageBus:

@@ -3,6 +3,7 @@
     "cSpell.words": [
         "aiofiles",
         "aiohttp",
+        "anyio",
         "Astrbot",
         "asyncio",
         "cumtime",
@@ -11,6 +12,7 @@
         "fanout",
         "GPLV",
         "hookspecs",
+        "inmemory",
         "ipynb",
         "kombu",
         "msgbus",

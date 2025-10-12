@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence, Mapping, AsyncGenerator
 
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
-from collections.abc import AsyncGenerator
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -299,90 +299,154 @@ class IAstrbotMessageBus(Protocol):
         ...
 
 
+#endregion
+
+#region TaskScheduler
+
+# --- types and small helper protocols ---
+type TaskID = str
+
+class ResultHandleProtocol(Protocol):
+    """A minimal protocol describing a task result handle / AsyncResult-like object."""
+    def id(self) -> TaskID: ...
+    def ready(self) -> bool: ...
+    def get(self, timeout: float | None = None) -> Any: ...
+
+class TaskNotFoundError(RuntimeError):
+    """Raised when a requested task cannot be found by the scheduler.
+
+    Attributes:
+        task_id: str | None -- the id of the missing task (if known)
+        reason: str | None -- optional human readable reason message
+    """
+
+    def __init__(self, task_id: str | None = None, reason: str | None = None) -> None:
+        self.task_id = task_id
+        self.reason = reason
+        msg = "Task not found" + (f": {task_id}" if task_id else "")
+        if reason:
+            msg = msg + f" ({reason})"
+        super().__init__(msg)
+
+class TaskTimeoutError(TimeoutError):
+    """Raised when waiting for a task result times out.
+
+    Attributes:
+        task_id: str | None -- the id of the timed-out task (if known)
+        timeout: float | None -- seconds waited before timing out
+    """
+
+    def __init__(self, task_id: str | None = None, timeout: float | None = None) -> None:
+        self.task_id = task_id
+        self.timeout = timeout
+        msg = "Task result timeout"
+        if task_id:
+            msg += f": {task_id}"
+        if timeout is not None:
+            msg += f" after {timeout}s"
+        super().__init__(msg)
+
 @runtime_checkable
 class IAstrbotTaskScheduler(Protocol):
     """任务调度/函数执行接口（抽象）。
 
     说明：此接口用于把“可执行任务”调度到后台 worker（例如 Celery），并提供查询、撤销等操作。
 
-    设计要点：
-    - send_task: 按任务名或注册名派发任务（跨进程）。
-    - apply_async: 直接派发本地可调用对象为任务（实现可能会拒绝未注册的可调用）。
-    - schedule: 支持按 ETA/倒计时或周期调度。
-    - get_result/revoke/inspect_workers: 支持结果查询、撤销和查看 worker 状态。
+    语义约定：
+    - send_task 返回 TaskID 或一个 ResultHandle（实现可选择）；async_send_task 返回相同语义的 awaitable。 
+    - get_result 在超时时应抛出 TaskTimeoutError（或实现选择返回 None，但需在实现文档中说明）。
     """
 
     def send_task(self,
                   name: str,
-                  args: list[Any] | None = None,
-                  kwargs: dict[str, Any] | None = None,
+                  args: Sequence[Any] | None = None,
+                  kwargs: Mapping[str, Any] | None = None,
                   queue: str | None = None,
                   retry: bool = False,
-                  countdown: int | None = None) -> Any:
-        """按任务名发送任务（返回任务标识或 AsyncResult 相似对象）。"""
+                  countdown: float | None = None,
+                  headers: Mapping[str, Any] | None = None,
+                  ) -> TaskID | ResultHandleProtocol:
+        """按任务名发送任务（返回 TaskID 或 ResultHandle）。"""
         ...
 
     async def async_send_task(self,
                               name: str,
-                              args: list[Any] | None = None,
-                              kwargs: dict[str, Any] | None = None,
+                              args: Sequence[Any] | None = None,
+                              kwargs: Mapping[str, Any] | None = None,
                               queue: str | None = None,
                               retry: bool = False,
-                              countdown: int | None = None) -> Any:
+                              countdown: float | None = None,
+                              headers: Mapping[str, Any] | None = None,
+                              ) -> TaskID | ResultHandleProtocol:
         """异步发送任务的版本。"""
         ...
 
     def apply_async(self,
                     func: Callable[..., Any],
-                    args: list[Any] | None = None,
-                    kwargs: dict[str, Any] | None = None,
-                    queue: str | None = None) -> Any:
-        """把本地可调用提交为异步任务（实现可选择是否支持）；返回任务 id/结果句柄。"""
+                    args: Sequence[Any] | None = None,
+                    kwargs: Mapping[str, Any] | None = None,
+                    queue: str | None = None,
+                    registered_only: bool = True,
+                    ) -> TaskID | ResultHandleProtocol:
+        """把本地可调用提交为异步任务（实现可选择是否支持）；
+        如果 registered_only=True, 未注册的可调用可能被拒绝。"""
         ...
 
     async def async_apply_async(self,
                                 func: Callable[..., Any],
-                                args: list[Any] | None = None,
-                                kwargs: dict[str, Any] | None = None,
-                                queue: str | None = None) -> Any:
+                                args: Sequence[Any] | None = None,
+                                kwargs: Mapping[str, Any] | None = None,
+                                queue: str | None = None,
+                                registered_only: bool = True,
+                                ) -> TaskID | ResultHandleProtocol:
         """异步版本的 apply_async。"""
         ...
 
     def schedule(self,
                  name: str,
-                 eta: Any | None = None,
+                 eta: datetime | float | None = None,
                  cron: str | None = None,
-                 args: list[Any] | None = None,
-                 kwargs: dict[str, Any] | None = None) -> Any:
-        """安排未来执行的任务（按 ETA 或 cron 表达式）。"""
+                 args: Sequence[Any] | None = None,
+                 kwargs: Mapping[str, Any] | None = None,
+                 ) -> TaskID | ResultHandleProtocol:
+        """安排未来执行的任务（由 eta/cron 指定时间）。
+
+        eta 可以是 datetime（绝对时间）或 float（以秒为单位的倒计时）。
+        """
         ...
 
-    def get_result(self, task_id: str, timeout: float | None = None) -> Any:
-        """查询任务结果；超时返回或抛出异常由实现决定。"""
+    def get_result(self, task_id: TaskID, timeout: float | None = None) -> Any:
+        """查询任务结果；超时应抛出 TaskTimeoutError。"""
         ...
-    async def async_get_result(self, task_id: str, timeout: float | None = None) -> Any:
+
+    async def async_get_result(self, task_id: TaskID, timeout: float | None = None) -> Any:
         """异步查询任务结果。"""
         ...
-    def revoke(self, task_id: str, terminate: bool = False) -> None:
+
+    def revoke(self, task_id: TaskID, terminate: bool = False) -> None:
         """撤销任务（可选强制终止 worker 执行）。"""
         ...
-    async def async_revoke(self, task_id: str, terminate: bool = False) -> None:
+
+    async def async_revoke(self, task_id: TaskID, terminate: bool = False) -> None:
         """异步撤销任务。"""
         ...
 
-    def inspect_workers(self) -> dict[str, Any]:
+    def inspect_workers(self) -> Mapping[str, Any]:
         """返回当前 worker 状态的概要（实现可以返回空或有限信息）。"""
         ...
-    async def async_inspect_workers(self) -> dict[str, Any]:
+
+    async def async_inspect_workers(self) -> Mapping[str, Any]:
         """异步版本的 inspect_workers。"""
         ...
+
     def close(self) -> None:
-        """释放调度器相关资源。"""
+        """释放调度器相关资源（同步）。"""
         ...
+
     async def async_close(self) -> None:
         """异步释放资源的版本（注意：实现可以选择实现异步或同步 close）。"""
         ...
 
-
+#endregion
 #endregion
 #endregion

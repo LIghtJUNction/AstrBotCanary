@@ -12,6 +12,18 @@ from .enums import AstrBotModuleType
 from .db import AstrbotDatabase
 from .models import Message
 
+from .scheduler import (
+    IAstrbotTaskScheduler,
+    CeleryTaskScheduler,
+    ResultHandleProtocol,
+    TaskTimeoutError,
+    TaskNotFoundError,
+    TaskID, # type TaskID: str
+    CeleryResultHandle,
+    InMemoryResultHandle,
+)
+from .msgbus import IAstrbotMessageBus, AstrbotMessageBus
+
 
 __all__ = [
     "IAstrbotUIModule",
@@ -33,4 +45,19 @@ __all__ = [
 
     # models
     "Message",
+
+    # scheduler
+    "IAstrbotTaskScheduler",
+    "CeleryTaskScheduler",
+    "ResultHandleProtocol",
+    "CeleryResultHandle",
+    "InMemoryResultHandle",
+    "TaskTimeoutError",
+    "TaskNotFoundError",
+    "TaskID",
+
+    # msgbus
+    "IAstrbotMessageBus",
+    "AstrbotMessageBus",
+
 ]
