@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any
 from pydantic import BaseModel, Field
 
-from astrbot_canary.core.types import BROKER_TYPE
+from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import AstrbotResultBackendType
 
 # 开发者必读：

@@ -41,7 +41,6 @@ class AstrbotModuleConfig(BaseModel):
     tui: list[tuple[str, str]] = Field(..., description="全部已发现tui模块 (group, name)")
     unknown: list[tuple[str, str]] = Field(..., description="全部已发现unknown模块 (group, name)")
 
-
 logger = getLogger("astrbot_canary.module.core")
 
 class AstrbotCoreModule():

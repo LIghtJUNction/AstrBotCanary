@@ -19,7 +19,7 @@ from taskiq import InMemoryBroker, ZeroMQBroker
 from taskiq_aio_pika import AioPikaBroker
 from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
 from taskiq_redis import RedisStreamBroker
-from astrbot_canary.core.types import BROKER_TYPE
+from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import AstrbotBrokerType
 
 # 开发者必读：

@@ -16,5 +16,6 @@ tui = [ [ "astrbot.modules.tui", "canary_tui",],]
 unknown = [ [ "", "",],]
 
 [value.last_loaded_modules]
+astrbot_canary_loader = [ "loader", "astrbot.modules.loader", "canary_loader",]
 
 [default.last_loaded_modules]
