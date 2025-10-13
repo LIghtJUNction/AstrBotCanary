@@ -1,14 +1,12 @@
 from robyn import Robyn
 from astrbot_canary_api.types import BROKER_TYPE
 from logging import getLogger , Logger
-logger: Logger = getLogger("astrbot_canary.web.app")
+logger: Logger = getLogger("astrbot_canary.module.web.app")
 
 web_app = Robyn(__file__)
 
 @web_app.startup_handler  # type: ignore[reportUnknownMemberType]
 async def startup_handler() -> None:
-    """Robyn startup handler — keep lightweight. Broker lifecycle is
-    managed by the module that owns it (module.Start runs broker.startup)."""
     logger.info("Web app startup handler called")
     broker: BROKER_TYPE = web_app.dependencies.get_global_dependencies()["BROKER"]
     await broker.startup()

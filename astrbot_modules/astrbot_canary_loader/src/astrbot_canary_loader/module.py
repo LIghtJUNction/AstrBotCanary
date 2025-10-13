@@ -8,6 +8,7 @@ from astrbot_canary_api import (
 )
 from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_api.interface import IAstrbotDatabase
+from .tasks import AstrbotCanaryLoaderTasks
 
 from logging import getLogger , Logger
 
@@ -58,6 +59,9 @@ class AstrbotLoader():
 
         # 绑定配置
         ...
+
+        # 绑定任务
+        AstrbotCanaryLoaderTasks.register(self.broker)
 
     def Start(self) -> None:
         logger.info(f"{self.name} v{self.version} is starting.")
