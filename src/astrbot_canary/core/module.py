@@ -1,8 +1,12 @@
 from importlib.metadata import EntryPoint, EntryPoints
 from pathlib import Path
 from pydantic import BaseModel, Field
+from taskiq import InMemoryBroker, ZeroMQBroker
+from taskiq_aio_pika import AioPikaBroker
+from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
+from taskiq_redis import RedisStreamBroker
 
-from astrbot_canary.core.backends import AstrbotBackendConfig
+from astrbot_canary.core.backends import AstrbotBackendConfig, AstrbotBackends
 from astrbot_canary.core.brokers import AstrbotBrokerConfig, AstrbotBrokers
 from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 from astrbot_canary.core.paths import AstrbotPaths
@@ -18,7 +22,7 @@ from click import confirm, prompt
 from logging import getLogger
 from astrbot_canary_helper import AstrbotCanaryHelper
 
-from dependency_injector.containers import DeclarativeContainer
+from dependency_injector.containers import Container, DeclarativeContainer
 from dependency_injector import providers
 
 # 类型字典
@@ -77,8 +81,8 @@ class AstrbotCoreModule():
         )
 
         # 上次启动配置
-        self.cfg_modules: IAstrbotConfigEntry = self.config.bindEntry(
-            entry=AstrbotConfigEntry.bind(
+        self.cfg_modules: AstrbotConfigEntry[AstrbotModuleConfig] = self.config.bindEntry(
+            entry=AstrbotConfigEntry[AstrbotModuleConfig].bind(
                 pypi_name=self.pypi_name,
                 group="core",
                 name="last_loaded_modules",
@@ -89,8 +93,8 @@ class AstrbotCoreModule():
         )
 
         # 设置消息代理
-        self.cfg_broker: IAstrbotConfigEntry = self.config.bindEntry(
-            entry=AstrbotConfigEntry.bind(
+        self.cfg_broker: AstrbotConfigEntry[AstrbotBrokerConfig] = self.config.bindEntry(
+            entry=AstrbotConfigEntry[AstrbotBrokerConfig].bind(
                 pypi_name=self.pypi_name,
                 group="core",
                 name="broker",
@@ -103,8 +107,8 @@ class AstrbotCoreModule():
         )
 
         # 设置结果后端
-        self.cfg_backend: IAstrbotConfigEntry = self.config.bindEntry(
-            entry=AstrbotConfigEntry.bind(
+        self.cfg_backend: AstrbotConfigEntry[AstrbotBackendConfig] = self.config.bindEntry(
+            entry=AstrbotConfigEntry[AstrbotBackendConfig].bind(
                 pypi_name=self.pypi_name,
                 group="core",
                 name="backend",
@@ -119,10 +123,14 @@ class AstrbotCoreModule():
         # 读取配置 -- AstrbotBrokerConfig.broker_type
         self.broker_cfg: AstrbotBrokerConfig = self.cfg_broker.value
 
-        self.broker = AstrbotBrokers.setup(self.broker_cfg)
+        # 设置消息代理
+        self.broker: InMemoryBroker | AioPikaBroker | RedisStreamBroker | ZeroMQBroker | NatsBroker | PushBasedJetStreamBroker | PullBasedJetStreamBroker = AstrbotBrokers.setup(self.broker_cfg)
 
         # 读取配置 -- AstrbotBackendConfig.backend_type
         self.backend_cfg : AstrbotBackendConfig = self.cfg_backend.value
+
+        # 设置结果后端
+        self.broker = AstrbotBackends.setup(self.backend_cfg, self.broker)
 
         class CoreContainer(DeclarativeContainer):
             AstrbotPaths = providers.Object(AstrbotPaths)
@@ -133,7 +141,7 @@ class AstrbotCoreModule():
             BROKER = providers.Object(self.broker)
 
         # 构建依赖容器
-
+        self.container = CoreContainer()
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     def Start(self) -> None:
@@ -154,13 +162,13 @@ class AstrbotCoreModule():
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
             if confirm("是否直接加载这些模块？", default=True):
-                result: module_load_result = self.load_last_modules(last_modules)
+                result: module_load_result = self.load_last_modules(last_modules , deps= self.container)
                 logger.info(f"模块加载完成，加载结果：{result}")
                 return
         # 没有记录或加载失败，自动发现并更新配置
         modules: EntryPoints = self.find_modules()
 
-        result = self.load_modules(modules)
+        result = self.load_modules(modules, deps= self.container)
 
         self.update_cfg_modules(result, self.cfg_modules)
 
@@ -182,7 +190,7 @@ class AstrbotCoreModule():
 
 
 #region 模块加载相关
-    def load_last_modules(self, last_modules: module_info) -> module_load_result:
+    def load_last_modules(self, last_modules: module_info , deps: Container) -> module_load_result:
         """ 返回加载结果字典 """
         result: module_load_result = {}
         for pypi_name, (module_type_str, group, name) in last_modules.items():
@@ -191,19 +199,19 @@ class AstrbotCoreModule():
                 logger.warning(f"无法找到上次记录的模块入口点 {group}:{name}，跳过加载。")
                 result[pypi_name] = (module_type_str, group, name, False)
                 continue
-            _, success = self.load_module(ep)
+            _, success = self.load_module(ep,deps= deps)
 
             logger.info(f"加载上次记录的模块 {group}:{name} {'成功' if success else '失败'}")
             result[pypi_name] = (module_type_str, group, name, success)
         return result
 
-    def load_module(self, entry: EntryPoint) -> tuple[IAstrbotModule | None, bool]:
+    def load_module(self, entry: EntryPoint , deps: Container ) -> tuple[IAstrbotModule | None, bool]:
         """尝试加载指定组和名字的模块 -- 返回是否成功"""
         # 实例化
         module_cls: type[IAstrbotModule] = entry.load()
         module_instance: IAstrbotModule = module_cls()
         try:
-            module_instance.Awake()
+            module_instance.Awake(deps=deps)
             
         except Exception as e:
             logger.error(f"模块 {entry.name} 初始化失败: {e}")
@@ -222,7 +230,7 @@ class AstrbotCoreModule():
         # 合并输出
         return AstrbotCanaryHelper.mergeEntryPoints(loaders, webs, tuis)
 
-    def load_modules(self, modules: EntryPoints) -> module_load_result:
+    def load_modules(self, modules: EntryPoints, deps: Container) -> module_load_result:
         result: module_load_result = {}
         # 按类型分组
         grouped: dict[str, list[EntryPoint]] = {
@@ -302,7 +310,7 @@ class AstrbotCoreModule():
                     # 未被选中，直接标记为加载失败
                     result[entry.name] = (type_value, entry.group, entry.name, False)
                     continue
-                module_instance, success = self.load_module(entry)
+                module_instance, success = self.load_module(entry,deps= deps)
                 pypi_name: str = getattr(module_instance, "pypi_name", entry.name) if module_instance else entry.name
                 result[pypi_name] = (type_value, entry.group, entry.name, success)
                 if success and module_instance is not None:
@@ -352,10 +360,6 @@ class AstrbotCoreModule():
         cfg_modules.value = cfg_obj
         cfg_modules.save(self.paths.config)
         logger.info(f"已更新模块配置: {cfg_modules.value}")
-
-
-
-
 
 
 #endregion

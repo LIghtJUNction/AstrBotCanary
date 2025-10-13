@@ -1,0 +1,10 @@
+pypi_name = "astrbot_canary"
+group = "core"
+name = "broker"
+description = "Message broker type for taskiq (inmemory, redis, etc.)"
+
+[value]
+broker_type = "inmemory"
+
+[default]
+broker_type = "inmemory"

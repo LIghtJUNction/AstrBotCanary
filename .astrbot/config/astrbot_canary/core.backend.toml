@@ -1,0 +1,32 @@
+pypi_name = "astrbot_canary"
+group = "core"
+name = "backend"
+description = "Result backend type for taskiq (none, sqlalchemy, mongodb, etc.)"
+
+[value]
+backend_type = "none"
+
+[default]
+backend_type = "none"
+
+[value.redis]
+
+[value.nats]
+jetstream = false
+
+[value.postgres]
+
+[value.s3]
+
+[value.ydb]
+
+[default.redis]
+
+[default.nats]
+jetstream = false
+
+[default.postgres]
+
+[default.s3]
+
+[default.ydb]

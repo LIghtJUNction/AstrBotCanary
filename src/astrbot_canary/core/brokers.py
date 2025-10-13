@@ -12,11 +12,19 @@ It supports:
 """
 
 from __future__ import annotations
-from typing import Any
 import inspect
 
 from pydantic import AmqpDsn, BaseModel, Field, PostgresDsn, RedisDsn
+from taskiq import InMemoryBroker, ZeroMQBroker
+from taskiq_aio_pika import AioPikaBroker
+from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
+from taskiq_redis import RedisStreamBroker
+from astrbot_canary.core.types import BROKER_TYPE
 from astrbot_canary_api import AstrbotBrokerType
+
+# 开发者必读：
+# https://taskiq-python.github.io/available-components/brokers.html
+
 
 class RedisBrokerConfig(BaseModel):
     redis_url: RedisDsn = Field(..., description="Redis 连接 URL")
@@ -79,16 +87,14 @@ class AstrbotBrokers:
     """
 
     broker_cfg: AstrbotBrokerConfig
-    broker: Any = None
+    broker: BROKER_TYPE | None = None
     @classmethod
-    def setup(cls, broker_cfg: AstrbotBrokerConfig) -> None:
+    def setup(cls, broker_cfg: AstrbotBrokerConfig) -> BROKER_TYPE:
         cls.broker_cfg = broker_cfg
         match cls.broker_cfg.broker_type:
             case AstrbotBrokerType.INMEMORY.value:
-                from taskiq import InMemoryBroker
                 cls.broker = InMemoryBroker()
             case AstrbotBrokerType.RABBITMQ.value:
-                from taskiq_aio_pika import AioPikaBroker
                 if not cls.broker_cfg.rabbitmq:
                     raise ValueError("broker_type 为 rabbitmq 时，rabbitmq 配置不能为空")
                 if not cls.broker_cfg.rabbitmq.rabbitmq_url:
@@ -99,7 +105,6 @@ class AstrbotBrokers:
                     queue_name="astrbot_task_queue"
                 )
             case AstrbotBrokerType.REDIS.value:
-                from taskiq_redis import RedisStreamBroker
                 if not cls.broker_cfg.redis:
                     raise ValueError("broker_type 为 redis 时，redis 配置不能为空")
                 if not cls.broker_cfg.redis.redis_url:
@@ -110,7 +115,6 @@ class AstrbotBrokers:
                     consumer_group_name="astrbot_consumer_group"
                 )
             case AstrbotBrokerType.ZEROMQ.value:
-                from taskiq.brokers.zmq_broker import ZeroMQBroker
                 if not cls.broker_cfg.zeromq:
                     raise ValueError("broker_type 为 zeromq 时，zeromq 配置不能为空")
                 if not getattr(cls.broker_cfg.zeromq, "zmq_pub_host", None) or not getattr(cls.broker_cfg.zeromq, "zmq_sub_host", None):
@@ -129,7 +133,7 @@ class AstrbotBrokers:
                 # 根据配置选择具体实现
                 if not nats_cfg.jetstream:
                     # 普通 NatsBroker
-                    from taskiq_nats import NatsBroker
+
                     cls.broker = NatsBroker(
                         servers=nats_cfg.servers,
                         queue=nats_cfg.queue or "astrbot_tasks",
@@ -138,13 +142,11 @@ class AstrbotBrokers:
                 else:
                     mode = str(nats_cfg.jetstream).lower()
                     if mode == "push":
-                        from taskiq_nats import PushBasedJetStreamBroker
                         cls.broker = PushBasedJetStreamBroker(
                             servers=nats_cfg.servers,
                             queue=nats_cfg.queue or "astrbot_tasks",
                         )
                     elif mode == "pull":
-                        from taskiq_nats import PullBasedJetStreamBroker
                         cls.broker = PullBasedJetStreamBroker(
                             servers=nats_cfg.servers,
                             durable=nats_cfg.durable or "astrbot_durable",
@@ -156,9 +158,13 @@ class AstrbotBrokers:
             case AstrbotBrokerType.CUSTOM.value:
                 ...
 
-
             case _:
                 raise ValueError(f"不支持的 broker_type: {cls.broker_cfg.broker_type}")
+
+        if cls.broker is None:
+            raise RuntimeError("Broker 初始化失败，结果为 None")
+        return cls.broker
+
 
     @classmethod
     async def startup(cls) -> None:

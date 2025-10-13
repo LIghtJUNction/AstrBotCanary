@@ -3,7 +3,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
 
-from dependency_injector.providers import Container
+from dependency_injector.containers import Container
 from sqlalchemy.orm import Session
 from astrbot_canary_api.enums import AstrBotModuleType
 
@@ -22,7 +22,7 @@ class IAstrbotModule(Protocol):
     description: ClassVar[str]
     enabled: bool
 
-    def Awake(self, deps: Container[Any] | None = None ) -> None:
+    def Awake(self, deps: Container | None = None ) -> None:
         """Called when the module is loaded."""
         ...
     def Start(self) -> None:
@@ -114,7 +114,7 @@ class IAstrbotConfig(Protocol):
     configs: dict[str, dict[str, IAstrbotConfigEntry]]
 
     @classmethod
-    def getConfig(cls, pypi_name: str) -> 'IAstrbotConfig':
+    def getConfig(cls, pypi_name: str) -> IAstrbotConfig:
         """获取自己的配置实例并注册到全局配置字典中"""
         ...
 
@@ -140,7 +140,7 @@ class IAstrbotDatabase(Protocol):
     session: Session | None  # sqlalchemy.orm.Session
 
     @classmethod
-    def connect(cls, db_path: Path) -> 'IAstrbotDatabase':
+    def connect(cls, db_path: Path) -> IAstrbotDatabase:
         """连接数据库，返回数据库实例"""
         ...
 
