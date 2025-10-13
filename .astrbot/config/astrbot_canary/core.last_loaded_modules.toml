@@ -17,5 +17,6 @@ unknown = [ [ "", "",],]
 
 [value.last_loaded_modules]
 astrbot_canary_loader = [ "loader", "astrbot.modules.loader", "canary_loader",]
+astrbot_canary_web = [ "web", "astrbot.modules.web", "canary_web",]
 
 [default.last_loaded_modules]

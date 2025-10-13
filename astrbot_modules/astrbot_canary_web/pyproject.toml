@@ -1,17 +1,29 @@
 [project]
 name = "astrbot-canary-web"
 version = "0.1.0"
-description = "Add your description here"
+description = "astrbot canary web module"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 requires-python = ">=3.13.8"
-dependencies = []
+dependencies = [
+    "anyio>=4.11.0",
+    "astrbot-canary-api",
+    "dependency-injector>=4.48.2",
+    "pydantic>=2.12.0",
+    "requests>=2.32.5",
+    "robyn>=0.72.2",
+    "sqlalchemy>=2.0.44",
+    "tqdm>=4.67.1",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+astrbot-canary-api = { workspace = true }
 
 [project.entry-points."astrbot.modules.web"]
 "canary_web" = "astrbot_canary_web:AstrbotCanaryWeb"

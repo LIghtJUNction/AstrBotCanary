@@ -32,3 +32,4 @@ class AstrbotCanaryHelper:
         for eps in args:
             merged_list.extend(eps)
         return EntryPoints(merged_list)
+    

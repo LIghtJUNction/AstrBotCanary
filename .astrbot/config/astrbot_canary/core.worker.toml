@@ -1,0 +1,10 @@
+pypi_name = "astrbot_canary"
+group = "core"
+name = "worker"
+description = "Number of worker threads for taskiq"
+
+[value]
+count = 2
+
+[default]
+count = 2

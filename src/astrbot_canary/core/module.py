@@ -1,7 +1,19 @@
+"""
+
+astrbot_canary 核心模块
+注意：不要在本模块内写异步函数
+异步循环只能在最后一个启动的模块内编写
+
+比如web模块
+请务必使用await broker.startup()等待broker启动完成
+
+"""
 from importlib.metadata import EntryPoint, EntryPoints
 from pathlib import Path
 from pydantic import BaseModel, Field
 from taskiq import InMemoryBroker, ZeroMQBroker
+from taskiq.acks import AcknowledgeType
+from taskiq.cli.common_args import LogLevel
 from taskiq_aio_pika import AioPikaBroker
 from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
 from taskiq_redis import RedisStreamBroker
@@ -11,6 +23,7 @@ from astrbot_canary.core.brokers import AstrbotBrokerConfig, AstrbotBrokers
 from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.db import AstrbotDatabase
+from astrbot_canary.core.worker import AstrbotWorker, AstrbotWorkerConfig
 from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_api import (
     AstrbotBrokerType,
@@ -53,6 +66,10 @@ class AstrbotCoreModule():
     enabled = True
 
     loaded_modules: dict[str, IAstrbotModule] = {}
+
+    # 特有属性
+    is_in_memory_broker: bool = True
+
 #region 基本生命周期
     def Awake(self) -> None:
         logger.info(f"{self.name} v{self.version} is awakening.")
@@ -71,7 +88,7 @@ class AstrbotCoreModule():
 
                 self.paths.astrbot_root = custom_astrbot_root
 
-        logger.info(f"使用的 Astrbot 根目录是 {self.paths.astrbot_root}")
+        logger.info(f"使用的 Astrbot 根目录是 {self.paths.astrbot_root.absolute()}")
         self.config: AstrbotConfig = AstrbotConfig.getConfig(self.pypi_name)
 
         # 初始化数据库
@@ -85,7 +102,12 @@ class AstrbotCoreModule():
                 pypi_name=self.pypi_name,
                 group="core",
                 name="last_loaded_modules",
-                default=AstrbotModuleConfig(loader=[("astrbot.modules.loader","canary_loader")], web=[("astrbot.modules.web","canary_web")], tui=[("astrbot.modules.tui","canary_tui")], unknown=[("","")]),
+                default=AstrbotModuleConfig(
+                    loader=[("astrbot.modules.loader","canary_loader")], 
+                    web=[("astrbot.modules.web","canary_web")], 
+                    tui=[("astrbot.modules.tui","canary_tui")], 
+                    unknown=[("","")]
+                ),
                 description="List of modules loaded in the last session",
                 config_dir=self.paths.config
             )
@@ -119,17 +141,65 @@ class AstrbotCoreModule():
             )
         )
 
+        # 设置工作线程
+        self.cfg_worker: AstrbotConfigEntry[AstrbotWorkerConfig] = self.config.bindEntry(
+            entry=AstrbotConfigEntry[AstrbotWorkerConfig].bind(
+                pypi_name=self.pypi_name,
+                group="core",
+                name="worker",
+                default=AstrbotWorkerConfig(
+                    count=2,
+                    log_level=LogLevel.INFO,
+                    modules=[],
+                    tasks_pattern=("**/tasks.py",),
+                    fs_discover=False,
+                    configure_logging=True,
+                    log_format="[%(asctime)s][%(name)s][%(levelname)-7s][%(processName)s] %(message)s",
+                    max_threadpool_threads=None,
+                    max_process_pool_processes=None,
+                    no_parse=False,
+                    shutdown_timeout=5.0,
+                    reload=False,
+                    reload_dirs=[],
+                    no_gitignore=False,
+                    max_async_tasks=100,
+                    receiver="taskiq.receiver:Receiver",
+                    receiver_arg=[],
+                    max_prefetch=0,
+                    no_propagate_errors=False,
+                    max_fails=-1,
+                    ack_type=AcknowledgeType.WHEN_SAVED,
+                    max_tasks_per_child=None,
+                    wait_tasks_timeout=None,
+                    hardkill_count=3,
+                    use_process_pool=False
+                ),
+                description="config of worker threads for taskiq",
+                config_dir=self.paths.config
+            )
+        )
+
         # 读取配置 -- AstrbotBrokerConfig.broker_type
         self.broker_cfg: AstrbotBrokerConfig = self.cfg_broker.value
 
         # 设置消息代理
         self.broker: InMemoryBroker | AioPikaBroker | RedisStreamBroker | ZeroMQBroker | NatsBroker | PushBasedJetStreamBroker | PullBasedJetStreamBroker = AstrbotBrokers.setup(self.broker_cfg)
+        self.is_in_memory_broker = isinstance(self.broker, InMemoryBroker)
+            
+        if not self.is_in_memory_broker:
+            # 读取配置 -- AstrbotBackendConfig.backend_type
+            self.backend_cfg: AstrbotBackendConfig = self.cfg_backend.value
+            # 设置结果后端
+            self.broker = AstrbotBackends.setup(self.backend_cfg, self.broker)
 
-        # 读取配置 -- AstrbotBackendConfig.backend_type
-        self.backend_cfg : AstrbotBackendConfig = self.cfg_backend.value
-
-        # 设置结果后端
-        self.broker = AstrbotBackends.setup(self.backend_cfg, self.broker)
+        if not self.is_in_memory_broker:
+            # 读取配置 -- AstrbotWorkerConfig.count
+            self.worker_cfg: AstrbotWorkerConfig = self.cfg_worker.value
+            # 准备worker
+            self.worker = AstrbotWorker.setup(self.worker_cfg, self.broker)
+        else:
+            # 跳过初始化worker
+            logger.info("使用 InMemoryBroker，跳过 AstrbotWorker 初始化。")
 
         class CoreContainer(DeclarativeContainer):
             AstrbotPaths = providers.Object(AstrbotPaths)
@@ -158,12 +228,16 @@ class AstrbotCoreModule():
         last_modules: module_info = self.cfg_modules.value.last_loaded_modules
 
         logger.info(f"last_modules: {last_modules}")
+        _refind = False
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
             if confirm("是否直接加载这些模块？", default=True):
                 result: module_load_result = self.load_last_modules(last_modules , deps= self.container)
                 logger.info(f"模块加载完成，加载结果：{result}")
-        else:
+            else:
+                _refind = True
+
+        if _refind:
             # 没有记录或加载失败，自动发现并更新配置
             modules: EntryPoints = self.find_modules()
 
@@ -178,11 +252,19 @@ class AstrbotCoreModule():
         # 启动模块Start
         for module in self.loaded_modules.values():
             try:
-                module.Start()
+                if module.enabled:
+                    module.Start()
             except Exception as e:
                 logger.error(f"模块 {module.name} 启动失败: {e}")
-        
-        
+
+        # 启动worker && 广播ping任务
+        if not self.is_in_memory_broker:
+            logger.info("Starting Astrbot Worker...")
+            AstrbotWorker.start()
+        else:
+            # 启动监听器
+            ...
+
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is being destroyed.")
         self.cfg_modules.save(self.paths.config)
@@ -201,8 +283,6 @@ class AstrbotCoreModule():
             module.OnDestroy()
         if active:
             module.Start()
-
-
 
 #region 模块加载相关
     def load_last_modules(self, last_modules: module_info , deps: Container) -> module_load_result:
