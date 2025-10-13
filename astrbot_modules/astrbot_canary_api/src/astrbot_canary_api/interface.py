@@ -1,17 +1,12 @@
 from __future__ import annotations
-
-from collections.abc import Callable, Sequence, Mapping, AsyncGenerator
-
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable, ClassVar
-from datetime import datetime
 
+from dependency_injector.providers import Container
 from sqlalchemy.orm import Session
-
 from astrbot_canary_api.enums import AstrBotModuleType
 
-from astrbot_canary_api.models import Message
 
 #region Interfaces
 
@@ -27,7 +22,7 @@ class IAstrbotModule(Protocol):
     description: ClassVar[str]
     enabled: bool
 
-    def Awake(self) -> None:
+    def Awake(self, deps: Container[Any] | None = None ) -> None:
         """Called when the module is loaded."""
         ...
     def Start(self) -> None:

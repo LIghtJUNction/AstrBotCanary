@@ -1,0 +1,191 @@
+"""Broker configuration helpers and a central factory for Astrbot brokers.
+
+This module centralizes broker config models and a helper `AstrbotBrokers` that
+constructs a Taskiq-compatible broker based on `AstrbotBrokerConfig`.
+
+It supports:
+- InMemory
+- Redis (taskiq_redis)
+- RabbitMQ (taskiq_aio_pika)
+- ZeroMQ (taskiq.brokers.zmq_broker)
+- NATS (taskiq_nats) with optional JetStream modes (push/pull)
+"""
+
+from __future__ import annotations
+from typing import Any
+import inspect
+
+from pydantic import AmqpDsn, BaseModel, Field, PostgresDsn, RedisDsn
+from astrbot_canary_api import AstrbotBrokerType
+
+class RedisBrokerConfig(BaseModel):
+    redis_url: RedisDsn = Field(..., description="Redis 连接 URL")
+
+class RabbitmqBrokerConfig(BaseModel):
+    rabbitmq_url: AmqpDsn = Field(..., description="RabbitMQ 连接 URL")
+
+class SqsBrokerConfig(BaseModel):
+    queue_name: str | None = Field(None, description="SQS 队列名 (name)")
+    queue_url: str | None = Field(None, description="SQS 队列完整 URL (优先)")
+
+class ZeromqBrokerConfig(BaseModel):
+    zmq_pub_host: str = Field("tcp://0.0.0.0:5555", description="ZeroMQ 发布 (PUB) 绑定地址，例如 tcp://")
+    zmq_sub_host: str = Field("tcp://localhost:5555", description="ZeroMQ 订阅 (SUB) 绑定地址，例如 tcp://")
+
+
+class NatsBrokerConfig(BaseModel):
+    servers: list[str] = Field(..., description="NATS servers 列表，例如 ['nats://127.0.0.1:4222']")
+    subject_prefix: str | None = Field(default="astrbot_tasks", description="可选的 subject 前缀")
+    # jetstream 模式: None/False 表示不使用 JetStream，'push' 使用 PushBasedJetStreamBroker，'pull' 使用 PullBasedJetStreamBroker
+    jetstream: str | bool | None = Field(None, description="是否使用 JetStream（'push'、'pull' 或 False/None 表示不使用）")
+    # 普通 NatsBroker 与 PushBasedJetStreamBroker 的队列名
+    queue: str | None = Field(None, description="用于 NATS 的队列名（可选）")
+    # Pull-based JetStream 所需的 durable consumer 名称
+    durable: str | None = Field(None, description="Pull-based JetStream 的 durable consumer 名称（可选）")
+
+class PostgresBrokerConfig(BaseModel):
+    dsn: PostgresDsn = Field(..., description="Postgres DSN，用于 PostgreSQL broker")
+
+class YdbBrokerConfig(BaseModel):
+    endpoint: str = Field(..., description="YDB 连接端点或连接字符串")
+    database: str | None = Field(None, description="YDB 数据库名（如适用）")
+    options: dict[str, str] | None = Field(default_factory=dict, description="其他可选参数")
+
+class CustomBrokerConfig(BaseModel):
+    path: str = Field(..., description="自定义 broker 路径，例如 module.path:ClassName")
+    options: dict[str, str] | None = Field(default_factory=dict, description="传递给自定义 broker 的可选参数")
+
+class AstrbotBrokerConfig(BaseModel):
+    broker_type: str = Field(AstrbotBrokerType.INMEMORY.value, description="消息代理类型")
+    redis: RedisBrokerConfig | None = None
+    rabbitmq: RabbitmqBrokerConfig | None = None
+    sqs: SqsBrokerConfig | None = None
+    zeromq: ZeromqBrokerConfig | None = None
+    nats: NatsBrokerConfig | None = None
+    postgresql: PostgresBrokerConfig | None = None
+    ydb: YdbBrokerConfig | None = None
+
+    custom: CustomBrokerConfig | None = None
+
+
+class AstrbotBrokers:
+    """Central broker holder.
+
+    Usage:
+        AstrbotBrokers.setup(cfg)
+        await AstrbotBrokers.startup()
+        # use AstrbotBrokers.broker to register tasks
+        await AstrbotBrokers.shutdown()
+    """
+
+    broker_cfg: AstrbotBrokerConfig
+    broker: Any = None
+    @classmethod
+    def setup(cls, broker_cfg: AstrbotBrokerConfig) -> None:
+        cls.broker_cfg = broker_cfg
+        match cls.broker_cfg.broker_type:
+            case AstrbotBrokerType.INMEMORY.value:
+                from taskiq import InMemoryBroker
+                cls.broker = InMemoryBroker()
+            case AstrbotBrokerType.RABBITMQ.value:
+                from taskiq_aio_pika import AioPikaBroker
+                if not cls.broker_cfg.rabbitmq:
+                    raise ValueError("broker_type 为 rabbitmq 时，rabbitmq 配置不能为空")
+                if not cls.broker_cfg.rabbitmq.rabbitmq_url:
+                    raise ValueError("broker_type 为 rabbitmq 时，rabbitmq_url 不能为空")
+                cls.broker = AioPikaBroker(
+                    rabbitmq_url=cls.broker_cfg.rabbitmq,
+                    exchange_name="astrbot_tasks",
+                    queue_name="astrbot_task_queue"
+                )
+            case AstrbotBrokerType.REDIS.value:
+                from taskiq_redis import RedisStreamBroker
+                if not cls.broker_cfg.redis:
+                    raise ValueError("broker_type 为 redis 时，redis 配置不能为空")
+                if not cls.broker_cfg.redis.redis_url:
+                    raise ValueError("broker_type 为 redis 时，redis_url 不能为空")
+                cls.broker = RedisStreamBroker(
+                    url=str(cls.broker_cfg.redis.redis_url),
+                    queue_name="astrbot_tasks",
+                    consumer_group_name="astrbot_consumer_group"
+                )
+            case AstrbotBrokerType.ZEROMQ.value:
+                from taskiq.brokers.zmq_broker import ZeroMQBroker
+                if not cls.broker_cfg.zeromq:
+                    raise ValueError("broker_type 为 zeromq 时，zeromq 配置不能为空")
+                if not getattr(cls.broker_cfg.zeromq, "zmq_pub_host", None) or not getattr(cls.broker_cfg.zeromq, "zmq_sub_host", None):
+                    raise ValueError("broker_type 为 zeromq 时，zmq_pub_host 和 zmq_sub_host 不能为空")
+                cls.broker = ZeroMQBroker(
+                    zmq_pub_host=str(cls.broker_cfg.zeromq.zmq_pub_host),
+                    zmq_sub_host=str(cls.broker_cfg.zeromq.zmq_sub_host),
+                )
+            case AstrbotBrokerType.NATS.value:
+                if not cls.broker_cfg.nats:
+                    raise ValueError("broker_type 为 nats 时，nats 配置不能为空")
+                nats_cfg = cls.broker_cfg.nats
+                if not getattr(nats_cfg, "servers", None):
+                    raise ValueError("broker_type 为 nats 时，servers 不能为空")
+
+                # 根据配置选择具体实现
+                if not nats_cfg.jetstream:
+                    # 普通 NatsBroker
+                    from taskiq_nats import NatsBroker
+                    cls.broker = NatsBroker(
+                        servers=nats_cfg.servers,
+                        queue=nats_cfg.queue or "astrbot_tasks",
+                        subject=nats_cfg.subject_prefix or "astrbot_tasks",
+                    )
+                else:
+                    mode = str(nats_cfg.jetstream).lower()
+                    if mode == "push":
+                        from taskiq_nats import PushBasedJetStreamBroker
+                        cls.broker = PushBasedJetStreamBroker(
+                            servers=nats_cfg.servers,
+                            queue=nats_cfg.queue or "astrbot_tasks",
+                        )
+                    elif mode == "pull":
+                        from taskiq_nats import PullBasedJetStreamBroker
+                        cls.broker = PullBasedJetStreamBroker(
+                            servers=nats_cfg.servers,
+                            durable=nats_cfg.durable or "astrbot_durable",
+                        )
+                    else:
+                        raise ValueError(f"未知的 nats.jetstream 模式: {nats_cfg.jetstream}")
+
+            
+            case AstrbotBrokerType.CUSTOM.value:
+                ...
+
+
+            case _:
+                raise ValueError(f"不支持的 broker_type: {cls.broker_cfg.broker_type}")
+
+    @classmethod
+    async def startup(cls) -> None:
+        """Start underlying broker if it exposes a startup method.
+
+        This will call broker.startup() if present and await it when it's awaitable.
+        """
+        if cls.broker is None:
+            return
+        start = getattr(cls.broker, "startup", None)
+        if start is None:
+            return
+        result = start()
+        if inspect.isawaitable(result):
+            await result
+
+    @classmethod
+    async def shutdown(cls) -> None:
+        """Shutdown underlying broker if it exposes a shutdown method.
+
+        This will call broker.shutdown() if present and await it when it's awaitable.
+        """
+        if cls.broker is None:
+            return
+        stop = getattr(cls.broker, "shutdown", None)
+        if stop is None:
+            return
+        result = stop()
+        if inspect.isawaitable(result):
+            await result

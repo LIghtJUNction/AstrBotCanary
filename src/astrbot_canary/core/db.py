@@ -7,10 +7,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from sqlalchemy.engine import Engine
 from contextlib import contextmanager
-from astrbot_canary_api.interface import IAstrbotDatabase
 
 class AstrbotDatabase():
-
     database_url: str
     engine: Engine | None
     session: Session | None
@@ -23,7 +21,7 @@ class AstrbotDatabase():
         self.session = SessionLocal()
 
     @classmethod
-    def connect(cls, db_path: Path) -> "AstrbotDatabase":
+    def connect(cls, db_path: Path) -> AstrbotDatabase:
         return cls(db_path)
 
     @classmethod

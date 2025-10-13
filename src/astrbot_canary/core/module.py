@@ -1,33 +1,32 @@
 from importlib.metadata import EntryPoint, EntryPoints
 from pathlib import Path
-
 from pydantic import BaseModel, Field
 
+from astrbot_canary.core.backends import AstrbotBackendConfig
+from astrbot_canary.core.brokers import AstrbotBrokerConfig, AstrbotBrokers
+from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
+from astrbot_canary.core.paths import AstrbotPaths
+from astrbot_canary.core.db import AstrbotDatabase
+from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_api import (
+    AstrbotBrokerType,
     IAstrbotModule, 
     IAstrbotConfigEntry ,
     IAstrbotPaths,
-    AstrbotPaths , 
-    AstrbotConfig , 
-    AstrbotConfigEntry 
 )
 from click import confirm, prompt
-
 from logging import getLogger
-
-from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_helper import AstrbotCanaryHelper
 
-from astrbot_canary_api.msgbus import AstrbotMessageBus
+from dependency_injector.containers import DeclarativeContainer
+from dependency_injector import providers
 
 # 类型字典
-
 type module_info = dict[str, tuple[str, str, str ]]
 """pypi_name :(module_type, group, name)"""
 
 type module_load_result = dict[str, tuple[str, str, str , bool]]
 """pypi_name :(module_type, group, name, success)"""
-
 
 class AstrbotModuleConfig(BaseModel):
     """模块配置，保存已加载的模块列表等"""
@@ -72,6 +71,11 @@ class AstrbotCoreModule():
         logger.info(f"使用的 Astrbot 根目录是 {self.paths.astrbot_root}")
         self.config: AstrbotConfig = AstrbotConfig.getConfig(self.pypi_name)
 
+        # 初始化数据库
+        self.db: AstrbotDatabase = AstrbotDatabase(
+            db_path=self.paths.astrbot_root / "astrbot.db"
+        )
+
         # 上次启动配置
         self.cfg_modules: IAstrbotConfigEntry = self.config.bindEntry(
             entry=AstrbotConfigEntry.bind(
@@ -83,8 +87,53 @@ class AstrbotCoreModule():
                 config_dir=self.paths.config
             )
         )
-        # 启动消息总线 -- 内存传输器（memory://astrbot）
-        self.msgbus: AstrbotMessageBus = AstrbotMessageBus.getBus("memory://astrbot")
+
+        # 设置消息代理
+        self.cfg_broker: IAstrbotConfigEntry = self.config.bindEntry(
+            entry=AstrbotConfigEntry.bind(
+                pypi_name=self.pypi_name,
+                group="core",
+                name="broker",
+                default=AstrbotBrokerConfig(
+                    broker_type=AstrbotBrokerType.INMEMORY.value,
+                ),
+                description="Message broker type for taskiq (inmemory, redis, etc.)",
+                config_dir=self.paths.config
+            )
+        )
+
+        # 设置结果后端
+        self.cfg_backend: IAstrbotConfigEntry = self.config.bindEntry(
+            entry=AstrbotConfigEntry.bind(
+                pypi_name=self.pypi_name,
+                group="core",
+                name="backend",
+                default=AstrbotBackendConfig(
+                    backend_type="none",
+                ),
+                description="Result backend type for taskiq (none, sqlalchemy, mongodb, etc.)",
+                config_dir=self.paths.config
+            )
+        )
+
+        # 读取配置 -- AstrbotBrokerConfig.broker_type
+        self.broker_cfg: AstrbotBrokerConfig = self.cfg_broker.value
+
+        self.broker = AstrbotBrokers.setup(self.broker_cfg)
+
+        # 读取配置 -- AstrbotBackendConfig.backend_type
+        self.backend_cfg : AstrbotBackendConfig = self.cfg_backend.value
+
+        class CoreContainer(DeclarativeContainer):
+            AstrbotPaths = providers.Object(AstrbotPaths)
+            AstrbotConfig = providers.Object(AstrbotConfig)
+            AstrbotConfigEntry = providers.Object(AstrbotConfigEntry)
+            AstrbotDatabase = providers.Object(AstrbotDatabase)
+            
+            BROKER = providers.Object(self.broker)
+
+        # 构建依赖容器
+
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     def Start(self) -> None:
@@ -100,7 +149,7 @@ class AstrbotCoreModule():
         logger.info(f"{self.name} v{self.version} has started.")
         # 优先加载上次记录的模块
         last_modules: module_info = self.cfg_modules.value.last_loaded_modules
-        
+
         logger.info(f"last_modules: {last_modules}")
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
@@ -130,8 +179,6 @@ class AstrbotCoreModule():
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is being destroyed.")
         self.cfg_modules.save(self.paths.config)
-        AstrbotMessageBus.resetBus()
-#endregion
 
 
 #region 模块加载相关
@@ -266,6 +313,7 @@ class AstrbotCoreModule():
 #endregion
 
 #region 配置更新相关
+
     def update_cfg_modules(self, load_result: module_load_result, cfg_modules: IAstrbotConfigEntry) -> None:
         # 保存真实的 (group, name) 信息到 last_loaded_modules
         last_loaded_modules: dict[str, tuple[str, str, str]] = {}
@@ -304,3 +352,12 @@ class AstrbotCoreModule():
         cfg_modules.value = cfg_obj
         cfg_modules.save(self.paths.config)
         logger.info(f"已更新模块配置: {cfg_modules.value}")
+
+
+
+
+
+
+#endregion
+#endregion
+

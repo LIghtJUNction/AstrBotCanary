@@ -20,6 +20,9 @@ dependencies = [
     "astrbot-canary-helper", # 无特殊功能，简单封装，仅用于简化代码
     "anyio>=4.11.0",
     "trio>=0.31.0",
+    "dependency-injector>=4.48.2",
+    "taskiq>=0.11.18",
+    "pyzmq>=27.1.0",
 ]
 
 [build-system]

@@ -112,7 +112,7 @@ ORM:sqlalchemy
 
 2. 从pypi安装本项目
 uv tool install aStrBoT.-_-_cAnarY
-（等正式版出来我换成正常一点的，不过其实这样也能安装哈哈）
+（稳定版发布后再改）
 ---
 
 ## 小贴士 (TIPS)
