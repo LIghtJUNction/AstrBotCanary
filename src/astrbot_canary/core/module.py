@@ -163,17 +163,17 @@ class AstrbotCoreModule():
             if confirm("是否直接加载这些模块？", default=True):
                 result: module_load_result = self.load_last_modules(last_modules , deps= self.container)
                 logger.info(f"模块加载完成，加载结果：{result}")
-                return
-        # 没有记录或加载失败，自动发现并更新配置
-        modules: EntryPoints = self.find_modules()
+        else:
+            # 没有记录或加载失败，自动发现并更新配置
+            modules: EntryPoints = self.find_modules()
 
-        result = self.load_modules(modules, deps= self.container)
+            result = self.load_modules(modules, deps= self.container)
 
-        self.update_cfg_modules(result, self.cfg_modules)
+            self.update_cfg_modules(result, self.cfg_modules)
 
-        logger.info(f"模块唤醒完成，加载结果：{result}")
+            logger.info(f"模块唤醒完成，加载结果：{result}")
 
-        logger.info(f"已加载的模块有：{list(self.loaded_modules.keys())}")
+            logger.info(f"已加载的模块有：{list(self.loaded_modules.keys())}")
 
         # 启动模块Start
         for module in self.loaded_modules.values():
@@ -186,6 +186,22 @@ class AstrbotCoreModule():
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is being destroyed.")
         self.cfg_modules.save(self.paths.config)
+
+#region 特有功能函数
+    @staticmethod
+    def setActive(active: bool, module: IAstrbotModule) -> None:
+        """Enable or disable the module at runtime."""
+        if module.enabled == active:
+            logger.info(f"{module.name} is already {'enabled' if active else 'disabled'}. No action taken.")
+            return
+        module.enabled = active
+        state = "enabled" if active else "disabled"
+        logger.info(f"{module.name} has been {state} at runtime.")
+        if not active:
+            module.OnDestroy()
+        if active:
+            module.Start()
+
 
 
 #region 模块加载相关

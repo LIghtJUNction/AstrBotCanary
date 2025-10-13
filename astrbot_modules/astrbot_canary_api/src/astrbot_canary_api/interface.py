@@ -20,7 +20,7 @@ class IAstrbotModule(Protocol):
     version: ClassVar[str]
     authors: ClassVar[list[str]]
     description: ClassVar[str]
-    enabled: bool
+    enabled: bool = True
 
     def Awake(self, deps: Container | None = None ) -> None:
         """Called when the module is loaded."""
@@ -31,7 +31,6 @@ class IAstrbotModule(Protocol):
     def OnDestroy(self) -> None:
         """Called when the module is unloaded."""
         ...
-
 
 @runtime_checkable
 class IAstrbotLoaderModule(IAstrbotModule, Protocol):
@@ -125,8 +124,6 @@ class IAstrbotConfig(Protocol):
     def bindEntry(self, entry: IAstrbotConfigEntry) -> IAstrbotConfigEntry:
         """绑定一个配置项"""
         ...
-
-
 
 #endregion
 

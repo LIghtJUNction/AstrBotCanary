@@ -48,6 +48,7 @@ class AstrbotLoader():
         logger.info(f"Database class ready: {self.db_cls}")
         logger.info(f"Broker instance ready: {self.broker}")
 
+
         # 绑定配置
         ...
 
@@ -58,3 +59,4 @@ class AstrbotLoader():
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is shutting down.")
         pass
+

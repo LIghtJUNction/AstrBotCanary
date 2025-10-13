@@ -123,10 +123,7 @@ if __name__ == "__main__":
     # 测试代码
     from astrbot_canary.core.paths import AstrbotPaths
     from enum import Enum
-
-
     cfg_dir: Path = AstrbotPaths.root("TEST").config
-
     class SubConfig(BaseModel):
         sub_field1: str = Field("sub_value1", description="子配置字段1")
         sub_field2: int = Field(42, description="子配置字段2")
