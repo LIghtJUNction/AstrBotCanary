@@ -18,7 +18,7 @@ from taskiq_aio_pika import AioPikaBroker
 from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
 from taskiq_redis import RedisStreamBroker
 
-from astrbot_canary.core.backends import AstrbotBackendConfig, AstrbotBackends
+from astrbot_canary.core.backends import AstrbotBackendConfig, AstrbotBackends, AstrbotNatsBackendConfig, AstrbotPostgresBackendConfig, AstrbotRedisBackendConfig, AstrbotS3BackendConfig, AstrbotYdbBackendConfig
 from astrbot_canary.core.brokers import AstrbotBrokerConfig, AstrbotBrokers
 from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 from astrbot_canary.core.paths import AstrbotPaths
@@ -27,6 +27,7 @@ from astrbot_canary.core.worker import AstrbotWorker, AstrbotWorkerConfig
 from astrbot_canary_api.enums import AstrBotModuleType
 from astrbot_canary_api import (
     AstrbotBrokerType,
+    AstrbotResultBackendType,
     IAstrbotModule, 
     IAstrbotConfigEntry ,
     IAstrbotPaths,
@@ -113,7 +114,7 @@ class AstrbotCoreModule():
             )
         )
 
-        # 设置消息代理
+        # 设置消息代理 -- 默认使用 InMemoryBroker
         self.cfg_broker: AstrbotConfigEntry[AstrbotBrokerConfig] = self.config.bindEntry(
             entry=AstrbotConfigEntry[AstrbotBrokerConfig].bind(
                 pypi_name=self.pypi_name,
@@ -127,21 +128,26 @@ class AstrbotCoreModule():
             )
         )
 
-        # 设置结果后端
+        # 设置结果后端 -- 默认使用 InMemoryBackend
         self.cfg_backend: AstrbotConfigEntry[AstrbotBackendConfig] = self.config.bindEntry(
             entry=AstrbotConfigEntry[AstrbotBackendConfig].bind(
                 pypi_name=self.pypi_name,
                 group="core",
                 name="backend",
                 default=AstrbotBackendConfig(
-                    backend_type="none",
+                    backend_type=AstrbotResultBackendType.INMEMORY.value,
+                    redis=AstrbotRedisBackendConfig(redis_url=None),
+                    nats=AstrbotNatsBackendConfig(nats_url=None, jetstream=False, durable_name=None),
+                    postgres=AstrbotPostgresBackendConfig(dsn=None),
+                    s3=AstrbotS3BackendConfig(bucket=None, region=None),
+                    ydb=AstrbotYdbBackendConfig(endpoint=None, database=None)
                 ),
                 description="Result backend type for taskiq (none, sqlalchemy, mongodb, etc.)",
                 config_dir=self.paths.config
             )
         )
 
-        # 设置工作线程
+        # 设置工作线程 -- 非 InMemoryBroker 时启用worker
         self.cfg_worker: AstrbotConfigEntry[AstrbotWorkerConfig] = self.config.bindEntry(
             entry=AstrbotConfigEntry[AstrbotWorkerConfig].bind(
                 pypi_name=self.pypi_name,
@@ -185,12 +191,11 @@ class AstrbotCoreModule():
         # 设置消息代理
         self.broker: InMemoryBroker | AioPikaBroker | RedisStreamBroker | ZeroMQBroker | NatsBroker | PushBasedJetStreamBroker | PullBasedJetStreamBroker = AstrbotBrokers.setup(self.broker_cfg)
         self.is_in_memory_broker = isinstance(self.broker, InMemoryBroker)
-            
-        if not self.is_in_memory_broker:
-            # 读取配置 -- AstrbotBackendConfig.backend_type
-            self.backend_cfg: AstrbotBackendConfig = self.cfg_backend.value
-            # 设置结果后端
-            self.broker = AstrbotBackends.setup(self.backend_cfg, self.broker)
+
+        # 读取配置 -- AstrbotBackendConfig.backend_type
+        self.backend_cfg: AstrbotBackendConfig = self.cfg_backend.value
+        # 设置结果后端 -- 绑定到broker
+        self.broker = AstrbotBackends.setup(self.backend_cfg, self.broker)
 
         if not self.is_in_memory_broker:
             # 读取配置 -- AstrbotWorkerConfig.count
@@ -228,14 +233,13 @@ class AstrbotCoreModule():
         last_modules: module_info = self.cfg_modules.value.last_loaded_modules
 
         logger.info(f"last_modules: {last_modules}")
-        _refind = False
+        _refind = True
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
             if confirm("是否直接加载这些模块？", default=True):
                 result: module_load_result = self.load_last_modules(last_modules , deps= self.container)
                 logger.info(f"模块加载完成，加载结果：{result}")
-            else:
-                _refind = True
+                _refind = False
 
         if _refind:
             # 没有记录或加载失败，自动发现并更新配置

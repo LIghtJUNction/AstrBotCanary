@@ -1,9 +1,14 @@
 from __future__ import annotations
 from typing import Any
 from pydantic import BaseModel, Field
+from taskiq.brokers.inmemory_broker import InmemoryResultBackend
+from taskiq.result_backends.dummy import DummyResultBackend
 
 from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import AstrbotResultBackendType
+
+from logging import getLogger , Logger
+logger: Logger = getLogger("astrbot_canary.core.backends")
 
 # 开发者必读：
 # https://taskiq-python.github.io/available-components/result-backends.html#nats-result-backend
@@ -31,7 +36,6 @@ class AstrbotPostgresBackendConfig(BaseModel):
     """PostgreSQL backend configuration."""
     dsn: str | None = Field(None, description="PostgreSQL DSN (e.g. postgresql://user:pass@host:5432/db)")
 
-
 class AstrbotS3BackendConfig(BaseModel):
     """S3/result-object storage backend configuration."""
     bucket: str | None = Field(None, description="S3 bucket name to store task results")
@@ -44,7 +48,7 @@ class AstrbotYdbBackendConfig(BaseModel):
 
 
 class AstrbotBackendConfig(BaseModel):
-    backend_type: str = Field(default=AstrbotResultBackendType.NONE.value, description="The type of backend to use, e.g., 'sqlalchemy', 'mongodb', etc.")
+    backend_type: str = Field(default=AstrbotResultBackendType.INMEMORY.value, description="The type of backend to use, e.g., 'sqlalchemy', 'mongodb', etc.")
     redis: AstrbotRedisBackendConfig = AstrbotRedisBackendConfig(redis_url=None)
     nats: AstrbotNatsBackendConfig = AstrbotNatsBackendConfig(nats_url=None, jetstream=False, durable_name=None)
     postgres: AstrbotPostgresBackendConfig = AstrbotPostgresBackendConfig(dsn=None)
@@ -56,22 +60,28 @@ class AstrbotBackends:
     backend_cfg: AstrbotBackendConfig
     # backend 可用于存放不同实现的 result backend（类型在运行时确定）
     backend: Any | None
+    broker: BROKER_TYPE
 
     @classmethod
-    def setup(cls, backend_cfg: AstrbotBackendConfig, broker: Any) -> BROKER_TYPE:
+    def setup(cls, backend_cfg: AstrbotBackendConfig, broker: BROKER_TYPE) -> BROKER_TYPE:
         cls.backend_cfg = backend_cfg
+
+        
         match cls.backend_cfg.backend_type:
-            case AstrbotResultBackendType.NONE.value:
-                cls.backend = None
+            # 默认支持
+            case AstrbotResultBackendType.INMEMORY.value:
+                """ 我看了下，默认是保存100条消息
+                请使用await broker.wait_all() 
+                不要紧接着立马读取结果，否则可能读不到 ...
+                这个后续可以升级为更高级的结果后端！
+                见：https://taskiq-python.github.io/available-components/result-backends.html#inmemory-result-backend
+                """
+                cls.backend = InmemoryResultBackend()
 
+            # TODO: 需要维护
             case AstrbotResultBackendType.REDIS.value:
-                try:
-                    from taskiq_redis import RedisAsyncResultBackend
-                except Exception as exc:  # pragma: no cover - dependency error
-                    raise ImportError(
-                        "taskiq-redis is required for Redis result backend; install it with 'pip install taskiq-redis'"
-                    ) from exc
-
+                # https://pypi.org/project/taskiq-redis/
+                from taskiq_redis import RedisAsyncResultBackend
                 if not cls.backend_cfg.redis or not cls.backend_cfg.redis.redis_url:
                     raise ValueError("backend_type 为 redis 时，redis_url 不能为空")
 
@@ -79,8 +89,9 @@ class AstrbotBackends:
                     redis_url=cls.backend_cfg.redis.redis_url,
                 )
 
+            # TODO: 需要维护
             case AstrbotResultBackendType.NATS.value:
-                # NATS backend may be provided by taskiq-nats. Try to import the package
+                # https://github.com/taskiq-python/taskiq-nats
                 try:
                     import taskiq_nats as _taskiq_nats  # type: ignore
                 except Exception as exc:  # pragma: no cover - dependency error
@@ -101,11 +112,9 @@ class AstrbotBackends:
                     nats_cfg = getattr(cls.backend_cfg, "nats")
                     nats_url = getattr(nats_cfg, "nats_url", None)
 
-                if nats_url is None and broker is not None:
+                if nats_url is None:
                     # common broker objects may expose a url or connection attribute
                     nats_url = getattr(broker, "nats_url", None) or getattr(broker, "url", None) or None
-
-                if nats_url is None:
                     # instantiate without URL if backend supports connecting via existing client
                     try:
                         cls.backend = backend_cls()
@@ -116,11 +125,15 @@ class AstrbotBackends:
                 else:
                     cls.backend = backend_cls(nats_url=nats_url)
 
+            # TODO: 这玩意有人用吗？不能缓存消息有啥用
             case AstrbotResultBackendType.DUMMY.value:
+                # Dummy backend does not store results
+                # Default result backend, that does nothing.
+                cls.backend = DummyResultBackend()
 
-                cls.backend = None
+            # TODO: 需要维护
             case AstrbotResultBackendType.POSTGRESQL.value:
-                # PostgreSQL backend (third-party: taskiq-postgresql)
+                # https://github.com/z22092/taskiq-postgresql
                 try:
                     import taskiq_postgresql as _pg  # type: ignore
                 except Exception as exc:  # pragma: no cover - dependency error
@@ -138,6 +151,8 @@ class AstrbotBackends:
                     raise ValueError("backend_type 为 postgresql 时，需要在 backend config 中提供 postgres.dsn")
 
                 cls.backend = pg_cls(dsn=dsn)
+            
+            # TODO: 需要维护
             case AstrbotResultBackendType.S3.value:
                 # S3/result-object storage backend (third-party). Try common packages.
                 # Possible packages: taskiq-s3, taskiq_aio_s3, taskiq_aio_sqs (some projects use S3-like storage)
@@ -164,6 +179,8 @@ class AstrbotBackends:
                     raise ValueError("backend_type 为 s3 时，需要在 backend config 中提供 s3.bucket")
 
                 cls.backend = s3_cls(bucket=bucket)
+
+            # TODO: 需要维护
             case AstrbotResultBackendType.YDB.value:
                 try:
                     import taskiq_ydb as _ydb  # type: ignore
@@ -194,6 +211,8 @@ class AstrbotBackends:
 
         # 如果后端不为 None，尝试绑定
         if cls.backend is not None:
-            broker = broker.with_result_backend(cls.backend)
-        return broker
+            logger.info(f"使用结果后端: {cls.backend_cfg.backend_type}")
+            cls.broker = broker.with_result_backend(cls.backend)
+
+        return cls.broker
             

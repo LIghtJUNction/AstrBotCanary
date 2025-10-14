@@ -26,7 +26,7 @@ class AstrbotBrokerType(Enum):
     CUSTOM = "custom"
 
 class AstrbotResultBackendType(Enum):
-    NONE = "none"
+    INMEMORY = "inmemory"
     DUMMY = "dummy"
     REDIS = "redis"
     NATS = "nats"

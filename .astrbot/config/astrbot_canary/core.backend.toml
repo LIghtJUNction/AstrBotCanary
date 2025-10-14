@@ -4,10 +4,10 @@ name = "backend"
 description = "Result backend type for taskiq (none, sqlalchemy, mongodb, etc.)"
 
 [value]
-backend_type = "none"
+backend_type = "inmemory"
 
 [default]
-backend_type = "none"
+backend_type = "inmemory"
 
 [value.redis]
 

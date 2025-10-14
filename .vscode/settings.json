@@ -10,6 +10,7 @@
         "autoflush",
         "cumtime",
         "dotenv",
+        "dumpb",
         "eventbus",
         "fanout",
         "GPLV",

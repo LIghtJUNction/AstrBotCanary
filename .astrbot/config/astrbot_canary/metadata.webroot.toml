@@ -1,6 +1,0 @@
-pypi_name = "astrbot_canary"
-group = "metadata"
-name = "webroot"
-value = "WindowsPath('.astrbot/webroot')"
-default = "WindowsPath('.astrbot/webroot')"
-description = "webroot directory"
