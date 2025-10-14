@@ -1,7 +1,8 @@
 from typing import Any
 from uuid import uuid4
+
 from robyn import Robyn
-from taskiq import BrokerMessage, InMemoryBroker, TaskiqMessage
+from taskiq import BrokerMessage, InMemoryBroker, TaskiqMessage, TaskiqResult
 from taskiq.decor import AsyncTaskiqDecoratedTask
 from astrbot_canary_api.types import BROKER_TYPE
 from logging import getLogger , Logger
@@ -11,14 +12,17 @@ web_app = Robyn(__file__)
 
 @web_app.startup_handler  # type: ignore[reportUnknownMemberType]
 async def startup_handler() -> None:
-    logger.info("Web app startup handler called")
-    broker: BROKER_TYPE = web_app.dependencies.get_global_dependencies()["BROKER"]
-    await broker.startup()
-    
-    await broker.result_backend.startup()
+    try:
+        logger.info("Web app startup handler called")
+        broker: BROKER_TYPE = web_app.dependencies.get_global_dependencies()["BROKER"]
+        await broker.startup()
+
+        await broker.result_backend.startup()
+    except Exception as e:
+        logger.error(f"未加载注入的Broker: {e}")
 
 
-@web_app.get("/", const=True)
+@web_app.get("/api/", const=True)
 async def index() -> str:
     return "Hello Astrbot Canary Web!"
 
@@ -46,13 +50,16 @@ async def ping(global_dependencies: dict[str, Any]) -> str | None:
             labels={},
         )
     )
+
+    # https://github.com/taskiq-python/taskiq/pull/514 缺少类型标注 
+    # ctrl+左键点击result_backend 调转查看，broker.result_backend : InmemoryResultBackend[Any]
     if await broker.result_backend.get_progress(task_id) is not None:
         logger.info(f"Ping task {task_id} sent, progress available.")
 
     await broker.wait_all()
 
     if await broker.result_backend.is_result_ready(task_id):
-        result = await broker.result_backend.get_result(task_id)
+        result: TaskiqResult[Any]= await broker.result_backend.get_result(task_id)
         return result.return_value
     else:
         return "???"

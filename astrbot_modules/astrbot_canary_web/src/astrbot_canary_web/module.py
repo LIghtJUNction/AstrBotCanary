@@ -39,16 +39,13 @@ class AstrbotCanaryWeb():
         db_cls: type[IAstrbotDatabase] = db_provider()
 
         broker_instance: BROKER_TYPE = BROKER()
-        web_app.inject_global(BROKER=broker_instance) # type: ignore 
-    
+        web_app.inject_global(BROKER=broker_instance) # type: ignore
+
         self.broker: BROKER_TYPE = broker_instance
         self.paths: IAstrbotPaths = paths_cls.root(self.pypi_name)
         self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
         self.db_cls: type[IAstrbotDatabase] = db_cls # 需要连接时调用 connect 方法获取实例
         self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls
-
-        
-
         self.cfg_web: IAstrbotConfigEntry = self.config.bindEntry(
             entry=self.cfg_entry_cls.bind(
                 pypi_name=self.pypi_name,
@@ -66,6 +63,11 @@ class AstrbotCanaryWeb():
         if not AstrbotCanaryFrontend.ensure(self.cfg_web.value.webroot):
             raise FileNotFoundError("Failed to ensure frontend files in webroot.")
         logger.info(f"Frontend files are ready in {self.cfg_web.value.webroot}")
+
+        # 绑定前端
+        web_app.serve_directory(route="/", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
+
+
 
     def Start(self) -> None:
         logger.info(f"{self.name} v{self.version} has started.")

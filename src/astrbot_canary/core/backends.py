@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from pydantic import BaseModel, Field
-from taskiq.brokers.inmemory_broker import InmemoryResultBackend
+from taskiq import InMemoryBroker
 from taskiq.result_backends.dummy import DummyResultBackend
 
 from astrbot_canary_api.types import BROKER_TYPE, RESULT_BACKEND_TYPE
@@ -71,7 +71,8 @@ class AstrbotBackends:
                 这个后续可以升级为更高级的结果后端！
                 见：https://taskiq-python.github.io/available-components/result-backends.html#inmemory-result-backend
                 """
-                cls.backend = InmemoryResultBackend()
+                logger.info("使用 InmemoryResultBackend 作为结果后端，默认保存100条结果")
+                # 直接跳过就行了，创建 broker 时自动使用 InmemoryResultBackend
 
             # TODO: 需要维护
             case AstrbotResultBackendType.REDIS.value:
@@ -207,7 +208,10 @@ class AstrbotBackends:
         # 如果后端不为 None，尝试绑定
 
         logger.info(f"使用结果后端: {cls.backend_cfg.backend_type}")
-        cls.broker = broker.with_result_backend(cls.backend)
-
+        
+        if not isinstance(broker, InMemoryBroker) and hasattr(broker, "with_result_backend"):
+            cls.broker = broker.with_result_backend(cls.backend)
+        else:
+            cls.broker = broker
         return cls.broker
             
