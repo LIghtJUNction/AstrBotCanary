@@ -1,6 +1,7 @@
 from dependency_injector.containers import Container
 from dependency_injector.providers import Provider
 
+from astrbot_canary.core.models import Base
 from astrbot_canary_api import IAstrbotConfig, IAstrbotConfigEntry
 from astrbot_canary_api.enums import AstrBotModuleType
 from logging import getLogger , Logger
@@ -13,7 +14,6 @@ from astrbot_canary_web.frontend import AstrbotCanaryFrontend
 from .app import web_app
 
 logger: Logger = getLogger("astrbot_canary.module.web")
-
 class AstrbotCanaryWeb():
     name = "canary_web"
     pypi_name = "astrbot_canary_web"
@@ -38,6 +38,7 @@ class AstrbotCanaryWeb():
         cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_provider()
         db_cls: type[IAstrbotDatabase] = db_provider()
 
+        # 注入Broker依赖
         broker_instance: BROKER_TYPE = BROKER()
         web_app.inject_global(BROKER=broker_instance) # type: ignore
 
@@ -46,6 +47,12 @@ class AstrbotCanaryWeb():
         self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
         self.db_cls: type[IAstrbotDatabase] = db_cls # 需要连接时调用 connect 方法获取实例
         self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls
+
+        # 初始化数据库连接
+        self.db : IAstrbotDatabase = self.db_cls.init_db(self.paths.data / "canary_web.db", Base)
+        # 注入数据库依赖
+        web_app.inject_global(DB=self.db) # type: ignore
+
         self.cfg_web: IAstrbotConfigEntry = self.config.bindEntry(
             entry=self.cfg_entry_cls.bind(
                 pypi_name=self.pypi_name,
@@ -65,7 +72,7 @@ class AstrbotCanaryWeb():
         logger.info(f"Frontend files are ready in {self.cfg_web.value.webroot}")
 
         # 绑定前端
-        web_app.serve_directory(route="/home/", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
+        web_app.serve_directory(route="/home", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
 
     def Start(self) -> None:
         logger.info(f"{self.name} v{self.version} has started.")

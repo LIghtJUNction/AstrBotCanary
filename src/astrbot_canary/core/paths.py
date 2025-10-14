@@ -25,6 +25,13 @@ class AstrbotPaths():
         return config_path
     
     @property
+    def data(self) -> Path:
+        """ 返回模块数据目录 """
+        data_path = self.astrbot_root / "data" / self.pypi_name
+        data_path.mkdir(parents=True, exist_ok=True)
+        return data_path
+    
+    @property
     def log(self) -> Path:
         """ 返回模块日志目录 """
         log_path = self.astrbot_root / "logs" / self.pypi_name

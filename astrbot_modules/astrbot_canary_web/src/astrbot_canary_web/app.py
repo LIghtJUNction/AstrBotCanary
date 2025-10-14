@@ -1,12 +1,29 @@
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel
-from robyn import Request, Robyn
+from robyn import Request, Response, Robyn
 from taskiq import BrokerMessage, InMemoryBroker, TaskiqMessage, TaskiqResult
 from taskiq.decor import AsyncTaskiqDecoratedTask
 from astrbot_canary_api.types import BROKER_TYPE
 from logging import getLogger , Logger
+
+from astrbot_canary_web.api import (
+    auth_router,
+    chat_router,
+    config_router,
+    conversation_router,
+    file_router,
+    live_log_router,
+    log_history_router,
+    persona_router,
+    plugin_router,
+    session_router,
+    stat_router,
+    t2i_router,
+    tools_router,
+    update_router,
+)
+
 logger: Logger = getLogger("astrbot_canary.module.web.app")
 
 web_app = Robyn(__file__)
@@ -22,11 +39,23 @@ async def startup_handler() -> None:
     except Exception as e:
         logger.error(f"未加载注入的Broker: {e}")
 
+# region root
+
+@web_app.get("/", const=True)
+async def index() -> Response:
+    return Response(
+        status_code=307,
+        description="",
+        headers={"Location": "/home"},
+    )
+
+
+
+# region main
 
 @web_app.get("/api/", const=True)
-async def index() -> str:
+async def api() -> str:
     return "Hello Astrbot Canary Web!"
-
 
 
 @web_app.post("/api/echo")
@@ -42,19 +71,22 @@ async def echo(request: Request):
         "size": request.__sizeof__()
     }
 
-# region main
-
-
-
-
-
-
-
-
-
-
-
-
+web_app.include_router(chat_router) #type: ignore
+# include_router 参数未标类型
+web_app.include_router(auth_router) #type: ignore
+web_app.include_router(config_router) #type: ignore
+web_app.include_router(conversation_router) #type: ignore
+web_app.include_router(file_router) #type: ignore
+web_app.include_router(live_log_router) #type: ignore
+web_app.include_router(log_history_router) #type: ignore
+web_app.include_router(persona_router) #type: ignore
+web_app.include_router(plugin_router) #type: ignore
+web_app.include_router(session_router) #type: ignore
+web_app.include_router(stat_router) #type: ignore
+web_app.include_router(t2i_router) #type: ignore
+web_app.include_router(tools_router) #type: ignore
+web_app.include_router(update_router) #type: ignore
+# endregion
 
 # region debug
 @web_app.get("/debug/ping")

@@ -1,9 +1,10 @@
 from __future__ import annotations
 from pathlib import Path
-from types import TracebackType
+
 from typing import Any, Protocol, runtime_checkable, ClassVar
 
 from dependency_injector.containers import Container
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 from astrbot_canary_api.enums import AstrBotModuleType
 
@@ -71,6 +72,11 @@ class IAstrbotPaths(Protocol):
         ...
 
     @property
+    def data(self) -> Path:
+        """ 返回模块数据目录 """
+        ...
+
+    @property
     def log(self) -> Path:
         """ 返回模块日志目录 """
         ...
@@ -130,11 +136,30 @@ class IAstrbotConfig(Protocol):
 #region database
 
 @runtime_checkable
+class TransactionContext(Protocol):
+    """事务上下文管理器协议"""
+    def __enter__(self) -> Session: ...
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+
+@runtime_checkable
+class AsyncTransactionContext(Protocol):
+    """异步事务上下文管理器协议"""
+    async def __aenter__(self) -> Session: ...
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+
+@runtime_checkable
 class IAstrbotDatabase(Protocol):
     """Interface for Astrbot database management, optimized for SQLAlchemy ORM."""
+    db_path: Path
+    """ 数据库文件路径 """
     database_url: str
-    engine: Any  # sqlalchemy.engine.Engine
+    """ 数据库连接URL """
+    engine: Engine | None  # sqlalchemy.engine.Engine
+    """ SQLAlchemy引擎实例 """
     session: Session | None  # sqlalchemy.orm.Session
+    """ SQLAlchemy会话实例 """
+    base: Any  # declarative_base()
+    """ SQLAlchemy declarative_base 对象，包含所有模型的基类 """
 
     @classmethod
     def connect(cls, db_path: Path) -> IAstrbotDatabase:
@@ -142,8 +167,12 @@ class IAstrbotDatabase(Protocol):
         ...
 
     @classmethod
-    def init_db(cls, db_path: Path, base: Any) -> None:
-        """初始化数据库表结构"""
+    def init_db(cls, db_path: Path, base: Any) -> IAstrbotDatabase:
+        """初始化数据库表结构
+        db_path: Path - 数据库文件路径
+        base: SQLAlchemy declarative_base 对象，包含所有模型的基类
+
+        """
         ...
 
     def execute(self, query: str, params: Any = ()) -> Any:
@@ -154,12 +183,8 @@ class IAstrbotDatabase(Protocol):
         """关闭数据库连接和会话"""
         ...
 
-    def get_session(self) -> Session:
-        """获取当前SQLAlchemy会话对象"""
-        ...
-
-    def transaction(self) -> Any:
-        """上下文管理器/装饰器：自动提交/回滚事务
+    def transaction(self) -> TransactionContext:
+        """上下文管理器：自动提交/回滚事务
         用法：
         @db.transaction()
         def do_something(session): ...
@@ -167,21 +192,11 @@ class IAstrbotDatabase(Protocol):
         """
         ...
 
-    def __enter__(self) -> 'IAstrbotDatabase':
-        ...
-    def __exit__(self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None
-    ) -> None:
-        ...
-    async def __aenter__(self) -> 'IAstrbotDatabase':
-        ...
-    async def __aexit__(self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None
-    ) -> None:
+    async def atransaction(self) -> AsyncTransactionContext:
+        """异步上下文管理器：自动提交/回滚事务
+        用法：
+        async with db.atransaction() as session: ...
+        """
         ...
 
 
