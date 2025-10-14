@@ -187,5 +187,4 @@ class IAstrbotDatabase(Protocol):
 
 #endregion
 
-
 #endregion

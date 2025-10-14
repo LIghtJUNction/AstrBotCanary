@@ -11,12 +11,9 @@ astrbot_canary 核心模块
 from importlib.metadata import EntryPoint, EntryPoints
 from pathlib import Path
 from pydantic import BaseModel, Field
-from taskiq import InMemoryBroker, ZeroMQBroker
+from taskiq import InMemoryBroker
 from taskiq.acks import AcknowledgeType
 from taskiq.cli.common_args import LogLevel
-from taskiq_aio_pika import AioPikaBroker
-from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
-from taskiq_redis import RedisStreamBroker
 
 from astrbot_canary.core.backends import AstrbotBackendConfig, AstrbotBackends, AstrbotNatsBackendConfig, AstrbotPostgresBackendConfig, AstrbotRedisBackendConfig, AstrbotS3BackendConfig, AstrbotYdbBackendConfig
 from astrbot_canary.core.brokers import AstrbotBrokerConfig, AstrbotBrokers
@@ -38,6 +35,8 @@ from astrbot_canary_helper import AstrbotCanaryHelper
 
 from dependency_injector.containers import Container, DeclarativeContainer
 from dependency_injector import providers
+
+from astrbot_canary_api.types import BROKER_TYPE
 
 # 类型字典
 type module_info = dict[str, tuple[str, str, str ]]
@@ -189,7 +188,7 @@ class AstrbotCoreModule():
         self.broker_cfg: AstrbotBrokerConfig = self.cfg_broker.value
 
         # 设置消息代理
-        self.broker: InMemoryBroker | AioPikaBroker | RedisStreamBroker | ZeroMQBroker | NatsBroker | PushBasedJetStreamBroker | PullBasedJetStreamBroker = AstrbotBrokers.setup(self.broker_cfg)
+        self.broker: BROKER_TYPE = AstrbotBrokers.setup(self.broker_cfg)
         self.is_in_memory_broker = isinstance(self.broker, InMemoryBroker)
 
         # 读取配置 -- AstrbotBackendConfig.backend_type

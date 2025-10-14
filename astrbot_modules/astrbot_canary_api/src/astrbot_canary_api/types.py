@@ -1,10 +1,9 @@
-from taskiq import InMemoryBroker, ZeroMQBroker
-from taskiq_aio_pika import AioPikaBroker
-from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
-from taskiq_redis import RedisStreamBroker
+from pydantic import BaseModel
+from taskiq import AsyncBroker, AsyncResultBackend
 
 __all__ = [
     "BROKER_TYPE",
 ]
 
-type BROKER_TYPE = InMemoryBroker | AioPikaBroker | RedisStreamBroker | ZeroMQBroker | NatsBroker | PushBasedJetStreamBroker | PullBasedJetStreamBroker
+type BROKER_TYPE = AsyncBroker
+type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]

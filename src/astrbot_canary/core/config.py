@@ -55,8 +55,7 @@ class AstrbotConfigEntry(BaseSettings, Generic[T]):
             try:
                 file_data = toml.load(config_file.open("r", encoding="utf-8"))
                 # 用 pydantic 校验和赋值
-                from typing import cast
-                entry = cast(AstrbotConfigEntry[T], self.model_validate(file_data))
+                entry =self.model_validate(file_data)
                 val: Any = entry.value
     
                 try:

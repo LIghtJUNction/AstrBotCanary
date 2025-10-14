@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from taskiq.brokers.inmemory_broker import InmemoryResultBackend
 from taskiq.result_backends.dummy import DummyResultBackend
 
-from astrbot_canary_api.types import BROKER_TYPE
+from astrbot_canary_api.types import BROKER_TYPE, RESULT_BACKEND_TYPE
 from astrbot_canary_api import AstrbotResultBackendType
 
 from logging import getLogger , Logger
@@ -22,7 +22,6 @@ class RedisBackendReturnType(BaseModel):
 class AstrbotRedisBackendConfig(BaseModel):
     redis_url: str | None = Field(None, description="Redis 连接 URL")
 
-
 class AstrbotNatsBackendConfig(BaseModel):
     """NATS result backend configuration (JetStream or basic)."""
     # full NATS connection URL, e.g. nats://user:pass@host:4222
@@ -30,7 +29,6 @@ class AstrbotNatsBackendConfig(BaseModel):
     # when using JetStream pull mode you may want to control durable name / queue
     jetstream: bool = Field(False, description="是否使用 JetStream")
     durable_name: str | None = Field(None, description="JetStream durable consumer name (可选)")
-
 
 class AstrbotPostgresBackendConfig(BaseModel):
     """PostgreSQL backend configuration."""
@@ -41,11 +39,9 @@ class AstrbotS3BackendConfig(BaseModel):
     bucket: str | None = Field(None, description="S3 bucket name to store task results")
     region: str | None = Field(None, description="S3 region (optional)")
 
-
 class AstrbotYdbBackendConfig(BaseModel):
     endpoint: str | None = Field(None, description="YDB endpoint")
     database: str | None = Field(None, description="YDB database name")
-
 
 class AstrbotBackendConfig(BaseModel):
     backend_type: str = Field(default=AstrbotResultBackendType.INMEMORY.value, description="The type of backend to use, e.g., 'sqlalchemy', 'mongodb', etc.")
@@ -55,11 +51,10 @@ class AstrbotBackendConfig(BaseModel):
     s3: AstrbotS3BackendConfig = AstrbotS3BackendConfig(bucket=None, region=None)
     ydb: AstrbotYdbBackendConfig = AstrbotYdbBackendConfig(endpoint=None, database=None)
 
-
 class AstrbotBackends:
     backend_cfg: AstrbotBackendConfig
     # backend 可用于存放不同实现的 result backend（类型在运行时确定）
-    backend: Any | None
+    backend: RESULT_BACKEND_TYPE
     broker: BROKER_TYPE
 
     @classmethod
@@ -210,9 +205,9 @@ class AstrbotBackends:
                 raise ValueError(f"Unsupported backend type: {cls.backend_cfg.backend_type}")
 
         # 如果后端不为 None，尝试绑定
-        if cls.backend is not None:
-            logger.info(f"使用结果后端: {cls.backend_cfg.backend_type}")
-            cls.broker = broker.with_result_backend(cls.backend)
+
+        logger.info(f"使用结果后端: {cls.backend_cfg.backend_type}")
+        cls.broker = broker.with_result_backend(cls.backend)
 
         return cls.broker
             

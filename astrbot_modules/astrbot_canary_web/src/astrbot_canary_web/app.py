@@ -1,8 +1,7 @@
 from typing import Any
 from uuid import uuid4
-from pydantic import BaseModel
 from robyn import Robyn
-from taskiq import BrokerMessage, TaskiqMessage, TaskiqResult
+from taskiq import BrokerMessage, InMemoryBroker, TaskiqMessage
 from taskiq.decor import AsyncTaskiqDecoratedTask
 from astrbot_canary_api.types import BROKER_TYPE
 from logging import getLogger , Logger
@@ -15,6 +14,7 @@ async def startup_handler() -> None:
     logger.info("Web app startup handler called")
     broker: BROKER_TYPE = web_app.dependencies.get_global_dependencies()["BROKER"]
     await broker.startup()
+    
     await broker.result_backend.startup()
 
 
@@ -26,6 +26,9 @@ async def index() -> str:
 @web_app.get("/debug/ping")
 async def ping(global_dependencies: dict[str, Any]) -> str | None:
     broker: BROKER_TYPE = global_dependencies["BROKER"]
+    if not isinstance(broker, InMemoryBroker):
+        return "其他Broker可以监听，因此不需要使用此接口来测试"
+
     task_id = uuid4().hex
     taskiq_msg = TaskiqMessage(
         task_id=task_id,
@@ -43,12 +46,16 @@ async def ping(global_dependencies: dict[str, Any]) -> str | None:
             labels={},
         )
     )
+    if await broker.result_backend.get_progress(task_id) is not None:
+        logger.info(f"Ping task {task_id} sent, progress available.")
 
     await broker.wait_all()
-    result = await broker.result_backend.get_result(task_id)
 
-    return result.return_value
-
+    if await broker.result_backend.is_result_ready(task_id):
+        result = await broker.result_backend.get_result(task_id)
+        return result.return_value
+    else:
+        return "???"
 
 @web_app.get("/debug/task/list")
 async def list_tasks(global_dependencies: dict[str, Any]) -> list[str]:
