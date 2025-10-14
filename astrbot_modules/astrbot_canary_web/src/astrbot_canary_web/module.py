@@ -65,9 +65,7 @@ class AstrbotCanaryWeb():
         logger.info(f"Frontend files are ready in {self.cfg_web.value.webroot}")
 
         # 绑定前端
-        web_app.serve_directory(route="/", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
-
-
+        web_app.serve_directory(route="/home/", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
 
     def Start(self) -> None:
         logger.info(f"{self.name} v{self.version} has started.")

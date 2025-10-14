@@ -1,7 +1,8 @@
 from typing import Any
 from uuid import uuid4
 
-from robyn import Robyn
+from pydantic import BaseModel
+from robyn import Request, Robyn
 from taskiq import BrokerMessage, InMemoryBroker, TaskiqMessage, TaskiqResult
 from taskiq.decor import AsyncTaskiqDecoratedTask
 from astrbot_canary_api.types import BROKER_TYPE
@@ -27,6 +28,35 @@ async def index() -> str:
     return "Hello Astrbot Canary Web!"
 
 
+
+@web_app.post("/api/echo")
+async def echo(request: Request):
+    return {
+        "body": request.body,
+        "method": request.method,
+        "identity": request.identity,
+        "path_params": request.path_params,
+        "ip": request.ip_addr,
+        "form_data": request.form_data,
+        "doc": request.__doc__,
+        "size": request.__sizeof__()
+    }
+
+# region main
+
+
+
+
+
+
+
+
+
+
+
+
+
+# region debug
 @web_app.get("/debug/ping")
 async def ping(global_dependencies: dict[str, Any]) -> str | None:
     broker: BROKER_TYPE = global_dependencies["BROKER"]
@@ -71,7 +101,7 @@ async def list_tasks(global_dependencies: dict[str, Any]) -> list[str]:
     task_list = list(tasks.keys())
     return task_list
 
-
+# endregion
 
 if __name__ == "__main__":
     # create a configured "Session" class
