@@ -76,6 +76,8 @@ ASTRBOT_ROOT = "./.astrbot"
 ORM:sqlalchemy
 - 插件系统设计：pluggy+入口点发现机制
 - 接口设计：Protocols
+备选：
+pyahocorasick
 
 - 动态验证一个模块是否符合协议
 - 依赖注入：Dependency Injector
