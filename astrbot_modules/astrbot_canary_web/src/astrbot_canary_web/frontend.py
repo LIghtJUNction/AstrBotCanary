@@ -119,4 +119,3 @@ class AstrbotCanaryFrontend():
 
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(target_dir)
-

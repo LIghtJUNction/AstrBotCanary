@@ -23,7 +23,8 @@ dependencies = [
     "dependency-injector>=4.48.2",
     "taskiq>=0.11.18",
     "pyzmq>=27.1.0",
-    "orjson>=3.11.0",
+    "orjson>=3.11.3",
+    "typer>=0.19.2",
 ]
 
 [build-system]

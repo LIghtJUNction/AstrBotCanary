@@ -1,5 +1,5 @@
-from robyn import SubRouter
+from fastapi import APIRouter
 
 __all__ = ["update_router"]
 
-update_router: SubRouter = SubRouter(__file__, prefix="/update")
+update_router: APIRouter = APIRouter(prefix="/update", tags=["Update"])

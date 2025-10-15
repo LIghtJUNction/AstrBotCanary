@@ -1,5 +1,4 @@
-from robyn import SubRouter
-
+from fastapi import APIRouter
 __all__ = ["file_router"]
 
-file_router: SubRouter = SubRouter(__file__, prefix="/file")
+file_router: APIRouter = APIRouter(prefix="/file", tags=["File"])

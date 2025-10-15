@@ -192,11 +192,25 @@ class IAstrbotDatabase(Protocol):
         """
         ...
 
-    async def atransaction(self) -> AsyncTransactionContext:
+    def atransaction(self) -> AsyncTransactionContext:
         """异步上下文管理器：自动提交/回滚事务
         用法：
         async with db.atransaction() as session: ...
         """
+        ...
+
+    def __aenter__(self) -> IAstrbotDatabase:
+        """异步上下文管理器入口"""
+        ...
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """异步上下文管理器出口"""
+    
+    def __enter__(self) -> IAstrbotDatabase:
+        """上下文管理器入口"""
+        ...
+    
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """上下文管理器出口"""
         ...
 
 

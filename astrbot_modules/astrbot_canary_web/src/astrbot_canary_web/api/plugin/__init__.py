@@ -1,5 +1,5 @@
-from robyn import SubRouter
+from fastapi import APIRouter
 
 __all__ = ["plugin_router"]
 
-plugin_router: SubRouter = SubRouter(__file__, prefix="/plugin")
+plugin_router: APIRouter = APIRouter(prefix="/plugin", tags=["Plugin"])

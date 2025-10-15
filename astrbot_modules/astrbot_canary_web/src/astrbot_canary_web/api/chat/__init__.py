@@ -1,5 +1,4 @@
-from robyn import SubRouter
-
+from fastapi import APIRouter
 __all__ = ["chat_router"]
 
-chat_router: SubRouter = SubRouter(__file__, prefix="/api/chat")
+chat_router: APIRouter = APIRouter(prefix="/chat", tags=["Chat"])

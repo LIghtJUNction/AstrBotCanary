@@ -1,5 +1,5 @@
-from robyn import SubRouter
+from fastapi import APIRouter
 
 __all__ = ["session_router"]
 
-session_router: SubRouter = SubRouter(__file__, prefix="/session")
+session_router: APIRouter = APIRouter(prefix="/session", tags=["Session"])

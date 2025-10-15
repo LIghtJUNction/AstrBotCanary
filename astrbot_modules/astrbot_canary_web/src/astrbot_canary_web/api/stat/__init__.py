@@ -1,5 +1,5 @@
-from robyn import SubRouter
+from fastapi import APIRouter
 
 __all__ = ["stat_router"]
 
-stat_router: SubRouter = SubRouter(__file__, prefix="/stat")
+stat_router: APIRouter = APIRouter(prefix="/stat", tags=["Stat"])

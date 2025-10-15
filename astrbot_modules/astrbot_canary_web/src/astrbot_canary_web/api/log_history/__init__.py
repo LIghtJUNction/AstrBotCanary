@@ -1,5 +1,5 @@
-from robyn import SubRouter
+from fastapi import APIRouter
 
 __all__ = ["log_history_router"]
 
-log_history_router: SubRouter = SubRouter(__file__, prefix="/log_history")
+log_history_router: APIRouter = APIRouter(prefix="/log_history", tags=["Log History"])
