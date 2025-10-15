@@ -11,7 +11,7 @@ from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_web.config import AstrbotCanaryWebConfig
 from astrbot_canary_web.frontend import AstrbotCanaryFrontend
 
-from .app import web_app
+from .app import AstrbotCanaryWebApp
 
 logger: Logger = getLogger("astrbot_canary.module.web")
 class AstrbotCanaryWeb():
@@ -38,9 +38,9 @@ class AstrbotCanaryWeb():
         cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_provider()
         db_cls: type[IAstrbotDatabase] = db_provider()
 
-        # 注入Broker依赖
         broker_instance: BROKER_TYPE = BROKER()
-        web_app.inject_global(BROKER=broker_instance) # type: ignore
+        # 注入依赖
+        AstrbotCanaryWebApp.web_app.inject_global(BROKER=broker_instance) # type: ignore
 
         self.broker: BROKER_TYPE = broker_instance
         self.paths: IAstrbotPaths = paths_cls.root(self.pypi_name)
@@ -51,7 +51,7 @@ class AstrbotCanaryWeb():
         # 初始化数据库连接
         self.db : IAstrbotDatabase = self.db_cls.init_db(self.paths.data / "canary_web.db", Base)
         # 注入数据库依赖
-        web_app.inject_global(DB=self.db) # type: ignore
+        AstrbotCanaryWebApp.db = self.db
 
         self.cfg_web: IAstrbotConfigEntry = self.config.bindEntry(
             entry=self.cfg_entry_cls.bind(
@@ -59,24 +59,38 @@ class AstrbotCanaryWeb():
                 group="basic",
                 name="common",
                 default=AstrbotCanaryWebConfig(
-                    webroot=self.paths.astrbot_root / "webroot"
+                    webroot=self.paths.astrbot_root / "webroot",
+                    host="127.0.0.1",
+                    port=6185
                 ),
                 description="Web UI 监听的主机地址",
                 config_dir=self.paths.config
             )
         )
-        logger.info(f"Web Config initialized: {self.cfg_web.value.webroot}")
 
-        if not AstrbotCanaryFrontend.ensure(self.cfg_web.value.webroot):
+        logger.info(f"Web Config initialized: {self.cfg_web.value.webroot.absolute()}, {self.cfg_web.value.host}:{self.cfg_web.value.port}")
+
+        if not AstrbotCanaryFrontend.ensure(self.cfg_web.value.webroot.absolute()):
             raise FileNotFoundError("Failed to ensure frontend files in webroot.")
-        logger.info(f"Frontend files are ready in {self.cfg_web.value.webroot}")
+        logger.info(f"Frontend files are ready in {self.cfg_web.value.webroot.absolute()}")
 
-        # 绑定前端
-        web_app.serve_directory(route="/home", directory_path=str(self.cfg_web.value.webroot / "dist"), index_file="index.html")
+        # 把已经初始化的属性注入到 web app wrapper 上，确保 self.* 已经存在
+        AstrbotCanaryWebApp.cfg_web = self.cfg_web
+        AstrbotCanaryWebApp.paths = self.paths
+        AstrbotCanaryWebApp.broker = self.broker
+
+        # 绑定前端 （bug）
+        # https://github.com/sparckles/Robyn/issues/1251
+        AstrbotCanaryWebApp.web_app.serve_directory(route="/", directory_path=str(AstrbotCanaryWebApp.cfg_web.value.webroot.absolute() / "dist"), index_file="index.html",show_files_listing=True)
+
+        # 初始路由
+        AstrbotCanaryWebApp.init()
+
+
 
     def Start(self) -> None:
         logger.info(f"{self.name} v{self.version} has started.")
-        web_app.start(host=self.cfg_web.value.host, port=self.cfg_web.value.port)
+        AstrbotCanaryWebApp.web_app.start(host=self.cfg_web.value.host, port=self.cfg_web.value.port)
 
     def OnDestroy(self) -> None:
         logger.info(f"{self.name} v{self.version} is being destroyed.")

@@ -198,11 +198,11 @@ class AstrbotBrokers:
 
 # 关键，当启动worker时，尝试获取 broker 实例（新进程内--需要not InMemoryBroker）
 
-def __getattr__(name: str) -> BROKER_TYPE:
+def __getattr__(name: str) -> BROKER_TYPE | None:
     if name == "broker":
         if AstrbotBrokers.broker is None:
             raise RuntimeError("Broker 未初始化，无法获取实例")
         if isinstance(AstrbotBrokers.broker, InMemoryBroker):
             raise RuntimeError("InMemoryBroker 不能跨进程使用，请选择其他 broker 类型")
         return AstrbotBrokers.broker
-    raise AttributeError(f"module 'astrbot_canary.core.brokers' has no attribute '{name}'")
+    

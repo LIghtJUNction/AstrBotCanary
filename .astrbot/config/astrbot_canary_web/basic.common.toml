@@ -5,10 +5,10 @@ description = "Web UI 监听的主机地址"
 
 [value]
 host = "127.0.0.1"
-port = 8080
+port = 6185
 webroot = ".astrbot\\webroot"
 
 [default]
 host = "127.0.0.1"
-port = 8080
+port = 6185
 webroot = ".astrbot\\webroot"
