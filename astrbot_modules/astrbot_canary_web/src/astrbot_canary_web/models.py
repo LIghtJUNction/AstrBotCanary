@@ -281,7 +281,7 @@ class Response(BaseModel,Generic[DataT]):
         ...
 
     @classmethod
-    def ok(cls, data: Any | None = None, message: str | None = "ok", **data_fields: Any) -> Response[Any]:
+    def ok(cls, data: Any | None = None, message: str | None = "ok", **data_fields: Any) -> Response[dict[str, Any]] | Response[DataT]:
         """创建一个成功响应（OK）。
 
         使用方式示例：

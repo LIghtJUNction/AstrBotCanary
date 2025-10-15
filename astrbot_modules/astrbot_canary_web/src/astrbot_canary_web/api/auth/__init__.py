@@ -58,9 +58,21 @@ async def login(request: Request) -> Response[LoginResponse]:
             if len(existing_users) == 0:
                 # 首次登录：接受任意账号/密码并写入数据库作为默认用户
                 # 使用 User.create_and_issue_token 将创建与 token 签发都封装在模型里
-                _result = User.create_and_issue_token(session, username=username, password=password, exp_days=JWT_EXP_DAYS)
+                _result = User.create_and_issue_token(
+                    session=session, 
+                    username=username, 
+                    password=password, 
+                    exp_days=JWT_EXP_DAYS
+                )
                 token = _result[1]
-                return Response[LoginResponse].ok(message="first user created and logged in", username=username, token=token, change_pwd_hint=is_default_password)
+                return Response[LoginResponse].ok(
+                    message="first user created and logged in", 
+                    data=LoginResponse(
+                        username=username, 
+                        token=token, 
+                        change_pwd_hint=is_default_password
+                    )
+                )
 
             # 非首次：查找指定用户名 (username 为主键，使用 session.get)
             user = session.get(User, username)
@@ -75,7 +87,10 @@ async def login(request: Request) -> Response[LoginResponse]:
 
             # 登录成功（使用模型封装的签发方法）
             token = user.issue_token(exp_days=JWT_EXP_DAYS)
-            return Response[LoginResponse].ok(message="login successful", username=username, token=token, change_pwd_hint=is_default_password)
+            return Response[LoginResponse].ok(
+                message="login successful", 
+                data=LoginResponse(username=username, token=token, change_pwd_hint=is_default_password)
+            )
 
     except HTTPException:
         # 让 HTTPException 向上抛出
@@ -167,7 +182,7 @@ async def edit_account(request: Request) -> Response[EditAccountResponse]:
 
 
             # commit happens on context exit
-            return Response[EditAccountResponse].ok(message="账户信息更新成功", username=user.username)
+            return Response[EditAccountResponse].ok(message="账户信息更新成功", data=EditAccountResponse())
 
     except HTTPException:
         raise
