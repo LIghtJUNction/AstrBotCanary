@@ -2,7 +2,6 @@ from dependency_injector.containers import Container
 from dependency_injector.providers import Provider
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -73,36 +72,16 @@ class AstrbotCanaryWeb():
 
         # 初始化 FastAPI 应用并挂载子路由
         self.app = FastAPI()
-        # 挂载静态文件和路由
-        self.app.mount(
-            path="/home", 
-            app=StaticFiles(directory=self.cfg_web.value.webroot / "dist" , html=True), 
-            name="index.html"
-        )
-        self.app.mount(
-            path="/assets",
-            app=StaticFiles(directory=str(self.cfg_web.value.webroot / "dist" / "assets")),
-            name="assets",
-        )
-        self.app.mount(
-            path="/favicon.svg",
-            app=StaticFiles(directory=str(self.cfg_web.value.webroot / "dist")),
-            name="favicon.svg",
-        )
-        self.app.mount(
-            path="/_redirects",
-            app=StaticFiles(directory=str(self.cfg_web.value.webroot / "dist")),
-            name="_redirects",
-        )
 
-        @self.app.get("/", include_in_schema=False)
-        async def index() -> RedirectResponse: 
-            return RedirectResponse(url="/home")
-
-        logger.debug(f"debug:{index} -- 纯为了消除未存取&警告lol")
-
-        # 嵌套挂载子路由 并注入全部依赖
+        # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
         self.app.include_router(api_router)
+
+        self.app.mount(
+            path="/",
+            app=StaticFiles(directory=self.cfg_web.value.webroot / "dist", html=True),
+            name="frontend",
+        )
+
 
         Response.deps["MODULE"] = self
         # 准备启动...
