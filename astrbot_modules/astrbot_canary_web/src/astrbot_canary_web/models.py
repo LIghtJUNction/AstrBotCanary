@@ -2,13 +2,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import hashlib
 import secrets
-from typing import Any, ClassVar, Generic, Literal, Self, TypeVar
+from typing import Any, ClassVar, Generic, Literal, Self, TypeVar, overload
 from uuid import uuid4
 from pydantic import BaseModel, Field
 from sqlalchemy import String
 from sqlalchemy.orm import Session, declarative_base, mapped_column, Mapped
 
 from jwt import decode, encode # type: ignore
+# PyJWT
 
 Base = declarative_base()
 
@@ -266,8 +267,21 @@ class Response(BaseModel,Generic[DataT]):
     status: Literal["ok", "error"] = "ok"
     message: str | None = None
     data: DataT | None = None
+    # 两个重载：
+    # 1) 调用者传入具体的 DataT，返回 Response[DataT]
+    @overload
     @classmethod
-    def ok(cls, data: DataT | None = None, message: str | None = "ok", **data_fields: Any) -> Self:
+    def ok(cls, data: DataT, message: str | None = "ok") -> Response[DataT]:
+        ...
+
+    # 2) 调用者使用 kwargs 构建匿名 dict 数据，返回 Response[dict[str, Any]]
+    @overload
+    @classmethod
+    def ok(cls, data: None = None, message: str | None = "ok", **data_fields: Any) -> Response[dict[str, Any]]:
+        ...
+
+    @classmethod
+    def ok(cls, data: Any | None = None, message: str | None = "ok", **data_fields: Any) -> Response[Any]:
         """创建一个成功响应（OK）。
 
         使用方式示例：
@@ -276,8 +290,8 @@ class Response(BaseModel,Generic[DataT]):
         - Response[LoginResponse].ok(username=..., token=...)
         """
         if data is None and data_fields:
-            # 接受 kwargs 来构建内部 data 字典
-            data = data_fields  # type: ignore
+            # 如果传入 kwargs，则把它们当作一个简单的 dict 作为 data
+            data = dict(data_fields)
         return cls(status="ok", message=message, data=data)
 
     @classmethod
