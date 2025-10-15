@@ -19,13 +19,14 @@ from astrbot_canary_web.api import api_router
 
 logger: Logger = getLogger("astrbot_canary.module.web")
 class AstrbotCanaryWeb():
-    name = "canary_web"
-    pypi_name = "astrbot_canary_web"
-    module_type = AstrBotModuleType.WEB
-    version = "0.1.0"
-    authors = ["LIghtJUNction"]
-    description = "Web UI module for Astrbot Canary."
-    enabled = True
+    name: str = "canary_web"
+    pypi_name: str = "astrbot_canary_web"
+    module_type: AstrBotModuleType = AstrBotModuleType.WEB
+    version: str = "0.1.0"
+    authors: list[str] = ["LIghtJUNction"]
+    description: str = "Web UI module for Astrbot Canary."
+
+    enabled: bool = True
 
     def Awake(self,deps: Container) -> None:
         logger.info(f"{self.name} v{self.version} is awakening.")
@@ -57,7 +58,8 @@ class AstrbotCanaryWeb():
                 default=AstrbotCanaryWebConfig(
                     webroot=self.paths.astrbot_root / "webroot",
                     host="127.0.0.1",
-                    port=6185
+                    port=6185,
+                    jwt_exp_days=7
                 ),
                 description="Web UI 监听的主机地址",
                 config_dir=self.paths.config

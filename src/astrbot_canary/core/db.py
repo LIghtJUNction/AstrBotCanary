@@ -100,9 +100,6 @@ class AstrbotDatabase():
             self.session.rollback()
             raise
 
-
-
-
 if __name__ == "__main__":
     from sqlalchemy import Column, Integer, String
     Base = declarative_base()
@@ -129,7 +126,7 @@ if __name__ == "__main__":
     with db.transaction() as session:
         for username, email in users_data:
             # 检查是否已存在
-            existing = session.query(User).filter_by(username=username).first()
+            existing = session.get(User, username)
             if not existing:
                 user = User(username=username, email=email)
                 session.add(user)
@@ -142,17 +139,17 @@ if __name__ == "__main__":
 
     # 3. 使用 ORM 更新用户邮箱
     with db.transaction() as session:
-        user = session.query(User).filter_by(username="alice").first()
+        user = session.get(User, "alice")
         if user:
             user.email = "alice@new.com"  # type: ignore[attr]
     print("ORM 更新邮箱成功")
     with db.transaction() as session:
-        user = session.query(User).filter_by(username="alice").first()
+        user = session.get(User, "alice")
         print("更新后:", user)
 
     # 4. 使用 ORM 删除用户
     with db.transaction() as session:
-        user = session.query(User).filter_by(username="bob").first()
+        user = session.get(User, "bob")
         if user:
             session.delete(user)
     print("ORM 删除用户成功")
