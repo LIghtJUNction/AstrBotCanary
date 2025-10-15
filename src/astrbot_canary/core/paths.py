@@ -1,19 +1,24 @@
 import os
 
-from astrbot_canary_api.interface import IAstrbotPaths
 from pathlib import Path
 from dotenv import load_dotenv
+
+from astrbot_canary_api import IAstrbotPaths
 
 class AstrbotPaths():
     """Class to manage and provide paths used by Astrbot Canary."""
     load_dotenv()
     astrbot_root: Path = Path(os.getenv("ASTRBOT_ROOT", Path.home() / ".astrbot"))
-    pypi_name: str
+    
+    def __init__(self,pypi_name: str) -> None:
+        self.pypi_name = pypi_name
+        # 确保根目录存在
+        self.astrbot_root.mkdir(parents=True, exist_ok=True)
 
     @classmethod
-    def root(cls, pypi_name: str) -> IAstrbotPaths:
-        """ 返回模块路径根 """
-        instance: IAstrbotPaths = cls()
+    def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
+        """ 返回Paths实例，用于访问模块的各类目录 """
+        instance: IAstrbotPaths = cls(pypi_name)
         instance.pypi_name = pypi_name
         return instance
     

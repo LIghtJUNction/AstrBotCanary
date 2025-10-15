@@ -3,7 +3,6 @@ from pathlib import Path
 
 from typing import Any, Protocol, runtime_checkable, ClassVar
 
-from dependency_injector.containers import Container
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 from astrbot_canary_api.enums import AstrBotModuleType
@@ -23,7 +22,7 @@ class IAstrbotModule(Protocol):
     description: ClassVar[str]
     enabled: bool = True
 
-    def Awake(self, deps: Container | None = None ) -> None:
+    def Awake(self, **kwargs: Any) -> None:
         """Called when the module is loaded."""
         ...
     def Start(self) -> None:
@@ -59,10 +58,11 @@ class IAstrbotPaths(Protocol):
     """Interface for Astrbot path management."""
 
     astrbot_root: Path
-    pypi_name: str
+    def __init__(self,pypi_name: str) -> None:
+        ...
     
     @classmethod
-    def root(cls, pypi_name: str) -> IAstrbotPaths:
+    def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
         """ 返回模块路径根实例，用于访问模块的各类目录 """
         ...
 
@@ -114,23 +114,27 @@ class IAstrbotConfigEntry(Protocol):
 
 @runtime_checkable
 class IAstrbotConfig(Protocol):
-    """Interface for Astrbot configuration management."""
+    """接口：按实例管理模块配置（不再要求类级全局字典）。"""
+
+    # 每个实例应记录自己的模块标识
     _pypi_name: str
-    configs: dict[str, dict[str, IAstrbotConfigEntry]]
 
     @classmethod
     def getConfig(cls, pypi_name: str) -> IAstrbotConfig:
-        """获取自己的配置实例并注册到全局配置字典中"""
+        """工厂/获取方法：返回针对指定 pypi_name 的配置实例。"""
         ...
 
     def findEntry(self, group: str, name: str) -> IAstrbotConfigEntry | None:
-        """找到指定组和名称的配置项，找不到返回None"""
+        """在本实例作用域查找配置项，找不到返回 None。"""
         ...
 
     def bindEntry(self, entry: IAstrbotConfigEntry) -> IAstrbotConfigEntry:
-        """绑定一个配置项"""
+        """绑定（或覆盖）一个配置项到本实例。"""
         ...
 
+    def get_all_entries(self) -> dict[str, IAstrbotConfigEntry]:
+        """返回当前实例所有配置项的浅拷贝（用于只读/遍历）。"""
+        ...
 #endregion
 
 #region database

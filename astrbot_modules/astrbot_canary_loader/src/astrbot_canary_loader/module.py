@@ -1,5 +1,4 @@
-from dependency_injector.containers import Container
-from dependency_injector.providers import Provider
+from dependency_injector.wiring import Provide
 from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import (
     IAstrbotConfig,
@@ -12,7 +11,6 @@ from .tasks import AstrbotCanaryLoaderTasks
 
 from logging import getLogger , Logger
 
-
 logger: Logger = getLogger("astrbot_canary.module.loader")
 
 class AstrbotLoader():
@@ -24,33 +22,25 @@ class AstrbotLoader():
     description = "Loader module for Astrbot Canary."
     enabled = True
 
-    def Awake(self, deps: Container | None = None) -> None:
+    def Awake(
+            self, 
+            paths_cls: type[IAstrbotPaths] = Provide["CoreContainer.AstrbotPaths"],
+            config_cls: type[IAstrbotConfig] = Provide["CoreContainer.AstrbotConfig"],
+            cfg_entry_cls: type[IAstrbotConfigEntry] = Provide["CoreContainer.AstrbotConfigEntry"],
+            db_cls: type[IAstrbotDatabase] = Provide["CoreContainer.AstrbotDatabase"],
+            broker: BROKER_TYPE = Provide["CoreContainer.BROKER"],
+        ) -> None:
+
         logger.info(f"{self.name} v{self.version} is awakening.")
         # 初始化Paths和Config
-        if deps is None:
-            raise ValueError("Dependency container is required for AstrbotLoader.")
-        logger.debug(f"Dependency container attributes: {[n for n in dir(deps) if not n.startswith('_')]}")
 
-        # TODO: 语法糖将以下内容给简化简化
-        paths_provider: Provider[type[IAstrbotPaths]] = deps.AstrbotPaths
-        config_provider: Provider[type[IAstrbotConfig]] = deps.AstrbotConfig
-        cfg_entry_provider: Provider[type[IAstrbotConfigEntry]] = deps.AstrbotConfigEntry
-        db_provider: Provider[type[IAstrbotDatabase]] = deps.AstrbotDatabase
-        BROKER: Provider[BROKER_TYPE] = deps.BROKER
-
-        paths_cls: type[IAstrbotPaths] = paths_provider()
-        config_cls: type[IAstrbotConfig] = config_provider()
-        cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_provider()
-        db_cls: type[IAstrbotDatabase] = db_provider()
-
-        broker_instance: BROKER_TYPE = BROKER()
-
-        self.paths: IAstrbotPaths = paths_cls.root(self.pypi_name)
+        self.paths: IAstrbotPaths = paths_cls.getPaths(self.pypi_name)
         self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
+
         self.db_cls: type[IAstrbotDatabase] = db_cls # 需要连接时调用 connect 方法获取实例
-        self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls
+        self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls # 用于绑定配置项
         
-        self.broker: BROKER_TYPE = broker_instance
+        self.broker: BROKER_TYPE = broker
 
         logger.info(f"Paths initialized at {self.paths.astrbot_root}")
         logger.info(f"Config initialized for {self.config}")

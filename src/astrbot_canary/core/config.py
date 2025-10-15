@@ -92,37 +92,48 @@ class AstrbotConfigEntry(BaseSettings, Generic[T]):
     def __str__(self) -> str:
         return f"AstrbotConfigEntry \n {self.pypi_name}:{self.group}.{self.name}={self.value} \n Description: {self.description} \n Default: {self.default}"
 
-class AstrbotConfig():
-    configs: dict[str, dict[str, AstrbotConfigEntry[Any]]] = {}
-    _pypi_name: str
+class AstrbotConfig:
+    """
+    每个实例独立维护自己的配置表（不再使用类级全局注册表）。
+    使用方式：
+      cfg = AstrbotConfig.getConfig("pypi_name")
+      entry = AstrbotConfigEntry.bind(...); cfg.bindEntry(entry)
+      e = cfg.findEntry("group","name")
+    注意：不同地方调用 getConfig(...) 会返回独立实例，若需要共享请在上层通过 DI/容器管理单例。
+    """
+
+    def __init__(self, pypi_name: str) -> None:
+        # 当前实例对应的模块名称
+        self._pypi_name: str = pypi_name
+        # 实例私有的 entries 字典：key -> AstrbotConfigEntry
+        self._entries: dict[str, AstrbotConfigEntry[Any]] = {}
 
     @classmethod
-    def getConfig(cls, pypi_name: str) -> AstrbotConfig:
-        # 保证每个 pypi_name 都有自己的配置字典
-        if pypi_name not in cls.configs:
-            cls.configs[pypi_name] = {}
-        _config = cls()
-        _config._pypi_name = pypi_name
-        return _config
+    def getConfig(cls, pypi_name: str) -> "AstrbotConfig":
+        """工厂方法：返回针对指定 pypi_name 的新实例（实例独立）。"""
+        return cls(pypi_name)
 
     def findEntry(self, group: str, name: str) -> AstrbotConfigEntry[Any] | None:
-        # 直接查当前实例对应 pypi_name 的配置分组
+        """在当前实例作用域查找配置项（只查本实例，不访问全局）。"""
         _key = group + "." + name
-        return self.configs.get(self._pypi_name, {}).get(_key, None)
+        return self._entries.get(_key)
 
     def bindEntry(self, entry: AstrbotConfigEntry[T]) -> AstrbotConfigEntry[T]:
-        """绑定一个配置项"""
-        if self._pypi_name not in self.configs:
-            self.configs[self._pypi_name] = {}
+        """绑定一个配置项到当前实例（覆盖同名项）。"""
+        # 确保 entry 的 pypi_name 与实例一致；若不一致则以实例为准并同步
+        entry.pypi_name = self._pypi_name
         _key = entry.group + "." + entry.name
-        self.configs[self._pypi_name][_key] = entry
+        self._entries[_key] = entry
         return entry
+    
+
+
 
 if __name__ == "__main__":
     # 测试代码
     from astrbot_canary.core.paths import AstrbotPaths
     from enum import Enum
-    cfg_dir: Path = AstrbotPaths.root("TEST").config
+    cfg_dir: Path = AstrbotPaths.getPaths("TEST").config
     class SubConfig(BaseModel):
         sub_field1: str = Field("sub_value1", description="子配置字段1")
         sub_field2: int = Field(42, description="子配置字段2")

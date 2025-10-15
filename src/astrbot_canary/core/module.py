@@ -10,6 +10,8 @@ astrbot_canary 核心模块
 """
 from importlib.metadata import EntryPoint, EntryPoints
 from pathlib import Path
+from typing import Any
+from dependency_injector.wiring import inject
 from pydantic import BaseModel, Field
 from taskiq import InMemoryBroker
 from taskiq.acks import AcknowledgeType
@@ -33,7 +35,7 @@ from click import confirm, prompt
 from logging import getLogger
 from astrbot_canary_helper import AstrbotCanaryHelper
 
-from dependency_injector.containers import Container, DeclarativeContainer
+from dependency_injector.containers import DeclarativeContainer
 from dependency_injector import providers
 
 from astrbot_canary_api.types import BROKER_TYPE
@@ -54,7 +56,39 @@ class AstrbotModuleConfig(BaseModel):
     tui: list[tuple[str, str]] = Field(..., description="全部已发现tui模块 (group, name)")
     unknown: list[tuple[str, str]] = Field(..., description="全部已发现unknown模块 (group, name)")
 
+#region 核心模块分发依赖池
+"""
+注意:
+    若要重置核心模块
+    请实现抽象接口 
+    IAstrbotPaths, 
+    IAstrbotConfig, 
+    IAstrbotConfigEntry, 
+    IAstrbotDatabase
+    并在此处注入到容器中
+
+"""
+class CoreContainer(DeclarativeContainer):
+    """
+    CoreContainer 的 Docstring
+    
+    :核心依赖池
+    """
+    AstrbotPaths = providers.Object(AstrbotPaths)
+    AstrbotConfig = providers.Object(AstrbotConfig)
+    AstrbotConfigEntry = providers.Object(AstrbotConfigEntry)
+    AstrbotDatabase = providers.Object(AstrbotDatabase)
+    
+    # 共享的broker实例
+    BROKER = providers.Object(Any)  # 在运行时注入实际的 broker 实例
+
+
+
+
 logger = getLogger("astrbot_canary.module.core")
+
+
+
 
 class AstrbotCoreModule():
     name = "canary_core"
@@ -71,10 +105,11 @@ class AstrbotCoreModule():
     is_in_memory_broker: bool = True
 
 #region 基本生命周期
+
     def Awake(self) -> None:
         logger.info(f"{self.name} v{self.version} is awakening.")
         # 初始化Paths和Config
-        self.paths: IAstrbotPaths = AstrbotPaths.root(self.pypi_name)
+        self.paths: IAstrbotPaths = AstrbotPaths.getPaths(self.pypi_name)
         if self.paths.astrbot_root == Path.home() / ".astrbot":
             if not confirm("你确定要使用推荐的默认路径~/.astrbot 吗？", default=True):
                 custom_astrbot_root_str: str = prompt("请输入你想要的路径（直接回车将使用当前路径）",default=".")
@@ -205,16 +240,9 @@ class AstrbotCoreModule():
             # 跳过初始化worker
             logger.info("使用 InMemoryBroker，跳过 AstrbotWorker 初始化。")
 
-        class CoreContainer(DeclarativeContainer):
-            AstrbotPaths = providers.Object(AstrbotPaths)
-            AstrbotConfig = providers.Object(AstrbotConfig)
-            AstrbotConfigEntry = providers.Object(AstrbotConfigEntry)
-            AstrbotDatabase = providers.Object(AstrbotDatabase)
-            
-            BROKER = providers.Object(self.broker)
-
         # 构建依赖容器
         self.container = CoreContainer()
+        self.container.BROKER.override(providers.Object(self.broker))
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     def Start(self) -> None:
@@ -236,7 +264,7 @@ class AstrbotCoreModule():
         if last_modules:
             logger.info(f"上次启动时加载的模块有：{last_modules}")
             if confirm("是否直接加载这些模块？", default=True):
-                result: module_load_result = self.load_last_modules(last_modules , deps= self.container)
+                result: module_load_result = self.load_last_modules(last_modules)
                 logger.info(f"模块加载完成，加载结果：{result}")
                 _refind = False
 
@@ -244,7 +272,7 @@ class AstrbotCoreModule():
             # 没有记录或加载失败，自动发现并更新配置
             modules: EntryPoints = self.find_modules()
 
-            result = self.load_modules(modules, deps= self.container)
+            result = self.load_modules(modules)
 
             self.update_cfg_modules(result, self.cfg_modules)
 
@@ -288,7 +316,7 @@ class AstrbotCoreModule():
             module.Start()
 
 #region 模块加载相关
-    def load_last_modules(self, last_modules: module_info , deps: Container) -> module_load_result:
+    def load_last_modules(self, last_modules: module_info ) -> module_load_result:
         """ 返回加载结果字典 """
         result: module_load_result = {}
         for pypi_name, (module_type_str, group, name) in last_modules.items():
@@ -297,19 +325,26 @@ class AstrbotCoreModule():
                 logger.warning(f"无法找到上次记录的模块入口点 {group}:{name}，跳过加载。")
                 result[pypi_name] = (module_type_str, group, name, False)
                 continue
-            _, success = self.load_module(ep,deps= deps)
+            _, success = self.load_module(ep)
 
             logger.info(f"加载上次记录的模块 {group}:{name} {'成功' if success else '失败'}")
             result[pypi_name] = (module_type_str, group, name, success)
         return result
 
-    def load_module(self, entry: EntryPoint , deps: Container ) -> tuple[IAstrbotModule | None, bool]:
+    def load_module(self, entry: EntryPoint ) -> tuple[IAstrbotModule | None, bool]:
         """尝试加载指定组和名字的模块 -- 返回是否成功"""
         # 实例化
         module_cls: type[IAstrbotModule] = entry.load()
         module_instance: IAstrbotModule = module_cls()
         try:
-            module_instance.Awake(deps=deps)
+            #region 注入实现
+            # self.container.wire(modules=[module_instance.__class__.__module__])
+            # 调试：确认 Provide 是否被解析
+            logger.info("Wiring to module %s done; calling Awake with DI", module_instance.__class__.__module__)
+
+            # 智能注入依赖
+            inject(fn=module_instance.Awake)()
+            # module_instance.Awake()
             
         except Exception as e:
             logger.error(f"模块 {entry.name} 初始化失败: {e}")
@@ -328,7 +363,7 @@ class AstrbotCoreModule():
         # 合并输出
         return AstrbotCanaryHelper.mergeEntryPoints(loaders, webs, tuis)
 
-    def load_modules(self, modules: EntryPoints, deps: Container) -> module_load_result:
+    def load_modules(self, modules: EntryPoints) -> module_load_result:
         result: module_load_result = {}
         # 按类型分组
         grouped: dict[str, list[EntryPoint]] = {
@@ -408,7 +443,7 @@ class AstrbotCoreModule():
                     # 未被选中，直接标记为加载失败
                     result[entry.name] = (type_value, entry.group, entry.name, False)
                     continue
-                module_instance, success = self.load_module(entry,deps= deps)
+                module_instance, success = self.load_module(entry)
                 pypi_name: str = getattr(module_instance, "pypi_name", entry.name) if module_instance else entry.name
                 result[pypi_name] = (type_value, entry.group, entry.name, success)
                 if success and module_instance is not None:

@@ -1,6 +1,4 @@
-from dependency_injector.containers import Container
-from dependency_injector.providers import Provider
-
+from dependency_injector.wiring import Provide
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -28,28 +26,31 @@ class AstrbotCanaryWeb():
 
     enabled: bool = True
 
-    def Awake(self,deps: Container) -> None:
+    def Awake(
+            self,
+            paths_cls: type[IAstrbotPaths] = Provide["CoreContainer.AstrbotPaths"],
+            config_cls: type[IAstrbotConfig] = Provide["CoreContainer.AstrbotConfig"],
+            cfg_entry_cls: type[IAstrbotConfigEntry] = Provide["CoreContainer.AstrbotConfigEntry"],
+            db_cls: type[IAstrbotDatabase] = Provide["CoreContainer.AstrbotDatabase"],
+            broker: BROKER_TYPE = Provide["CoreContainer.BROKER"],
+        ) -> None:
         logger.info(f"{self.name} v{self.version} is awakening.")
-        self.deps = deps
-        paths_provider: Provider[type[IAstrbotPaths]] = deps.AstrbotPaths
-        config_provider: Provider[type[IAstrbotConfig]] = deps.AstrbotConfig
-        cfg_entry_provider: Provider[type[IAstrbotConfigEntry]] = deps.AstrbotConfigEntry
-        db_provider: Provider[type[IAstrbotDatabase]] = deps.AstrbotDatabase
-        BROKER: Provider[BROKER_TYPE] = deps.BROKER
-        paths_cls: type[IAstrbotPaths] = paths_provider()
-        config_cls: type[IAstrbotConfig] = config_provider()
-        cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_provider()
-        db_cls: type[IAstrbotDatabase] = db_provider()
-        broker_instance: BROKER_TYPE = BROKER()
-        # 注入依赖到本模块实例
-        self.broker: BROKER_TYPE = broker_instance
-        self.paths: IAstrbotPaths = paths_cls.root(self.pypi_name)
-        self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
-        self.db_cls: type[IAstrbotDatabase] = db_cls # 需要连接时调用 connect 方法获取实例
-        self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls
-        # 初始化数据库连接
-        self.db : IAstrbotDatabase = self.db_cls.init_db(self.paths.data / "canary_web.db", Base)
 
+        # 初始化 Paths 和 Config（与 loader 风格一致）
+        self.paths: IAstrbotPaths = paths_cls.getPaths(self.pypi_name)
+        self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
+
+        # 延迟数据库连接：保存类以在需要时调用
+        self.db_cls: type[IAstrbotDatabase] = db_cls
+        self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls
+
+        # Broker 实例
+        self.broker: BROKER_TYPE = broker
+
+        # 初始化数据库连接（实际建立）
+        self.db: IAstrbotDatabase = self.db_cls.init_db(self.paths.data / "canary_web.db", Base)
+
+        # 绑定 Web 模块的配置项
         self.cfg_web: IAstrbotConfigEntry = self.config.bindEntry(
             entry=self.cfg_entry_cls.bind(
                 pypi_name=self.pypi_name,
@@ -83,7 +84,6 @@ class AstrbotCanaryWeb():
             app=StaticFiles(directory=self.cfg_web.value.webroot / "dist", html=True),
             name="frontend",
         )
-
 
         Response.deps["MODULE"] = self
         # 准备启动...
