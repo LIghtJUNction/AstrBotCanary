@@ -58,7 +58,7 @@ ASTRBOT_ROOT = "./.astrbot"
 ---
 
 ## 为何暂时不支持 Python 3.14
-本项目使用 Robyn（高性能 Web 框架），并且 Robyn 依赖通过 PyO3 编写的 Rust 扩展模块。当前 PyO3 对 Python 3.14 的支持尚不完善，因此本项目暂时以 3.13.8 作为兼容目标。一旦 PyO3 / Robyn 支持 Python 3.14，会在后续版本中尽快切换或发布兼容分支。
+当前 PyO3 对 Python 3.14 的支持尚不完善，因此本项目暂时以 3.13.8 作为兼容目标。一旦 PyO3 / Robyn 支持 Python 3.14，会在后续版本中尽快切换或发布兼容分支。
 
 ---
 
@@ -68,8 +68,8 @@ ASTRBOT_ROOT = "./.astrbot"
 ---
 
 ## 开发计划（依赖 / 选型示例）
-- 消息分发+调度+定时：taskiq! +0ORJSONSerializer+FastStream
-- Web 框架：Robyn（Rust + PyO3 驱动，高并发探索）
+- 消息分发+调度+定时：taskiq! +0ORJSONSerializer+FastStream（未使用）
+- Web 框架：Fastapi(robyn有无法接受的bug）
 - TUI 框架：Textual
 - 数据类型验证：pydantic，pydantic-settings
 - 数据库 ：sqlite
@@ -77,10 +77,10 @@ ORM:sqlalchemy
 - 插件系统设计：pluggy+入口点发现机制
 - 接口设计：Protocols
 备选：
-pyahocorasick
+pyahocorasick（文本处理）
 
 - 动态验证一个模块是否符合协议
-- 依赖注入：Dependency Injector
+
 
 > 注：上面只是示例/候选库，具体选型以实现和兼容性为准。
 
