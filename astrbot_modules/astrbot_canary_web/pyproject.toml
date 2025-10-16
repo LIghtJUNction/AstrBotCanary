@@ -10,7 +10,6 @@ requires-python = ">=3.13.8"
 dependencies = [
     "anyio>=4.11.0",
     "astrbot-canary-api",
-    "dependency-injector>=4.48.2",
     "email-validator>=2.3.0",
     "fastapi>=0.119.0",
     "orjson>=3.11.3",
@@ -30,5 +29,5 @@ build-backend = "hatchling.build"
 [tool.uv.sources]
 astrbot-canary-api = { workspace = true }
 
-[project.entry-points."astrbot.modules.web"]
+[project.entry-points."astrbot.modules"]
 "canary_web" = "astrbot_canary_web:AstrbotCanaryWeb"

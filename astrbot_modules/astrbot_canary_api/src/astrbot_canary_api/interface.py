@@ -1,53 +1,64 @@
 from __future__ import annotations
 from pathlib import Path
 
-from typing import Any, Protocol, runtime_checkable, ClassVar
+from typing import Any, Generic, Protocol, TypeVar, runtime_checkable, ContextManager, AsyncContextManager
+import pluggy
 
+from pydantic import BaseModel
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session
-from astrbot_canary_api.enums import AstrBotModuleType
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from taskiq import AsyncBroker, AsyncResultBackend
 
+type BROKER_TYPE = AsyncBroker
+type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
+
+__all__ = [
+    "IAstrbotPaths",
+    "IAstrbotConfig",
+    "IAstrbotDatabase",
+    "BROKER_TYPE",
+    "RESULT_BACKEND_TYPE",
+    "ASTRBOT_MODULES_HOOK_NAME",
+    "modulespec",
+    "moduleimpl"
+]
 
 #region Interfaces
 
 #region Module
-@runtime_checkable
-class IAstrbotModule(Protocol):
-    """Interface for Astrbot modules."""
-    name: ClassVar[str]
-    pypi_name: ClassVar[str]
-    module_type: ClassVar[AstrBotModuleType]
-    version: ClassVar[str]
-    authors: ClassVar[list[str]]
-    description: ClassVar[str]
-    enabled: bool = True
+# ---------------------------------------------------------------------------
+# Pluggy hookspecs for modules
+# ---------------------------------------------------------------------------
+ASTRBOT_MODULES_HOOK_NAME = "astrbot.modules"  # Must match the name used in PluginManager
 
+# Hook markers - plugins must use the same project name for @hookimpl
+modulespec = pluggy.HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
+moduleimpl = pluggy.HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
+
+class ModuleSpec:
+    """pluggy hookspec class for Astrbot modules.
+
+    Plugins should implement these methods and decorate them with
+    `@hookimpl` (using the same marker string defined above). The
+    `PluginManager` in the core can call `pm.hook.Awake()` / `.Start()` /
+    `.OnDestroy()` and pluggy will dispatch to all registered implementations.
+    """
+
+    @modulespec
     def Awake(self, **kwargs: Any) -> None:
         """Called when the module is loaded."""
-        ...
+
+    @modulespec
     def Start(self) -> None:
         """Called when the module is started."""
-        ...
+
+    @modulespec
     def OnDestroy(self) -> None:
         """Called when the module is unloaded."""
-        ...
 
-@runtime_checkable
-class IAstrbotLoaderModule(IAstrbotModule, Protocol):
-    """Interface for Astrbot loader modules."""
-    api_version: ClassVar[str]
 
-    def Load(self, name: str) -> None:
-        ...
-    def Unload(self, name: str) -> None:
-        ...
-    def Reload(self, name: str) -> None:
-        ...
 
-@runtime_checkable
-class IAstrbotUIModule(IAstrbotModule, Protocol):
-    """Interface for Astrbot UI modules."""
-    ...
 
 #endregion
 
@@ -82,74 +93,64 @@ class IAstrbotPaths(Protocol):
         ...
 
 
+
 #endregion
 #region Config
-@runtime_checkable
-class IAstrbotConfigEntry(Protocol):
-    """Interface for a single configuration entry."""
-    pypi_name: str
-    name: str
-    group: str
-    value: Any
-    default: Any
-    description: str
 
-    @classmethod
-    def bind(cls, pypi_name: str, group: str, name: str, default: Any, description: str , config_dir: Path) -> 'IAstrbotConfigEntry':
-        """ 建议设置value时先从本地文件读取，不要直接使用默认值 """
-        ...
-
-    def load(self, pypi_name: str , config_dir: Path) -> None:
-        """从本地文件加载配置"""
-        ...
-
-    def save(self , config_dir: Path) -> None:
-        """将配置保存回本地文件"""
-        ...
-
-    def reset(self, config_dir: Path) -> None:
-        """重置配置为默认值并保存"""
-        ...
-
+T = TypeVar("T", bound=BaseModel)
 
 @runtime_checkable
 class IAstrbotConfig(Protocol):
-    """接口：按实例管理模块配置（不再要求类级全局字典）。"""
+    """按实例管理模块配置（与 core.config.AstrbotConfig 保持一致）。
+    将配置项定义为 IAstrbotConfig.Entry 的嵌套协议，以匹配 AstrbotConfig.Entry 的实现方式。
+    """
 
-    # 每个实例应记录自己的模块标识
-    _pypi_name: str
+    class Entry(Protocol, Generic[T]):
+        """单个配置项的协议（作为 IAstrbotConfig 的内部类）"""
+        name: str
+        group: str
+        value: T
+        default: T
+        description: str
+        _cfg_file: Path | None
+
+        @classmethod
+        def bind(cls, group: str, name: str, default: T, description: str, cfg_dir: Path) -> IAstrbotConfig.Entry[T]:
+            """按 group 保存到 {cfg_dir}/{group}.toml，并返回绑定好的条目实例。"""
+            ...
+
+        def load(self) -> None:
+            """从所在组文件加载本项数据（不影响同组其它项）。"""
+            ...
+
+        def save(self) -> None:
+            """将本项合并到所在组文件并保存（不覆盖同组其它项）。"""
+            ...
+
+        def reset(self) -> None:
+            """重置为默认值并保存。"""
+            ...
 
     @classmethod
-    def getConfig(cls, pypi_name: str) -> IAstrbotConfig:
-        """工厂/获取方法：返回针对指定 pypi_name 的配置实例。"""
+    def getConfig(cls) -> IAstrbotConfig:
+        """返回一个新的配置实例（实现无需维持全局单例）。"""
         ...
 
-    def findEntry(self, group: str, name: str) -> IAstrbotConfigEntry | None:
+    def findEntry(self, group: str, name: str) -> IAstrbotConfig.Entry[Any] | None:
         """在本实例作用域查找配置项，找不到返回 None。"""
         ...
 
-    def bindEntry(self, entry: IAstrbotConfigEntry) -> IAstrbotConfigEntry:
+    def bindEntry(self, entry: IAstrbotConfig.Entry[T]) -> IAstrbotConfig.Entry[T]:
         """绑定（或覆盖）一个配置项到本实例。"""
         ...
 
-    def get_all_entries(self) -> dict[str, IAstrbotConfigEntry]:
-        """返回当前实例所有配置项的浅拷贝（用于只读/遍历）。"""
-        ...
 #endregion
 
 #region database
 
-@runtime_checkable
-class TransactionContext(Protocol):
-    """事务上下文管理器协议"""
-    def __enter__(self) -> Session: ...
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
-
-@runtime_checkable
-class AsyncTransactionContext(Protocol):
-    """异步事务上下文管理器协议"""
-    async def __aenter__(self) -> Session: ...
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+"""Transaction context aliases to match contextmanager/asynccontextmanager return types."""
+TransactionContext = ContextManager[Session]
+AsyncTransactionContext = AsyncContextManager[AsyncSession]
 
 @runtime_checkable
 class IAstrbotDatabase(Protocol):
@@ -160,8 +161,10 @@ class IAstrbotDatabase(Protocol):
     """ 数据库连接URL """
     engine: Engine | None  # sqlalchemy.engine.Engine
     """ SQLAlchemy引擎实例 """
-    session: Session | None  # sqlalchemy.orm.Session
-    """ SQLAlchemy会话实例 """
+    # session: 不再在接口上保持单一 Session 实例，使用 SessionLocal factory
+    SessionLocal: sessionmaker[Session] | None
+    async_engine: Any | None
+    AsyncSessionLocal: async_sessionmaker[AsyncSession] | None
     base: Any  # declarative_base()
     """ SQLAlchemy declarative_base 对象，包含所有模型的基类 """
 
@@ -187,6 +190,10 @@ class IAstrbotDatabase(Protocol):
         """关闭数据库连接和会话"""
         ...
 
+    async def aclose(self) -> None:
+        """异步释放异步引擎/会话资源（若有）。"""
+        ...
+
     def transaction(self) -> TransactionContext:
         """上下文管理器：自动提交/回滚事务
         用法：
@@ -203,18 +210,24 @@ class IAstrbotDatabase(Protocol):
         """
         ...
 
-    def __aenter__(self) -> IAstrbotDatabase:
-        """异步上下文管理器入口"""
+    def session_scope(self) -> TransactionContext:
+        """显式的同步 session 上下文管理器（短生命周期 session）。"""
         ...
+
+    async def __aenter__(self) -> IAstrbotDatabase:
+        """异步上下文管理器入口（如果实现）。"""
+        ...
+
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """异步上下文管理器出口"""
-    
-    def __enter__(self) -> IAstrbotDatabase:
-        """上下文管理器入口"""
+        """异步上下文管理器出口（如果实现）。"""
         ...
-    
+
+    def __enter__(self) -> IAstrbotDatabase:
+        """同步上下文管理器入口（如果实现）。"""
+        ...
+
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """上下文管理器出口"""
+        """同步上下文管理器出口（如果实现）。"""
         ...
 
 

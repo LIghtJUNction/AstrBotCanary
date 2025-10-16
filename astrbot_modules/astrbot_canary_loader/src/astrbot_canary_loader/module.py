@@ -1,4 +1,3 @@
-from dependency_injector.wiring import Provide
 from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import (
     IAstrbotConfig,
@@ -24,11 +23,6 @@ class AstrbotLoader():
 
     def Awake(
             self, 
-            paths_cls: type[IAstrbotPaths] = Provide["CoreContainer.AstrbotPaths"],
-            config_cls: type[IAstrbotConfig] = Provide["CoreContainer.AstrbotConfig"],
-            cfg_entry_cls: type[IAstrbotConfigEntry] = Provide["CoreContainer.AstrbotConfigEntry"],
-            db_cls: type[IAstrbotDatabase] = Provide["CoreContainer.AstrbotDatabase"],
-            broker: BROKER_TYPE = Provide["CoreContainer.BROKER"],
         ) -> None:
 
         logger.info(f"{self.name} v{self.version} is awakening.")

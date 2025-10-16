@@ -12,6 +12,10 @@ from logging import Logger
 import rich.traceback
 # import cProfile
 from astrbot_canary.core import AstrbotCoreModule
+
+#region 注入核心实现
+
+
 # 安装错误堆栈追踪器
 rich.traceback.install()
 
@@ -25,7 +29,6 @@ def main() -> None:
     core_module = AstrbotCoreModule()
     core_module.Awake()
     core_module.Start()
-    core_module.OnDestroy()
 
 if __name__ == "__main__":
     # profiler = cProfile.Profile()

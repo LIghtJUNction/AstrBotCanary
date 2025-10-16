@@ -1,25 +1,31 @@
 from .interface import (
-    IAstrbotUIModule, 
-    IAstrbotLoaderModule,
-    IAstrbotModule,
     IAstrbotConfigEntry,
     IAstrbotConfig,
     IAstrbotPaths,
+    IAstrbotDatabase,
+    ASTRBOT_MODULES_HOOK_NAME,
+    modulespec,
+    moduleimpl,
 )
 
 from .enums import AstrBotModuleType, AstrbotBrokerType, AstrbotResultBackendType
 
 __all__ = [
-    "IAstrbotUIModule",
-    "IAstrbotLoaderModule",
-    "IAstrbotModule",
+
+    # interfaces
     "IAstrbotConfigEntry",
     "IAstrbotConfig",
     "IAstrbotPaths",
+    "IAstrbotDatabase",
 
     # enum
     "AstrBotModuleType",
     "AstrbotBrokerType",
-    "AstrbotResultBackendType"
+    "AstrbotResultBackendType",
+
+    # pluggy
+    "ASTRBOT_MODULES_HOOK_NAME",
+    "modulespec",
+    "moduleimpl"
 
 ]
