@@ -137,7 +137,9 @@ uv pip install -e .[all]
 请在提交前阅读仓库中的贡献指南（若有）与 `CODE_OF_CONDUCT`。
 
 项目主页 / 参考： https://github.com/AstrBotDevs/AstrBot  
-仓库维护者：LIghtJUNction
+
+
+Canary仓库维护者：LIghtJUNction
 
 ---
 
