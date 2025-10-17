@@ -11,6 +11,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from taskiq import AsyncBroker, AsyncResultBackend
 
+from astrbot_canary_api.enums import AstrbotModuleType
+
 type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
 __all__ = [
@@ -35,7 +37,27 @@ ASTRBOT_MODULES_HOOK_NAME = "astrbot.modules"  # Must match the name used in Plu
 modulespec = HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
 moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
 
-class ModuleSpec:
+
+# 此协议用于type hint
+# 模块实现应该按照ModuleSpec写
+class IAstrbotModule(Protocol):
+    module_type: AstrbotModuleType
+    pypi_name: str
+    """ 唯一，即项目名，例如：astrbot_canary """
+    name: str
+    """ 唯一，即入口点名，例如：canary_core """
+    
+    @classmethod
+    def Awake(cls) -> None:
+        ...
+    @classmethod
+    def Start(cls) -> None:
+        ...
+    @classmethod
+    def OnDestroy(cls) -> None:
+        ...
+
+class AstrbotModuleSpec:
     """Astrbot 模块规范
     Awake: 自身初始化时调用，请勿编写涉及除本模块之外的逻辑
         建议操作：

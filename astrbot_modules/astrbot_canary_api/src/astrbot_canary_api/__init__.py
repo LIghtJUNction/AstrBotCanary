@@ -1,5 +1,7 @@
 from .interface import (
+    IAstrbotModule,
     IAstrbotConfig,
+    IAstrbotConfigEntry,
     IAstrbotPaths,
     IAstrbotDatabase,
     ASTRBOT_MODULES_HOOK_NAME,
@@ -13,8 +15,11 @@ __all__ = [
 
     # interfaces
     "IAstrbotConfig",
+    "IAstrbotConfigEntry",
     "IAstrbotPaths",
     "IAstrbotDatabase",
+    "IAstrbotModule",
+
 
     # enum
     "AstrbotModuleType",

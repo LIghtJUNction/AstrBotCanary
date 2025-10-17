@@ -3,25 +3,23 @@ from importlib.metadata import PackageMetadata
 # import uvicorn
 from logging import getLogger , Logger
 
-from astrbot_canary_api import moduleimpl
+from astrbot_canary_api import AstrbotModuleType, moduleimpl
 from astrbot_canary_api.decorators import AstrbotModule
 
 # from astrbot_canary_web.api import api_router
 
 logger: Logger = getLogger("astrbot_canary.module.web")
 
-@AstrbotModule(
-    pypi_name="astrbot_canary_web",
-)
+@AstrbotModule("astrbot_canary_web", "canary_web", AstrbotModuleType.WEB)
 class AstrbotCanaryWeb():
     info: PackageMetadata
 
     @classmethod
-    @moduleimpl
+    @moduleimpl(trylast=True)
     def Awake(
             cls,
         ) -> None:
-        logger.info(f"{cls.info} is awakening.")
+        logger.info(f"{cls.info.get("name")} is awakening.")
 
         # # 绑定 Web 模块的配置项
         # self.cfg_web: IAstrbotConfigEntry = self.config.bindEntry(

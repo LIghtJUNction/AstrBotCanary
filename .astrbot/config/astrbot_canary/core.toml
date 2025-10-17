@@ -3,9 +3,9 @@ group = "core"
 description = "核心模块配置项"
 
 [value]
-modules = [ "astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web", "astrbot_canary_tui",]
-boot = [ "astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web",]
+modules = [ "canary_core", "canary_loader", "canary_web", "canary_tui",]
+boot = [ "canary_core", "canary_loader", "canary_web",]
 
 [default]
-modules = [ "astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web", "astrbot_canary_tui",]
-boot = [ "astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web",]
+modules = [ "canary_core", "canary_loader", "canary_web", "canary_tui",]
+boot = [ "canary_core", "canary_loader", "canary_web",]

@@ -10,14 +10,17 @@ astrbot_canary 核心模块
 from pydantic import BaseModel
 from astrbot_canary_api.decorators import AstrbotModule
 from astrbot_canary_api import (
+    AstrbotModuleType,
     IAstrbotConfig,
+    IAstrbotDatabase,
     IAstrbotPaths,
+    IAstrbotConfigEntry,
     moduleimpl,
 )
-from astrbot_canary_api.interface import IAstrbotConfigEntry
 """
 依赖抽象，而非具体
 """
+
 from importlib.metadata import PackageMetadata
 
 """
@@ -31,13 +34,10 @@ class AstrbotCoreConfig(BaseModel):
     """
     核心模块配置项
     """
-    modules: list[str]
-    """ 发现的模块 """
-    boot: list[str]
-    """ 启动Astrbot-模块启动顺序 """
+    ...
 
-@AstrbotModule(pypi_name="astrbot_canary")
-class AstrbotCoreModule():
+@AstrbotModule("astrbot_canary", "canary_core", AstrbotModuleType.CORE)
+class AstrbotCoreModule:
     info: PackageMetadata
 
     pypi_name: str
@@ -45,36 +45,25 @@ class AstrbotCoreModule():
 
     paths: IAstrbotPaths
     config: IAstrbotConfig
+    database: IAstrbotDatabase
 
-    
 #region 基本生命周期
     @classmethod
-    @moduleimpl
+    @moduleimpl(tryfirst=True)
     def Awake(
         cls,
     ) -> None:
-        logger.info(f"{cls.info}")
+        logger.info(f"{cls.info.get("name")} is awakening")
 
-        cls.cfg_core: IAstrbotConfigEntry[AstrbotCoreConfig] = cls.config.bindEntry(
-            entry=cls.ConfigEntry.bind(
-                group="core",
-                name="boot",
-                default=AstrbotCoreConfig(
-                    modules=["astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web", "astrbot_canary_tui"],
-                    boot=["astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web"],
-                ),
-                description="核心模块配置项",
-                cfg_dir=cls.paths.config,
-            )
-        )
 
+        
         
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod
     @moduleimpl
     def Start(cls) -> None:
-        logger.info(f"started.")
+        logger.info(f"{cls.info.get("name")} start.")
 
         ...
     @classmethod
@@ -83,5 +72,10 @@ class AstrbotCoreModule():
         logger.info(f"destroyed.")
 
 
+
 #endregion
 
+#region
+    @classmethod
+    def order_module(cls):
+        ...

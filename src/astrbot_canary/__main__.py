@@ -5,21 +5,26 @@ status: dev
 authors: [LIghtJUNction]
 owners: [LIghtJUNction]
 created: 2025-10-09
-updated: 2025-10-11
+updated: 2025-10-18
 """
+from importlib.metadata import EntryPoints
 from logging import INFO, getLogger , basicConfig
 from pluggy import PluginManager as ModuleManager # 为了区分加载器的 PluginManager...
+from pydantic import BaseModel
 import rich.traceback
+from rich.logging import RichHandler
 from atexit import register
+from click import Choice, confirm, prompt
+
 # import cProfile
 
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 
-from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME
+from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType
 from astrbot_canary_api.decorators import AstrbotModule
-from astrbot_canary_api.interface import ModuleSpec
+from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
 
 # region 注入实现
 AstrbotModule.Config = AstrbotConfig
@@ -27,40 +32,165 @@ AstrbotModule.ConfigEntry = AstrbotConfigEntry
 AstrbotModule.Paths = AstrbotPaths
 AstrbotModule.Database = AstrbotDatabase
 
+# 导入Helper库
+from astrbot_canary_helper import AstrbotCanaryHelper
+
 # 安装错误堆栈追踪器
+# enable rich tracebacks and pretty console logging
 rich.traceback.install()
-basicConfig(level=INFO)
+# rich + logging
+basicConfig(
+    level=INFO,
+    format="%(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[RichHandler(rich_tracebacks=True, markup=True)],
+)
 
 logger = getLogger("astrbot_canary.module.root")
-
-mm = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
+class AstrbotRootConfig(BaseModel):
+    """
+    核心模块配置项
+    """
+    modules: list[str]
+    """ 发现的模块 """
+    boot: list[str]
+    """ 启动Astrbot-模块启动顺序 """
 
 """ 核心模块管理器实例 """
 
-def main() -> None:
-    """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
-    logger.info("AstrbotCanary 正在启动，加载模块...")
-    mm.add_hookspecs(ModuleSpec)
-    mm.load_setuptools_entrypoints(ASTRBOT_MODULES_HOOK_NAME)
-    """ setuptools是早期的打包工具,现在推荐使用uv """
-    modules = mm.get_plugins()
-    logger.info(f"已加载模块列表：{modules}")
-    mm.hook.Awake()
-    """ 根模块仅负责唤醒，不负责启动，核心模块负责启动 """
+class AstrbotRootModule:
+    """ Astrbot根模块
+    请勿参考本模块进行开发
+    本模块为入口模块  
+    """
+    mm = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
+    @classmethod
+    def Awake(cls) -> None:
+        """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
+        logger.info("AstrbotCanary 正在启动，加载模块...")
+        cls.mm.add_hookspecs(AstrbotModuleSpec)
+        cls.config = AstrbotModule.Config.getConfig()
+        cls.paths = AstrbotModule.Paths.getPaths("astrbot_canary")
+        cls.ConfigEntry = AstrbotModule.ConfigEntry
+        
+        cls.cfg_root: IAstrbotConfigEntry[AstrbotRootConfig] = cls.config.bindEntry(
+            entry=cls.ConfigEntry.bind(
+                group="core",
+                name="boot",
+                default=AstrbotRootConfig(
+                    modules=["canary_core", "canary_loader", "canary_web", "canary_tui"],
+                    boot=["canary_core", "canary_loader", "canary_web"],
+                ),
+                description="核心模块配置项",
+                cfg_dir=cls.paths.config,
+            )
+        )
 
-@register
-def atExit() -> None:
-    logger.info("AstrbotCanary 正在退出，执行清理操作...")
-    mm.hook.OnDestroy()
+        # mm.load_setuptools_entrypoints(ASTRBOT_MODULES_HOOK_NAME)
+        # 这里不用这个加载逻辑
 
+        boot : list[IAstrbotModule] = []
+        """ 启动列表 """
 
+        # 决定是否发现模块启动还是直接从配置启动
+        if confirm(f"从配置文件启动？",default=True):
+            _boot = cls.cfg_root.value.boot
+            for i in _boot:
+                ep = AstrbotCanaryHelper.getSingleEntryPoint(ASTRBOT_MODULES_HOOK_NAME,i)
+                if ep is None:
+                    continue
+                module = ep.load()
+                boot.append(module)
+        else:
 
+            module_eps: EntryPoints = AstrbotCanaryHelper.getAllEntryPoints(group=ASTRBOT_MODULES_HOOK_NAME)
+            _, core_module, loader_module, web_module, tui_module = cls.group_modules(module_eps)
+            logger.debug(f"core:{core_module}\nloader:{loader_module}\nweb:{web_module}\ntui:{tui_module}")
 
+            if _:
+                logger.warning(f"发现未知模块{_}")
+
+            # --- CORE: 仅选一个 ---
+            if len(core_module) > 1:
+                core_names = [getattr(m, "pypi_name", getattr(m, "__name__", repr(m))) for m in core_module]
+                sel = prompt("请选择一个核心模块加载", type=Choice(core_names))
+                core = next(m for m in core_module if getattr(m, "pypi_name", None) == sel or getattr(m, "__name__", None) == sel)
+                boot.append(core)
+            elif len(core_module) == 1:
+                boot.append(core_module[0])
+
+            # --- LOADER: 仅选一个 ---
+            if len(loader_module) > 1:
+                loader_names = [getattr(m, "pypi_name", getattr(m, "__name__", repr(m))) for m in loader_module]
+                sel = prompt("请选择一个加载器模块", type=Choice(loader_names))
+                loader = next(m for m in loader_module if getattr(m, "pypi_name", None) == sel or getattr(m, "__name__", None) == sel)
+                boot.append(loader)
+            elif len(loader_module) == 1:
+                boot.append(loader_module[0])
+
+            # --- UI: web + tui 合并，从中仅选一个 ---
+            ui_candidates = web_module + tui_module
+            if len(ui_candidates) > 1:
+                ui_names = [getattr(m, "pypi_name", getattr(m, "__name__", repr(m))) for m in ui_candidates]
+                sel = prompt("请选择一个UI模块 (web/tui)", type=Choice(ui_names))
+                ui = next(m for m in ui_candidates if getattr(m, "pypi_name", None) == sel or getattr(m, "__name__", None) == sel)
+                boot.append(ui)
+
+            elif len(ui_candidates) == 1:
+                boot.append(ui_candidates[0])
+
+        for astrbot_module in boot:
+            cls.mm.register(astrbot_module)
+
+        _boot = [i.name for i in boot]
+        cls.cfg_root.value.boot = _boot
+        cls.mm.hook.Awake()
+        """ 根模块仅负责唤醒，不负责启动，核心模块负责启动 """
+
+    @classmethod
+    def Start(cls):
+        cls.mm.hook.Start()
+
+    @classmethod
+    def group_modules(cls, eps: EntryPoints) -> tuple[list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule]]:
+        """ 分组模块 """
+        unknown_module: list[IAstrbotModule] = []
+        core_module: list[IAstrbotModule] = []
+        loader_module: list[IAstrbotModule] = []
+        web_module: list[IAstrbotModule] = []
+        tui_module: list[IAstrbotModule] = []
+
+        for ep in eps:
+            module: IAstrbotModule = ep.load()
+            match module.module_type:
+                case AstrbotModuleType.CORE:
+                    core_module.append(module)
+                case AstrbotModuleType.LOADER:
+                    loader_module.append(module)
+                case AstrbotModuleType.WEB:
+                    web_module.append(module)
+                case AstrbotModuleType.TUI:
+                    tui_module.append(module)
+                case _:
+                    unknown_module.append(module)
+        return unknown_module,core_module,loader_module,web_module,tui_module
+
+    @staticmethod
+    @register
+    def atExit() -> None:
+        logger.info("AstrbotCanary 正在退出，执行清理操作...")
+        AstrbotRootModule.mm.hook.OnDestroy()
+        AstrbotRootModule.cfg_root.save()
 
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()
-    main()
+    AstrbotRootModule.Awake()
     # profiler.disable()
     # profiler.print_stats(sort="cumtime")
 
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+    AstrbotRootModule.Start()
+    # profiler.disable()
+    # profiler.print_stats(sort="cumtime")

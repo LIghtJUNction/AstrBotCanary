@@ -1,11 +1,29 @@
+""" Q&A
+AstrbotModule 装饰器为什么需要
+pypi_name / name两个参数？并且两者都要唯一性？
 
+pypi_name用于标识模块来源
+不是所有模块都必须上传至pypi,这个还可以填写git仓库链接
+还可以填写wheel文件路径/项目路径...
+即uv pip install pypi_name
+pip install pypi_name
+...
+
+name（即入口点名称）将被写入配置方便下次快速启动
+
+
+"""
 from importlib.metadata import Distribution, distribution , PackageMetadata
 from pydantic import BaseModel
-
-from astrbot_canary_api import IAstrbotConfig, IAstrbotDatabase, IAstrbotPaths
 from taskiq import AsyncBroker
 
-from astrbot_canary_api.interface import IAstrbotConfigEntry
+from astrbot_canary_api import (
+    AstrbotModuleType, 
+    IAstrbotConfig, 
+    IAstrbotDatabase, 
+    IAstrbotPaths,
+    IAstrbotConfigEntry
+)
 
 """
 取名为 info 是模仿BepInEx
@@ -84,18 +102,29 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
     注入：
         核心模块负责注入具体实现
     """
-    def __init__(self,pypi_name: str , info: PackageMetadata | None = None) -> None:
+    def __init__(
+            self,
+            pypi_name: str ,
+            name: str,
+            module_type: AstrbotModuleType,
+            info: PackageMetadata | None = None
+        ) -> None:
         self.info: PackageMetadata | None = info
         self.pypi_name: str = pypi_name
+        self.name : str = name
+        self.module_type : AstrbotModuleType = module_type
 
     def __call__(self, cls: type) -> type:
         cls.pypi_name = self.pypi_name
+        cls.name = self.name
+        cls.module_type = self.module_type
         if self.info is None:
             dist: Distribution = distribution(self.pypi_name)
             meta: PackageMetadata = dist.metadata
             cls.info = meta
         else:
             cls.info = self.info
+
         impl_config = type(self).Config
         impl_config_entry = type(self).ConfigEntry
         impl_paths = type(self).Paths
@@ -115,7 +144,7 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
         return cls
 
 if __name__ == "__main__":
-    @AstrbotModule(pypi_name="astrbot_canary_api")
+    @AstrbotModule("astrbot_canary_api", "canary_test", AstrbotModuleType.UNKNOWN)
     class TestModule:
         pass
 
