@@ -140,7 +140,7 @@ class IAstrbotConfig(Protocol):
         """在本实例作用域查找配置项，找不到返回 None。"""
         ...
 
-    def bindEntry(self, entry: IAstrbotConfig.Entry[T]) -> IAstrbotConfig.Entry[T]:
+    def bindEntry(self, entry: IAstrbotConfig.Entry[Any]) -> IAstrbotConfig.Entry[Any]:
         """绑定（或覆盖）一个配置项到本实例。"""
         ...
 

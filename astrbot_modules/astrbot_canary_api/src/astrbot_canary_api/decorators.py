@@ -16,9 +16,9 @@ class AstrbotModule:
     注入：
         核心模块负责注入具体实现
     """
-    Paths: type[IAstrbotPaths]
-    Config: type[IAstrbotConfig]
-    Database: type[IAstrbotDatabase]
+    Paths: type[IAstrbotPaths] | None = None
+    Config: type[IAstrbotConfig] | None = None
+    Database: type[IAstrbotDatabase] | None = None
 
     def __init__(self,pypi_name: str , info: PackageMetadata | None = None) -> None:
         self.info: PackageMetadata | None = info

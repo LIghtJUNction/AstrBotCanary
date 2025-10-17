@@ -1,5 +1,4 @@
 from .interface import (
-    IAstrbotConfigEntry,
     IAstrbotConfig,
     IAstrbotPaths,
     IAstrbotDatabase,
@@ -8,18 +7,17 @@ from .interface import (
     moduleimpl,
 )
 
-from .enums import AstrBotModuleType, AstrbotBrokerType, AstrbotResultBackendType
+from .enums import AstrbotModuleType, AstrbotBrokerType, AstrbotResultBackendType
 
 __all__ = [
 
     # interfaces
-    "IAstrbotConfigEntry",
     "IAstrbotConfig",
     "IAstrbotPaths",
     "IAstrbotDatabase",
 
     # enum
-    "AstrBotModuleType",
+    "AstrbotModuleType",
     "AstrbotBrokerType",
     "AstrbotResultBackendType",
 

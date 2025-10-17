@@ -27,10 +27,9 @@ class AstrbotConfig:
     注意：不同地方调用 getConfig(...) 会返回独立实例，若需要共享请在上层通过 DI/容器管理单例。
     """
     def __init__(self) -> None:
-    # 实例私有的 entries 字典：key -> AstrbotConfigEntry
-        self._entries: dict[str, AstrbotConfig.Entry[Any]] = {}
+        self._entries: dict[str, IAstrbotConfig.Entry[Any]] = {}
 
-    class Entry(IAstrbotConfig.Entry[T], BaseSettings, Generic[T]):
+    class Entry(BaseSettings, Generic[T]):
         name: str
         group: str
         value: T
@@ -62,8 +61,11 @@ class AstrbotConfig:
             )
 
             config_file: Path = (cfg_dir / f"{group}.toml").resolve()
+            # ensure configuration directory exists
+            cfg_dir.mkdir(parents=True, exist_ok=True)
+            # bind file path before any save/load operations
+            entry._cfg_file = config_file
             if config_file.exists():
-                entry._cfg_file = config_file
                 entry.load()
             else:
                 entry.save()
@@ -110,20 +112,17 @@ class AstrbotConfig:
         def __str__(self) -> str:
             return f"AstrbotConfigEntry \n {self.group}.{self.name}={self.value} \n Description: {self.description} \n Default: {self.default}"
 
-
-
-
     @classmethod
-    def getConfig(cls) -> AstrbotConfig:
+    def getConfig(cls) -> IAstrbotConfig:
         """工厂方法：返回针对指定 pypi_name 的新实例（实例独立）。"""
         return cls()
 
-    def findEntry(self, group: str, name: str) -> AstrbotConfig.Entry[Any] | None:
+    def findEntry(self, group: str, name: str) -> IAstrbotConfig.Entry[Any] | None:
         """在当前实例作用域查找配置项（只查本实例，不访问全局）。"""
         _key = group + "." + name
         return self._entries.get(_key)
 
-    def bindEntry(self, entry: AstrbotConfig.Entry[T]) -> AstrbotConfig.Entry[T]:
+    def bindEntry(self, entry: IAstrbotConfig.Entry[Any]) -> IAstrbotConfig.Entry[Any]:
         """绑定一个配置项到当前实例（覆盖同名项）。"""
         _key = entry.group + "." + entry.name
         self._entries[_key] = entry
@@ -159,4 +158,59 @@ if __name__ == "__main__":
         sub_config: SubConfig = SubConfig(sub_field1="nested_value", sub_field2=100)
 
     # 序列化反序列化测试
+    # 创建配置实例并绑定条目，验证保存与加载行为
+    cfg = AstrbotConfig.getConfig()
+
+    # 创建一个嵌套配置条目并绑定
+    nested_default = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    entry = AstrbotConfig.Entry[NestedConfig].bind(
+        group="database",
+        name="main",
+        default=nested_default,
+        description="主数据库配置",
+        cfg_dir=cfg_dir,
+    )
+
+    # 绑定到配置实例
+    bound = cfg.bindEntry(entry)
+    assert bound is entry, "bindEntry 应该返回被绑定的条目实例"
+
+    # 查找并断言
+    found = cfg.findEntry("database", "main")
+    assert found is not None, "findEntry 未找到已绑定的条目"
+    assert found.name == "main" and found.group == "database", "找到的条目标识不正确"
+
+    # 修改并保存，然后重新加载以确认持久化
+    found.value.host = "127.0.0.1"
+    found.save()
+
+    # 重新绑定一个新的实例（模拟进程重启后的读取）
+    new_entry = AstrbotConfig.Entry[NestedConfig].bind(
+        group="database",
+        name="main",
+        default=nested_default,
+        description="主数据库配置",
+        cfg_dir=cfg_dir,
+    )
+
+    # 新实例应具有之前保存的值
+    assert new_entry.value.host == "127.0.0.1", f"持久化加载失败，期待 host=127.0.0.1，实际 {new_entry.value.host}"
+    assert new_entry.value.port == 5432, f"持久化加载失败，期待 port=5432，实际 {new_entry.value.port}"
+    assert new_entry.value.sub_config.sub_field1 == "nested_value", f"持久化加载失败，期待 sub_field1=nested_value，实际 {new_entry.value.sub_config.sub_field1}"
+    assert new_entry.value.sub_config.sub_field2 == 100, f"持久化加载失败，期待 sub_field2=100，实际 {new_entry.value.sub_config.sub_field2}"
+    assert new_entry.value.type_1 == Type1.OPTION_A.value, f"持久化加载失败，期待 type_1={Type1.OPTION_A.value}，实际 {new_entry.value.type_1}"
+    assert new_entry.value.type_2 == Type2.OPTION_X, f"持久化加载失败，期待 type_2={Type2.OPTION_X}，实际 {new_entry.value.type_2}"
+    assert new_entry.value.user == "user", f"持久化加载失败，期待 user=user，实际 {new_entry.value.user}"
+    assert new_entry.value.password == "password", f"持久化加载失败，期待 password=password，实际 {new_entry.value.password}"
+
+
+    print("AstrbotConfig 自检通过：绑定/保存/加载 流程工作正常。")
 

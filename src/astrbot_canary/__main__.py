@@ -7,13 +7,20 @@ owners: [LIghtJUNction]
 created: 2025-10-09
 updated: 2025-10-11
 """
-from logging import INFO, getLogger , basicConfig
-from logging import Logger
+from logging import INFO, getLogger , basicConfig, Logger
 import rich.traceback
-# import cProfile
-from astrbot_canary.core import AstrbotCoreModule
 
+# import cProfile
+
+from astrbot_canary.core.db import AstrbotDatabase
+from astrbot_canary.core.paths import AstrbotPaths
+from astrbot_canary.core.config import AstrbotConfig
+
+from astrbot_canary_api.decorators import AstrbotModule
 #region 注入核心实现
+AstrbotModule.Config = AstrbotConfig
+AstrbotModule.Paths = AstrbotPaths
+AstrbotModule.Database = AstrbotDatabase
 
 
 # 安装错误堆栈追踪器
@@ -26,9 +33,7 @@ basicConfig(level=INFO)
 logger = getLogger("astrbot_canary.loader")
 
 def main() -> None:
-    core_module = AstrbotCoreModule()
-    core_module.Awake()
-    core_module.Start()
+    ...
 
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
