@@ -132,7 +132,6 @@ class IAstrbotConfig(Protocol):
     将配置项定义为 IAstrbotConfig.Entry 的嵌套协议，以匹配 AstrbotConfig.Entry 的实现方式。
     """
 
-
     @classmethod
     def getConfig(cls) -> IAstrbotConfig:
         """返回一个新的配置实例"""

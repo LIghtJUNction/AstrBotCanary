@@ -1,13 +1,10 @@
 from __future__ import annotations
 
+import toml
 from pathlib import Path
 from typing import Any, Generic
-
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
-import toml
-
-from astrbot_canary.core.paths import AstrbotPaths
 
 from astrbot_canary_api.interface import T, IAstrbotConfigEntry
 
@@ -99,7 +96,7 @@ class AstrbotConfig:
       e = cfg.findEntry("group","name")
     注意：不同地方调用 getConfig(...) 会返回独立实例，若需要共享请在上层通过 DI/容器管理单例。
     """
-    
+
     def __init__(self) -> None:
         self._entries: dict[str,IAstrbotConfigEntry[Any]] = {}
 

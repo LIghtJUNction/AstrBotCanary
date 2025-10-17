@@ -39,12 +39,15 @@ class AstrbotCoreConfig(BaseModel):
 @AstrbotModule(pypi_name="astrbot_canary")
 class AstrbotCoreModule():
     info: PackageMetadata
-#region 基本生命周期
-    pypi_name: str
-    Config: IAstrbotConfig
-    ConfigEntry: IAstrbotConfigEntry[AstrbotCoreConfig]
-    paths: IAstrbotPaths
 
+    pypi_name: str
+    ConfigEntry: type[IAstrbotConfigEntry[AstrbotCoreConfig]]
+
+    paths: IAstrbotPaths
+    config: IAstrbotConfig
+
+    
+#region 基本生命周期
     @classmethod
     @moduleimpl
     def Awake(
@@ -52,7 +55,7 @@ class AstrbotCoreModule():
     ) -> None:
         logger.info(f"{cls.info}")
 
-        cls.cfg_core = cls.Config.bindEntry(
+        cls.cfg_core: IAstrbotConfigEntry[AstrbotCoreConfig] = cls.config.bindEntry(
             entry=cls.ConfigEntry.bind(
                 group="core",
                 name="boot",
@@ -64,6 +67,8 @@ class AstrbotCoreModule():
                 cfg_dir=cls.paths.config,
             )
         )
+
+        
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod

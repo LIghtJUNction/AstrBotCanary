@@ -1,3 +1,10 @@
-from .module import AstrbotCoreModule
+from .config import AstrbotConfig, AstrbotConfigEntry
+from .paths import AstrbotPaths
+from .db import AstrbotDatabase
 
-__all__ = ["AstrbotCoreModule"]
+__all__ = [
+    "AstrbotConfig",
+    "AstrbotConfigEntry",
+    "AstrbotPaths",
+    "AstrbotDatabase",
+]
