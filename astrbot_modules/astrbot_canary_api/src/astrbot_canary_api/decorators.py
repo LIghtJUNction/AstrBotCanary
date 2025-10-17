@@ -27,6 +27,7 @@ class AstrbotModule:
         self.pypi_name = pypi_name
 
     def __call__(self, cls: type) -> type:
+        cls.pypi_name = self.pypi_name
         if self.info is None:
             dist: Distribution = distribution(self.pypi_name)
             meta: PackageMetadata = dist.metadata

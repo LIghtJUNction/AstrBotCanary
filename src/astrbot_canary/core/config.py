@@ -8,14 +8,87 @@ from pydantic_settings import BaseSettings
 import toml
 
 from astrbot_canary.core.paths import AstrbotPaths
-from astrbot_canary_api import IAstrbotConfig
-from astrbot_canary_api.interface import T
+
+from astrbot_canary_api.interface import T, IAstrbotConfigEntry
 
 from logging import getLogger
 logger = getLogger("astrbot_canary.config")
 
 __all__ = ["AstrbotConfig"]
 
+class AstrbotConfigEntry(BaseSettings, Generic[T]):
+    name: str
+    group: str
+    value: T
+    default: T
+    description: str
+    _cfg_file: Path | None = None
+    """ 请使用 bind(...) 方法创建实例 
+    将自动按格式： {group}.toml 存储在模块配置目录下
+    例如 group="database", name="main"
+    同组配置合并保存
+    """
+    @classmethod
+    def bind(
+        cls,
+        group: str,
+        name: str,
+        default: T,
+        description: str,
+        cfg_dir: Path,
+    ) -> AstrbotConfigEntry[T]:
+        entry = cls(
+            group=group,
+            name=name,
+            value=default,
+            default=default,
+            description=description
+        )
+        config_file: Path = (cfg_dir / f"{group}.toml").resolve()
+        # ensure configuration directory exists
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        # bind file path before any save/load operations
+        entry._cfg_file = config_file
+        if config_file.exists():
+            entry.load()
+        else:
+            entry.save()
+        return entry
+    def load(self) -> None:
+        """从本地文件加载配置"""
+        if self._cfg_file and self._cfg_file.exists():
+            config_file = self._cfg_file
+            try:
+                file_data = toml.load(config_file.open("r", encoding="utf-8"))
+                # 用 pydantic 校验和赋值
+                entry = self.model_validate(file_data)
+                val: Any = entry.value
+                try:
+                    self.value = self.default.model_validate(val)
+                except Exception:
+                    self.value = self.default
+                self.description = entry.description
+            except Exception as e:
+                logger.error(f"Error loading config {config_file}: {e}")
+    def save(self) -> None:
+        """将配置保存回本地文件"""
+        if self._cfg_file is None:
+            raise ValueError("ConfigEntry not bound to a file. Use bind(...) to create an entry.")
+        data = self.model_dump(mode="json")
+        value_dict = self.value.model_dump(mode="json")
+        data["value"].update(value_dict)
+        try:
+            toml.dump(data, self._cfg_file.open("w", encoding="utf-8"))
+        except Exception as e:
+            logger.error(f"Error saving config {self._cfg_file}: {e}")
+    def reset(self) -> None:
+        """重置配置为默认值并保存"""
+        self.value = self.default
+        self.save()
+    def __repr__(self) -> str:
+        return f"<@{self.group}.{self.name}={self.value}?{self.default}>"
+    def __str__(self) -> str:
+        return f"AstrbotConfigEntry \n {self.group}.{self.name}={self.value} \n Description: {self.description} \n Default: {self.default}"
 
 class AstrbotConfig:
     """
@@ -26,103 +99,22 @@ class AstrbotConfig:
       e = cfg.findEntry("group","name")
     注意：不同地方调用 getConfig(...) 会返回独立实例，若需要共享请在上层通过 DI/容器管理单例。
     """
+    Entry = AstrbotConfigEntry
+
     def __init__(self) -> None:
-        self._entries: dict[str, IAstrbotConfig.Entry[Any]] = {}
-
-    class Entry(BaseSettings, Generic[T]):
-        name: str
-        group: str
-        value: T
-        default: T
-        description: str
-        _cfg_file: Path | None = None
-        """ 请使用 bind(...) 方法创建实例 
-        将自动按格式： {group}.toml 存储在模块配置目录下
-        例如 group="database", name="main"
-        同组配置合并保存
-        """
-
-        @classmethod
-        def bind(
-            cls,
-            group: str,
-            name: str,
-            default: T,
-            description: str,
-            cfg_dir: Path,
-        ) -> AstrbotConfig.Entry[T]:
-
-            entry = cls(
-                group=group,
-                name=name,
-                value=default,
-                default=default,
-                description=description
-            )
-
-            config_file: Path = (cfg_dir / f"{group}.toml").resolve()
-            # ensure configuration directory exists
-            cfg_dir.mkdir(parents=True, exist_ok=True)
-            # bind file path before any save/load operations
-            entry._cfg_file = config_file
-            if config_file.exists():
-                entry.load()
-            else:
-                entry.save()
-            return entry
-
-        def load(self) -> None:
-            """从本地文件加载配置"""
-            if self._cfg_file and self._cfg_file.exists():
-                config_file = self._cfg_file
-                try:
-                    file_data = toml.load(config_file.open("r", encoding="utf-8"))
-                    # 用 pydantic 校验和赋值
-                    entry = self.model_validate(file_data)
-                    val: Any = entry.value
-                    try:
-                        self.value = self.default.model_validate(val)
-                    except Exception:
-                        self.value = self.default
-
-                    self.description = entry.description
-                except Exception as e:
-                    logger.error(f"Error loading config {config_file}: {e}")
-
-        def save(self) -> None:
-            """将配置保存回本地文件"""
-            if self._cfg_file is None:
-                raise ValueError("ConfigEntry not bound to a file. Use bind(...) to create an entry.")
-            data = self.model_dump(mode="json")
-            value_dict = self.value.model_dump(mode="json")
-            data["value"].update(value_dict)
-            try:
-                toml.dump(data, self._cfg_file.open("w", encoding="utf-8"))
-            except Exception as e:
-                logger.error(f"Error saving config {self._cfg_file}: {e}")
-
-        def reset(self) -> None:
-            """重置配置为默认值并保存"""
-            self.value = self.default
-            self.save()
-
-        def __repr__(self) -> str:
-            return f"<@{self.group}.{self.name}={self.value}?{self.default}>"
-
-        def __str__(self) -> str:
-            return f"AstrbotConfigEntry \n {self.group}.{self.name}={self.value} \n Description: {self.description} \n Default: {self.default}"
+        self._entries: dict[str,IAstrbotConfigEntry[Any]] = {}
 
     @classmethod
-    def getConfig(cls) -> IAstrbotConfig:
+    def getConfig(cls) -> AstrbotConfig:
         """工厂方法：返回针对指定 pypi_name 的新实例（实例独立）。"""
         return cls()
 
-    def findEntry(self, group: str, name: str) -> IAstrbotConfig.Entry[Any] | None:
+    def findEntry(self, group: str, name: str) -> IAstrbotConfigEntry[Any] | None:
         """在当前实例作用域查找配置项（只查本实例，不访问全局）。"""
         _key = group + "." + name
         return self._entries.get(_key)
 
-    def bindEntry(self, entry: IAstrbotConfig.Entry[Any]) -> IAstrbotConfig.Entry[Any]:
+    def bindEntry(self, entry: IAstrbotConfigEntry[Any]) -> IAstrbotConfigEntry[Any]:
         """绑定一个配置项到当前实例（覆盖同名项）。"""
         _key = entry.group + "." + entry.name
         self._entries[_key] = entry
@@ -171,7 +163,7 @@ if __name__ == "__main__":
         password="password",
         sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
     )
-    entry = AstrbotConfig.Entry[NestedConfig].bind(
+    entry = AstrbotConfigEntry[NestedConfig].bind(
         group="database",
         name="main",
         default=nested_default,
@@ -193,7 +185,7 @@ if __name__ == "__main__":
     found.save()
 
     # 重新绑定一个新的实例（模拟进程重启后的读取）
-    new_entry = AstrbotConfig.Entry[NestedConfig].bind(
+    new_entry = AstrbotConfigEntry[NestedConfig].bind(
         group="database",
         name="main",
         default=nested_default,

@@ -7,8 +7,11 @@ astrbot_canary 核心模块
 请务必使用await broker.startup()等待broker启动完成
 
 """
+from pydantic import BaseModel
 from astrbot_canary_api.decorators import AstrbotModule
 from astrbot_canary_api import (
+    IAstrbotConfig,
+    IAstrbotPaths,
     moduleimpl,
 )
 """
@@ -23,11 +26,26 @@ from logging import getLogger
 
 logger = getLogger("astrbot_canary.module.core")
 
+
+class AstrbotCoreConfig(BaseModel):
+    """
+    核心模块配置项
+    """
+    modules: list[str]
+    """ 发现的模块 """
+    boot: list[str]
+    """ 启动Astrbot-模块启动顺序 """
+
+
+
 @AstrbotModule(pypi_name="astrbot_canary")
 class AstrbotCoreModule():
-    # cls.info : PackageMetadata
     info: PackageMetadata
 #region 基本生命周期
+    pypi_name: str
+    Config: IAstrbotConfig
+    Paths: IAstrbotPaths
+
 
     @classmethod
     @moduleimpl
@@ -35,12 +53,25 @@ class AstrbotCoreModule():
         cls,
     ) -> None:
         logger.info(f"{cls.info}")
+        cls.Paths.getPaths(cls.pypi_name)
+
+        cls.cfg_core = cls.Config.bindEntry(
+            entry=cls.Config.Entry[AstrbotCoreConfig].bind(
+                group="core",
+                name="boot",
+                default=AstrbotCoreConfig(
+                    modules=[""],
+                    boot=[""],
+                ),
+                description="核心模块配置项",
+                cfg_dir=cls.Paths.config,
+            )
+        )
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod
     @moduleimpl
     def Start(cls) -> None:
-
         logger.info(f"started.")
 
         ...

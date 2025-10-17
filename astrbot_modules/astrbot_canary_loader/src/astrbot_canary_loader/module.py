@@ -23,18 +23,6 @@ class AstrbotLoader():
         ) -> None:
 
         logger.info(f"{cls.info} is awakening.")
-        # 初始化Paths和Config
-
-        # logger.info(f"Paths initialized at {self.paths.astrbot_root}")
-        # logger.info(f"Config initialized for {self.config}")
-        # logger.info(f"Database class ready: {self.db_cls}")
-        # logger.info(f"Broker instance ready: {self.broker}")
-
-        # 绑定配置
-        ...
-
-        # 绑定任务
-        # AstrbotCanaryLoaderTasks.register(self.broker)
 
     @classmethod
     @moduleimpl
