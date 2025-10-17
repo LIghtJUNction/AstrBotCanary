@@ -99,8 +99,7 @@ class AstrbotConfig:
       e = cfg.findEntry("group","name")
     注意：不同地方调用 getConfig(...) 会返回独立实例，若需要共享请在上层通过 DI/容器管理单例。
     """
-    Entry = AstrbotConfigEntry
-
+    
     def __init__(self) -> None:
         self._entries: dict[str,IAstrbotConfigEntry[Any]] = {}
 

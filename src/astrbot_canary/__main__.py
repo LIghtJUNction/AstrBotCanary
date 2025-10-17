@@ -15,7 +15,7 @@ from atexit import register
 
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.paths import AstrbotPaths
-from astrbot_canary.core.config import AstrbotConfig
+from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 
 from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME
 from astrbot_canary_api.decorators import AstrbotModule
@@ -23,6 +23,7 @@ from astrbot_canary_api.interface import ModuleSpec
 
 # region 注入实现
 AstrbotModule.Config = AstrbotConfig
+AstrbotModule.ConfigEntry = AstrbotConfigEntry
 AstrbotModule.Paths = AstrbotPaths
 AstrbotModule.Database = AstrbotDatabase
 

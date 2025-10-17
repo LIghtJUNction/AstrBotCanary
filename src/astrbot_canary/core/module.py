@@ -14,6 +14,7 @@ from astrbot_canary_api import (
     IAstrbotPaths,
     moduleimpl,
 )
+from astrbot_canary_api.interface import IAstrbotConfigEntry
 """
 依赖抽象，而非具体
 """
@@ -26,7 +27,6 @@ from logging import getLogger
 
 logger = getLogger("astrbot_canary.module.core")
 
-
 class AstrbotCoreConfig(BaseModel):
     """
     核心模块配置项
@@ -36,16 +36,14 @@ class AstrbotCoreConfig(BaseModel):
     boot: list[str]
     """ 启动Astrbot-模块启动顺序 """
 
-
-
 @AstrbotModule(pypi_name="astrbot_canary")
 class AstrbotCoreModule():
     info: PackageMetadata
 #region 基本生命周期
     pypi_name: str
     Config: IAstrbotConfig
-    Paths: IAstrbotPaths
-
+    ConfigEntry: IAstrbotConfigEntry[AstrbotCoreConfig]
+    paths: IAstrbotPaths
 
     @classmethod
     @moduleimpl
@@ -53,18 +51,17 @@ class AstrbotCoreModule():
         cls,
     ) -> None:
         logger.info(f"{cls.info}")
-        cls.Paths.getPaths(cls.pypi_name)
 
         cls.cfg_core = cls.Config.bindEntry(
-            entry=cls.Config.Entry[AstrbotCoreConfig].bind(
+            entry=cls.ConfigEntry.bind(
                 group="core",
                 name="boot",
                 default=AstrbotCoreConfig(
-                    modules=[""],
-                    boot=[""],
+                    modules=["astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web", "astrbot_canary_tui"],
+                    boot=["astrbot_canary_core", "astrbot_canary_loader", "astrbot_canary_web"],
                 ),
                 description="核心模块配置项",
-                cfg_dir=cls.Paths.config,
+                cfg_dir=cls.paths.config,
             )
         )
 

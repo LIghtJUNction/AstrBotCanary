@@ -1,8 +1,11 @@
 
 from importlib.metadata import Distribution, distribution , PackageMetadata
+from pydantic import BaseModel
 
 from astrbot_canary_api import IAstrbotConfig, IAstrbotDatabase, IAstrbotPaths
 from taskiq import AsyncBroker
+
+from astrbot_canary_api.interface import IAstrbotConfigEntry
 
 """
 取名为 info 是模仿BepInEx
@@ -17,14 +20,19 @@ class AstrbotModule:
     注入：
         核心模块负责注入具体实现
     """
-    Paths: type[IAstrbotPaths] | None = None
-    Config: type[IAstrbotConfig] | None = None
-    Database: type[IAstrbotDatabase] | None = None
+    Paths: type[IAstrbotPaths]
+    Config: type[IAstrbotConfig]
+    ConfigEntry: type[IAstrbotConfigEntry[BaseModel]]
+    Database: type[IAstrbotDatabase]
+    # 实例
+    paths: IAstrbotPaths | None = None
+    config: IAstrbotConfig | None = None
+    database: IAstrbotDatabase | None = None
     broker: AsyncBroker | None = None
 
     def __init__(self,pypi_name: str , info: PackageMetadata | None = None) -> None:
         self.info: PackageMetadata | None = info
-        self.pypi_name = pypi_name
+        self.pypi_name: str = pypi_name
 
     def __call__(self, cls: type) -> type:
         cls.pypi_name = self.pypi_name
@@ -37,6 +45,11 @@ class AstrbotModule:
         cls.Config = self.Config
         cls.Paths = self.Paths
         cls.Database = self.Database
+        # 创建实例
+        cls.config = cls.Config.getConfig()
+        cls.paths = cls.Paths.getPaths(cls.pypi_name)
+        cls.database = cls.Database.connect(cls.paths.data / f"{cls.pypi_name}.db")
+
         return cls
 
 if __name__ == "__main__":

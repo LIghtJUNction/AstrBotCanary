@@ -7,8 +7,8 @@ from pluggy import HookimplMarker, HookspecMarker
 from pydantic import BaseModel
 
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from taskiq import AsyncBroker, AsyncResultBackend
 
 type BROKER_TYPE = AsyncBroker
@@ -110,8 +110,9 @@ class IAstrbotConfigEntry(Protocol, Generic[T]):
     default: T
     description: str
     _cfg_file: Path | None
+
     @classmethod
-    def bind(cls, group: str, name: str, default: T, description: str, cfg_dir: Path) -> IAstrbotConfigEntry[T]:
+    def bind(cls: type[IAstrbotConfigEntry[T]], group: str, name: str, default: T, description: str, cfg_dir: Path) -> IAstrbotConfigEntry[T]:
         """按 group 保存到 {cfg_dir}/{group}.toml，并返回绑定好的条目实例。"""
         ...
     def load(self) -> None:
@@ -130,8 +131,7 @@ class IAstrbotConfig(Protocol):
     """按实例管理模块配置（与 core.config.AstrbotConfig 保持一致）。
     将配置项定义为 IAstrbotConfig.Entry 的嵌套协议，以匹配 AstrbotConfig.Entry 的实现方式。
     """
-    Entry = IAstrbotConfigEntry
-    # 实现可以提供这个便捷引用
+
 
     @classmethod
     def getConfig(cls) -> IAstrbotConfig:
@@ -165,9 +165,9 @@ class IAstrbotDatabase(Protocol):
     """ SQLAlchemy引擎实例 """
     # session: 不再在接口上保持单一 Session 实例，使用 SessionLocal factory
     SessionLocal: sessionmaker[Session] | None
-    async_engine: Any | None
+    async_engine: AsyncEngine | None
     AsyncSessionLocal: async_sessionmaker[AsyncSession] | None
-    base: Any  # declarative_base()
+    base: type[DeclarativeBase]  # declarative_base()
     """ SQLAlchemy declarative_base 对象，包含所有模型的基类 """
 
     @classmethod
@@ -176,10 +176,12 @@ class IAstrbotDatabase(Protocol):
         ...
 
     @classmethod
-    def init_db(cls, db_path: Path, base: Any) -> IAstrbotDatabase:
+    def init_db(cls, db_path: Path, base: type[DeclarativeBase]) -> IAstrbotDatabase:
         """初始化数据库表结构
         db_path: Path - 数据库文件路径
-        base: SQLAlchemy declarative_base 对象，包含所有模型的基类
+        base: SQLAlchemy DeclarativeBase 基类
+            其子类将初始化
+            自动映射为数据库表
 
         """
         ...
