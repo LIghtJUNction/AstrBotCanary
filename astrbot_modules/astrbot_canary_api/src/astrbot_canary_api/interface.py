@@ -2,8 +2,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable, ContextManager, AsyncContextManager
-import pluggy
 
+from pluggy import HookimplMarker, HookspecMarker
 from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -12,7 +12,6 @@ from taskiq import AsyncBroker, AsyncResultBackend
 
 type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
-
 __all__ = [
     "IAstrbotPaths",
     "IAstrbotConfig",
@@ -31,39 +30,45 @@ __all__ = [
 # Pluggy hookspecs for modules
 # ---------------------------------------------------------------------------
 ASTRBOT_MODULES_HOOK_NAME = "astrbot.modules"  # Must match the name used in PluginManager
-
 # Hook markers - plugins must use the same project name for @hookimpl
-modulespec = pluggy.HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
-moduleimpl = pluggy.HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
+modulespec = HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
+moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
 
 class ModuleSpec:
-    """pluggy hookspec class for Astrbot modules.
+    """Astrbot 模块规范
+    Awake: 自身初始化时调用，请勿编写涉及除本模块之外的逻辑
+        建议操作：
+            绑定配置
+            配置数据库
+            ...
+    Start: 模块启动时调用，负责启动模块的主要功能，可以涉及与其它模块交互
+    OnDestroy: 模块卸载时调用，负责清理资源和保存状态
+        建议操作：
+            关闭数据库连接
+            停止后台任务
+            保存配置
+            释放资源
+            ！无需使用@atexit注册退出钩子，模块框架会统一调用 OnDestroy
 
-    Plugins should implement these methods and decorate them with
-    `@hookimpl` (using the same marker string defined above). The
-    `PluginManager` in the core can call `pm.hook.Awake()` / `.Start()` /
-    `.OnDestroy()` and pluggy will dispatch to all registered implementations.
     """
-
     @modulespec
-    def Awake(self, **kwargs: Any) -> None:
+    @classmethod
+    def Awake(cls) -> None:
         """Called when the module is loaded."""
 
     @modulespec
-    def Start(self) -> None:
+    @classmethod
+    def Start(cls) -> None:
         """Called when the module is started."""
 
     @modulespec
-    def OnDestroy(self) -> None:
+    @classmethod
+    def OnDestroy(cls) -> None:
         """Called when the module is unloaded."""
-
-
-
 
 #endregion
 
 #region Paths
-
 @runtime_checkable
 class IAstrbotPaths(Protocol):
     """Interface for Astrbot path management."""
@@ -92,13 +97,9 @@ class IAstrbotPaths(Protocol):
         """ 返回模块日志目录 """
         ...
 
-
-
 #endregion
 #region Config
-
 T = TypeVar("T", bound=BaseModel)
-
 @runtime_checkable
 class IAstrbotConfig(Protocol):
     """按实例管理模块配置（与 core.config.AstrbotConfig 保持一致）。
@@ -230,7 +231,5 @@ class IAstrbotDatabase(Protocol):
         """同步上下文管理器出口（如果实现）。"""
         ...
 
-
 #endregion
-
 #endregion

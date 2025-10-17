@@ -5,7 +5,7 @@ from typing import Any
 
 from taskiq import TaskiqEvents, TaskiqState
 from taskiq.abc.broker import EventHandler
-from astrbot_canary_api.types import BROKER_TYPE
+
 from logging import getLogger
 logger = getLogger("astrbot_canary.module.loader.tasks")
 

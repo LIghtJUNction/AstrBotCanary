@@ -1,59 +1,54 @@
-from astrbot_canary_api.types import BROKER_TYPE
+from importlib.metadata import PackageMetadata
 from astrbot_canary_api import (
+    AstrbotModuleType,
     IAstrbotConfig,
-    IAstrbotConfigEntry,
     IAstrbotPaths,
+    IAstrbotDatabase,
+    moduleimpl,
 )
-from astrbot_canary_api.enums import AstrBotModuleType
-from astrbot_canary_api.interface import IAstrbotDatabase
-from .tasks import AstrbotCanaryLoaderTasks
+from astrbot_canary_api.decorators import AstrbotModule
+
+# from .tasks import AstrbotCanaryLoaderTasks
 
 from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot_canary.module.loader")
 
+@AstrbotModule(
+    pypi_name="astrbot_canary_loader",
+)
 class AstrbotLoader():
-    name = "canary_loader"
-    pypi_name = "astrbot_canary_loader"
-    module_type = AstrBotModuleType.LOADER
-    version = "1.0.0"
-    authors = ["LIghtJUNction"]
-    description = "Loader module for Astrbot Canary."
-    enabled = True
+    info : PackageMetadata
 
+    @moduleimpl
+    @classmethod
     def Awake(
-            self, 
+            cls, 
         ) -> None:
 
-        logger.info(f"{self.name} v{self.version} is awakening.")
+        logger.info(f"{cls.info} is awakening.")
         # 初始化Paths和Config
 
-        self.paths: IAstrbotPaths = paths_cls.getPaths(self.pypi_name)
-        self.config: IAstrbotConfig = config_cls.getConfig(self.pypi_name)
-
-        self.db_cls: type[IAstrbotDatabase] = db_cls # 需要连接时调用 connect 方法获取实例
-        self.cfg_entry_cls: type[IAstrbotConfigEntry] = cfg_entry_cls # 用于绑定配置项
-        
-        self.broker: BROKER_TYPE = broker
-
-        logger.info(f"Paths initialized at {self.paths.astrbot_root}")
-        logger.info(f"Config initialized for {self.config}")
-        logger.info(f"Database class ready: {self.db_cls}")
-        logger.info(f"Broker instance ready: {self.broker}")
+        # logger.info(f"Paths initialized at {self.paths.astrbot_root}")
+        # logger.info(f"Config initialized for {self.config}")
+        # logger.info(f"Database class ready: {self.db_cls}")
+        # logger.info(f"Broker instance ready: {self.broker}")
 
         # 绑定配置
         ...
 
         # 绑定任务
-        AstrbotCanaryLoaderTasks.register(self.broker)
+        # AstrbotCanaryLoaderTasks.register(self.broker)
 
-    def Start(self) -> None:
-        logger.info(f"{self.name} v{self.version} is starting.")
-        from .tasks import AstrbotCanaryLoaderTasks
-        self.tasks: AstrbotCanaryLoaderTasks = AstrbotCanaryLoaderTasks.register(self.broker)
-        
+    @moduleimpl
+    @classmethod
+    def Start(cls) -> None:
+        logger.info(f"{cls.info} is starting.")
+        # cls.tasks: AstrbotCanaryLoaderTasks = AstrbotCanaryLoaderTasks.register(cls.broker)
 
-    def OnDestroy(self) -> None:
-        logger.info(f"{self.name} v{self.version} is shutting down.")
+    @moduleimpl
+    @classmethod
+    def OnDestroy(cls) -> None:
+        logger.info(f"{cls.info} is shutting down.")
         pass
 

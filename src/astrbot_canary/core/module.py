@@ -7,30 +7,21 @@ astrbot_canary 核心模块
 请务必使用await broker.startup()等待broker启动完成
 
 """
-
+from astrbot_canary_api.decorators import AstrbotModule
+from astrbot_canary_api import (
+    moduleimpl,
+)
 
 """
 依赖抽象，而非具体
 """
 from importlib.metadata import PackageMetadata
-from astrbot_canary_api import (
-    moduleimpl
-)
-from astrbot_canary_api.decorators import AstrbotModule
+from typing import Any
 
 """
 稳定第三方库直接依赖
 """
-from pydantic import BaseModel
 from logging import getLogger
-
-from typing import Any, TypeVar
-
-from astrbot_canary_api import (
-    moduleimpl,
-)
-
-T = TypeVar("T", bound=BaseModel)
 
 logger = getLogger("astrbot_canary.module.core")
 
@@ -44,9 +35,6 @@ class AstrbotCoreModule():
         self,
     ) -> None:
         logger.info(f"{self.info.get('Name')} v{self.info.get('Version')} is awakening.")
-
-
-
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @moduleimpl
