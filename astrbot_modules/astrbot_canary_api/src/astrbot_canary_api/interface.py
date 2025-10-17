@@ -51,18 +51,18 @@ class ModuleSpec:
             ！无需使用@atexit注册退出钩子，模块框架会统一调用 OnDestroy
 
     """
-    @modulespec
     @classmethod
+    @modulespec
     def Awake(cls) -> None:
         """Called when the module is loaded."""
 
-    @modulespec
     @classmethod
+    @modulespec
     def Start(cls) -> None:
         """Called when the module is started."""
 
-    @modulespec
     @classmethod
+    @modulespec
     def OnDestroy(cls) -> None:
         """Called when the module is unloaded."""
 

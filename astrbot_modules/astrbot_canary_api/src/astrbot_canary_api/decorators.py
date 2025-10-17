@@ -2,6 +2,7 @@
 from importlib.metadata import Distribution, distribution , PackageMetadata
 
 from astrbot_canary_api import IAstrbotConfig, IAstrbotDatabase, IAstrbotPaths
+from taskiq import AsyncBroker
 
 """
 取名为 info 是模仿BepInEx
@@ -19,6 +20,7 @@ class AstrbotModule:
     Paths: type[IAstrbotPaths] | None = None
     Config: type[IAstrbotConfig] | None = None
     Database: type[IAstrbotDatabase] | None = None
+    broker: AsyncBroker | None = None
 
     def __init__(self,pypi_name: str , info: PackageMetadata | None = None) -> None:
         self.info: PackageMetadata | None = info

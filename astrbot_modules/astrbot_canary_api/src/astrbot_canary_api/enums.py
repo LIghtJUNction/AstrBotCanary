@@ -18,10 +18,6 @@ class AstrbotModuleType(IntFlag):
     def is_ui(self) -> bool:
         return bool(self & self.UI_MASK)
     
-
-
-    
-
 class AstrbotBrokerType(Enum):
     INMEMORY = "inmemory"
     ZEROMQ = "zeromq"

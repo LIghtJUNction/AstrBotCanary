@@ -1,7 +1,6 @@
-"""Broker configuration helpers and a central factory for Astrbot brokers.
-
-This module centralizes broker config models and a helper `AstrbotBrokers` that
-constructs a Taskiq-compatible broker based on `AstrbotBrokerConfig`.
+"""
+此文件仅供参考，本模块将直接基于
+InMemoryBroker进行开发
 
 It supports:
 - InMemory
@@ -19,7 +18,6 @@ from taskiq import InMemoryBroker, ZeroMQBroker
 from taskiq_aio_pika import AioPikaBroker
 from taskiq_nats import NatsBroker, PullBasedJetStreamBroker, PushBasedJetStreamBroker
 from taskiq_redis import RedisStreamBroker
-from astrbot_canary_api.types import BROKER_TYPE
 from astrbot_canary_api import AstrbotBrokerType
 
 # 开发者必读：

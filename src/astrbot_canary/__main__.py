@@ -30,15 +30,17 @@ AstrbotModule.Database = AstrbotDatabase
 rich.traceback.install()
 basicConfig(level=INFO)
 
-logger = getLogger("astrbot_canary.loader")
+logger = getLogger("astrbot_canary.module.root")
 
 mm = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
+
 """ 核心模块管理器实例 """
-mm.add_hookspecs(ModuleSpec)
+
 
 def main() -> None:
     """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
     logger.info("AstrbotCanary 正在启动，加载模块...")
+    mm.add_hookspecs(ModuleSpec)
     mm.load_setuptools_entrypoints(ASTRBOT_MODULES_HOOK_NAME)
     """ setuptools是早期的打包工具,现在推荐使用UV,这个函数没改名 """
     modules = mm.get_plugins()

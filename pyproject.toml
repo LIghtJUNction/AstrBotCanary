@@ -84,8 +84,8 @@ dev = [
     "pytest-cov",
     "pytest"
 ]
-
-
+[project.entry-points."astrbot.modules"]
+"canary_core" = "astrbot_canary.core:AstrbotCoreModule"
 
 # [tool.uv.sources]
 # orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}

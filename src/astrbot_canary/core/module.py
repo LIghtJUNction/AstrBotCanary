@@ -11,12 +11,10 @@ from astrbot_canary_api.decorators import AstrbotModule
 from astrbot_canary_api import (
     moduleimpl,
 )
-
 """
 依赖抽象，而非具体
 """
 from importlib.metadata import PackageMetadata
-from typing import Any
 
 """
 稳定第三方库直接依赖
@@ -30,39 +28,27 @@ class AstrbotCoreModule():
     # cls.info : PackageMetadata
     info: PackageMetadata
 #region 基本生命周期
+
+    @classmethod
     @moduleimpl
     def Awake(
-        self,
+        cls,
     ) -> None:
-        logger.info(f"{self.info.get('Name')} v{self.info.get('Version')} is awakening.")
+        logger.info(f"{cls.info}")
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
+    @classmethod
     @moduleimpl
-    def Start(self) -> None:
+    def Start(cls) -> None:
 
-        logger.info(f"{self.info.get('Name')} v{self.info.get('Version')} has started.")
+        logger.info(f"started.")
 
         ...
-
+    @classmethod
     @moduleimpl
-    def OnDestroy(self) -> None:
-        logger.info(f"{self.info.get('Name')} v{self.info.get('Version')} is being destroyed.")
+    def OnDestroy(cls) -> None:
+        logger.info(f"destroyed.")
 
-#region 特有功能函数
-    @staticmethod
-    def setActive(active: bool, module: Any) -> None:
-        """Enable or disable the module at runtime."""
-        if module.enabled == active:
-            logger.info(f"{module.name} is already {'enabled' if active else 'disabled'}. No action taken.")
-            return
-        module.enabled = active
-        state = "enabled" if active else "disabled"
-        logger.info(f"{module.name} has been {state} at runtime.")
-        if not active:
-            module.OnDestroy()
-        if active:
-            module.Start()
 
-#endregion
 #endregion
 

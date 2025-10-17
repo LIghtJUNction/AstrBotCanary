@@ -1,9 +1,5 @@
 from importlib.metadata import PackageMetadata
 from astrbot_canary_api import (
-    AstrbotModuleType,
-    IAstrbotConfig,
-    IAstrbotPaths,
-    IAstrbotDatabase,
     moduleimpl,
 )
 from astrbot_canary_api.decorators import AstrbotModule
@@ -20,8 +16,8 @@ logger: Logger = getLogger("astrbot_canary.module.loader")
 class AstrbotLoader():
     info : PackageMetadata
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def Awake(
             cls, 
         ) -> None:
@@ -40,14 +36,14 @@ class AstrbotLoader():
         # 绑定任务
         # AstrbotCanaryLoaderTasks.register(self.broker)
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def Start(cls) -> None:
         logger.info(f"{cls.info} is starting.")
         # cls.tasks: AstrbotCanaryLoaderTasks = AstrbotCanaryLoaderTasks.register(cls.broker)
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def OnDestroy(cls) -> None:
         logger.info(f"{cls.info} is shutting down.")
         pass

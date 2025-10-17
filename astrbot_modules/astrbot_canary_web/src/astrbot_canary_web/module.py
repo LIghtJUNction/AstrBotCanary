@@ -1,6 +1,6 @@
 from importlib.metadata import PackageMetadata
 
-import uvicorn
+# import uvicorn
 from logging import getLogger , Logger
 
 from astrbot_canary_api import moduleimpl
@@ -16,8 +16,8 @@ logger: Logger = getLogger("astrbot_canary.module.web")
 class AstrbotCanaryWeb():
     info: PackageMetadata
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def Awake(
             cls,
         ) -> None:
@@ -61,20 +61,12 @@ class AstrbotCanaryWeb():
         # Response.deps["MODULE"] = self
         # # 准备启动...
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def Start(cls) -> None:
-        logger.info(f"{cls.name} v{cls.version} has started.")
-        # Use uvicorn to run FastAPI app
-        # 在后台线程中启动 uvicorn，避免阻塞主线程
-        uvicorn.run(
-            cls.app,
-            host=str(cls.cfg_web.value.host),
-            port=int(cls.cfg_web.value.port),
-            log_level="info",
-        )
+        ...
 
-    @moduleimpl
     @classmethod
+    @moduleimpl
     def OnDestroy(cls) -> None:
-        logger.info(f"{cls.name} v{cls.version} is being destroyed.")
+        ...
