@@ -1,3 +1,4 @@
+import warnings
 import pytest
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -71,3 +72,160 @@ def test_astrbot_config_entry(tmp_cfg_dir: Path):
     assert isinstance(entry.value.type_2, Type2)
     assert entry.value.sub_config.sub_field1 == "nested_value"
     print("pytest: AstrbotConfigEntry 测试通过")
+
+def test_repr_str():
+    dummy = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        path1="some/path",
+        path2=Path("another/path"),
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    entry = AstrbotConfigEntry[NestedConfig](
+        name="n", group="g", value=dummy, default=dummy, description="d", cfg_file=None
+    )
+    assert isinstance(repr(entry), str)
+    assert isinstance(str(entry), str)
+
+def test_save_no_cfg_file():
+    dummy = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        path1="some/path",
+        path2=Path("another/path"),
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    entry = AstrbotConfigEntry[NestedConfig](
+        name="n", group="g", value=dummy, default=dummy, description="d", cfg_file=None
+    )
+    entry.save()  # 不应抛异常
+
+def test_load_file_not_exist(tmp_path: Path):
+    dummy = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        path1="some/path",
+        path2=Path("another/path"),
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    entry = AstrbotConfigEntry[NestedConfig](
+        name="n", group="g", value=dummy, default=dummy, description="d", cfg_file=tmp_path / "not_exist.toml"
+    )
+    entry.load()  # 不应抛异常
+def test_load_invalid_data(tmp_path: Path):
+    dummy = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        path1="some/path",
+        path2=Path("another/path"),
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    cfg_file = tmp_path / "invalid.toml"
+    cfg_file.write_text("not_a_valid_toml = 123")
+    entry = AstrbotConfigEntry[NestedConfig](
+        name="n", group="g", value=dummy, default=dummy, description="d", cfg_file=cfg_file
+    )
+    with pytest.raises(Exception):
+        entry.load()
+
+def test_save_invalid_type(tmp_path: Path):
+    class Dummy(BaseModel):
+        x: int = 1
+    entry = AstrbotConfigEntry[Dummy](
+        name="n", group="g", value=Dummy(), default=Dummy(), description="d", cfg_file=tmp_path / "f.toml"
+    )
+    entry.value = "not_a_model"  # 故意测试非法类型 #type: ignore
+    with warnings.catch_warnings(record=True) as w:
+        entry.save()
+        assert any("PydanticSerializationUnexpectedValue" in str(warn.message) for warn in w)
+
+def test_reset_invalid_default():
+    class Dummy(BaseModel):
+        x: int = 1
+    entry = AstrbotConfigEntry[Dummy](
+        name="n", group="g", value=Dummy(), default=Dummy(), description="d", cfg_file=None
+    )
+    entry.default = "not_a_model"  # 故意测试非法类型 #type: ignore
+    with pytest.raises(Exception):
+        entry.reset()
+
+def test_save_no_cfg_file_logs_error(caplog: pytest.LogCaptureFixture):
+    dummy = NestedConfig(
+        type_1=Type1.OPTION_A.value,
+        type_2=Type2.OPTION_X,
+        path1="some/path",
+        path2=Path("another/path"),
+        host="localhost",
+        port=5432,
+        user="user",
+        password="password",
+        sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+    )
+    entry = AstrbotConfigEntry[NestedConfig](
+        name="n", group="g", value=dummy, default=dummy, description="d", cfg_file=None
+    )
+    with caplog.at_level("ERROR"):
+        entry.save()
+        assert any("配置文件路径未设置" in m for m in caplog.messages)
+
+def test_bind_file_exists(tmp_path: Path):
+    # 构造一个已存在的 toml 文件，包含 value/default 字段为 dict
+    from toml import dump
+    dummy_dict = {
+        "type_1": Type1.OPTION_A.value,
+        "type_2": Type2.OPTION_X.value,
+        "path1": "some/path",
+        "path2": "another/path",
+        "host": "localhost",
+        "port": 5432,
+        "user": "user",
+        "password": "password",
+        "sub_config": {"sub_field1": "nested_value", "sub_field2": 100},
+    }
+    data = {
+        "name": "main",
+        "group": "database",
+        "value": dummy_dict,
+        "default": dummy_dict,
+        "description": "主数据库配置",
+    }
+    cfg_file = tmp_path / "database.toml"
+    with cfg_file.open("w", encoding="utf-8") as f:
+        dump(data, f)
+    # bind 时应走到文件存在分支
+    entry = AstrbotConfigEntry[NestedConfig].bind(
+        group="database",
+        name="main",
+        default=NestedConfig(
+            type_1=Type1.OPTION_A.value,
+            type_2=Type2.OPTION_X,
+            path1="some/path",
+            path2=Path("another/path"),
+            host="localhost",
+            port=5432,
+            user="user",
+            password="password",
+            sub_config=SubConfig(sub_field1="nested_value", sub_field2=100),
+        ),
+        description="主数据库配置",
+        cfg_dir=tmp_path,
+    )
+    assert entry.value.port == 5432
+    assert entry.value.type_2 == Type2.OPTION_X or entry.value.type_2 == Type2.OPTION_X.value
+

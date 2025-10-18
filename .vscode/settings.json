@@ -2,11 +2,13 @@
     "deepscan.enable": true,
     "cSpell.words": [
         "Astrbot",
+        "asyncio",
         "atransaction",
         "hookspecs",
         "moduleimpl",
         "modulespec",
         "orjson",
+        "pytest",
         "sessionmaker",
         "taskiq",
         "tryfirst",

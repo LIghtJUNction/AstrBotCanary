@@ -3,7 +3,7 @@ from collections.abc import Generator, AsyncGenerator
 from pathlib import Path
 from typing import Any
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -176,85 +176,3 @@ class AstrbotDatabase:
         except Exception:
             pass
 
-if __name__ == "__main__":
-    from sqlalchemy import Column, Integer, String
-    Base = declarative_base()
-    db_path = Path("./test/astrbot_canary.db")
-
-    # 定义复杂模型
-    class User(Base):
-        __tablename__ = "users"
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        username = Column(String, unique=True, index=True)
-        email = Column(String, unique=True)
-        def __repr__(self):
-            return f"<User(id={self.id}, username={self.username}, email={self.email})>"
-
-    # 初始化数据库并创建表
-    db = AstrbotDatabase.init_db(db_path, Base)
-
-    # 1. 使用 ORM 批量插入用户（避免重复）
-    users_data = [
-        ("alice", "alice@example.com"),
-        ("bob", "bob@example.com"),
-        ("charlie", "charlie@example.com"),
-    ]
-    with db.transaction() as session:
-        for username, email in users_data:
-            # 按 username 检查是否已存在（session.get 按主键查询，不适用于 username）
-            existing = session.query(User).filter_by(username=username).one_or_none()
-            if existing is None:
-                user = User(username=username, email=email)
-                session.add(user)
-    print("ORM 批量插入用户成功")
-
-    # 2. 使用 ORM 查询所有用户
-    with db.transaction() as session:
-        users = session.query(User).all()
-        print("所有用户:", users)
-
-    # 3. 使用 ORM 更新用户邮箱
-    with db.transaction() as session:
-        user = session.query(User).filter_by(username="alice").one_or_none()
-        if user:
-            user.email = "alice@new.com"  # type: ignore[attr]
-    print("ORM 更新邮箱成功")
-    with db.transaction() as session:
-        user = session.query(User).filter_by(username="alice").one_or_none()
-        print("更新后:", user)
-
-    # 4. 使用 ORM 删除用户
-    with db.transaction() as session:
-        user = session.query(User).filter_by(username="bob").one_or_none()
-        if user:
-            session.delete(user)
-    print("ORM 删除用户成功")
-    with db.transaction() as session:
-        users = session.query(User).all()
-        print("删除后:", users)
-
-    # 5. 事务测试：ORM 批量插入+回滚
-    try:
-        with db.transaction() as session:
-            dave = User(username="dave", email="dave@example.com")
-            eve = User(username="eve", email="eve@example.com")
-            session.add(dave)
-            session.add(eve)
-            raise Exception("模拟事务失败，触发回滚")
-    except Exception as e:
-        print("事务回滚成功，异常:", e)
-    with db.transaction() as session:
-        users = session.query(User).all()
-        print("事务后:", users)
-
-    # 6. 异常断言：插入重复用户名
-    try:
-        with db.transaction() as session:
-            duplicate = User(username="alice", email="alice@dup.com")
-            session.add(duplicate)
-            session.commit()  # 强制提交以触发异常
-    except Exception as e:
-        print("插入重复用户名异常捕获:", e)
-
-    db.close()
-    print("数据库关闭")
