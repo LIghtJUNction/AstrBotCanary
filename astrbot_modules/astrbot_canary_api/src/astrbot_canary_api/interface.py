@@ -330,8 +330,6 @@ class IAstrbotNetwork(Protocol):
 
     def __init__(
             self, 
-            title: str , 
-            description: str,
             lifespan: AsyncContextManager[Any] | None = None,
         ) -> None:
         """包含自己的子路由和路由"""
@@ -373,7 +371,7 @@ class IAstrbotNetwork(Protocol):
         """通用路由装饰器，接受所有HTTP方法"""
         ...
 
-    def include_router(self, router: 'IAstrbotRouter', prefix: str = "") -> None:
+    def include_router(self, router: IAstrbotNetwork, prefix: str = "") -> None:
         """嵌套/挂载子路由，prefix为可选子路由前缀"""
         ...
 
@@ -387,66 +385,6 @@ class IAstrbotNetwork(Protocol):
 
     def add_event_handler(self, event_type: str, handler: Any) -> None:
         """注册生命周期事件（startup/shutdown等）"""
-        ...
-
-    def normalize_path(self, path: str) -> str:
-        """规范化路径，去除多余斜杠"""
-        ...
-
-#region 路由器
-class IAstrbotRouter(Protocol):
-    """
-    Astrbot Taskiq 路由器接口
-    支持嵌套子路由、装饰器注册、通用路由、include_router、路由获取等能力
-    """
-    scheme: str = "astrbot"
-
-    def __init__(self, prefix: str) -> None:
-        """包含自己的子路由和路由"""
-        ...
-
-    def add_middleware(self, middleware: Any) -> None:
-        """添加中间件"""
-        ...
-
-    def get(self, path: str):
-        """GET请求装饰器"""
-        ...
-
-    def post(self, path: str):
-        """POST请求装饰器"""
-        ...
-
-    def put(self, path: str):
-        """PUT请求装饰器"""
-        ...
-
-    def delete(self, path: str):
-        """DELETE请求装饰器"""
-        ...
-
-    def head(self, path: str):
-        """HEAD请求装饰器"""
-        ...
-
-    def options(self, path: str):
-        """OPTIONS请求装饰器"""
-        ...
-
-    def patch(self, path: str):
-        """PATCH请求装饰器"""
-        ...
-
-    def api_route(self, path: str, methods: list[str]) -> Any:
-        """通用路由装饰器，接受所有HTTP方法"""
-        ...
-
-    def include_router(self, router: 'IAstrbotRouter', prefix: str = "") -> None:
-        """嵌套/挂载子路由，prefix为可选子路由前缀"""
-        ...
-
-    def get_routes(self) -> list[tuple[list[str], str, Any]]:
-        """获取所有注册的路由 (方法列表, 完整路径, handler)"""
         ...
 
     def normalize_path(self, path: str) -> str:
