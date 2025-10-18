@@ -24,6 +24,7 @@ jobs:
           source .venv/bin/activate
       - name: Install dependencies with uv
         run: |
+          source .venv/bin/activate
           uv sync
           uv pip install -e .[dev]
           python -m ensurepip --upgrade

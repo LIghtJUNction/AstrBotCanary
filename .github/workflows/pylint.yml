@@ -20,10 +20,10 @@ jobs:
 
     - name: Install dependencies
       run: |
+        source .venv/bin/activate
         uv sync
         uv venv .venv
         uv tool install pylint
-      
         uv pip install -e .[dev]
 
       
