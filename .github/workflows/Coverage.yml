@@ -24,13 +24,15 @@ jobs:
           source .venv/bin/activate
       - name: Install dependencies with uv
         run: |
-          source .venv/bin/activate
+          rm -rf .venv
+          uv venv .venv
           uv sync
+          source .venv/bin/activate
+          
           uv pip install -e .[dev]
-          python -m ensurepip --upgrade
-          pip install pytest
           uv tool install codecov
           uv tool install coverage
+          pytest
 
       - name: Run tests with coverage (uv)
         run: |
