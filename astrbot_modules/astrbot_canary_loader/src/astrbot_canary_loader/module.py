@@ -9,7 +9,7 @@ from astrbot_canary_api.decorators import AstrbotModule
 
 from logging import getLogger , Logger
 
-logger: Logger = getLogger("astrbot_canary.module.loader")
+logger: Logger = getLogger("astrbot.module.loader")
 
 @AstrbotModule("astrbot_canary_loader","canary_loader",AstrbotModuleType.LOADER)
 class AstrbotLoader():

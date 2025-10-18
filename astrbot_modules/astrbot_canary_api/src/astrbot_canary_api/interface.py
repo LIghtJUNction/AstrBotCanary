@@ -1,4 +1,6 @@
 from __future__ import annotations
+from collections.abc import AsyncIterable
+from logging import LogRecord
 from pathlib import Path
 
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable, ContextManager, AsyncContextManager
@@ -35,7 +37,6 @@ ASTRBOT_MODULES_HOOK_NAME = "astrbot.modules"  # Must match the name used in Plu
 # Hook markers - plugins must use the same project name for @hookimpl
 modulespec = HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
 moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
-
 
 # 此协议用于type hint
 # 模块实现应该按照ModuleSpec写
@@ -177,7 +178,7 @@ class IAstrbotDatabase(Protocol):
         ...
 
     @classmethod
-    def init_db(cls, db_path: Path, base: type[DeclarativeBase]) -> IAstrbotDatabase:
+    def init_base(cls, db_path: Path, base: type[DeclarativeBase]) -> IAstrbotDatabase:
         """初始化数据库表结构
         db_path: Path - 数据库文件路径
         base: SQLAlchemy DeclarativeBase 基类
@@ -185,6 +186,10 @@ class IAstrbotDatabase(Protocol):
             自动映射为数据库表
 
         """
+        ...
+
+    def bind_base(self: IAstrbotDatabase, base: type[DeclarativeBase]) -> None:
+        """实例化后绑定Base（DeclarativeBase），用于动态绑定模型基类。"""
         ...
 
     def execute(self, query: str, params: dict[str, Any] | tuple[Any, ...] | None = None) -> Any:
@@ -236,4 +241,35 @@ class IAstrbotDatabase(Protocol):
         ...
 
 #endregion
+class LogHistoryItem(BaseModel):
+    level: str
+    time: str
+    data: str
+
+class LogSSEItem(BaseModel):
+    type: str
+    level: str
+    time: str
+    data: str
+class LogHistoryResponseData(BaseModel):
+    logs: list[LogHistoryItem]
+
+#region 日志处理器
+class IAstrbotLogHandler(Protocol):
+    """ 前端的控制台使用 """
+
+    def emit(self, record: LogRecord) -> None:
+        """处理并记录日志"""
+        ...
+    async def event_stream(self) -> AsyncIterable[str]:
+        """异步日志流生成器，用于 SSE 推送"""
+        while True:
+            yield "data: ...\n\n"
+        ...
+
+    async def get_log_history(self) -> LogHistoryResponseData:
+        """获取所有历史日志"""
+        ...
+
+
 #endregion

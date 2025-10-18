@@ -5,7 +5,7 @@ from logging import getLogger , Logger
 
 from tqdm import tqdm
 
-logger: Logger = getLogger("astrbot_canary.frontend")
+logger: Logger = getLogger("astrbot.module.web.frontend")
 
 class AstrbotCanaryFrontend():
     """ 直接使用Astrbot官方前端 """

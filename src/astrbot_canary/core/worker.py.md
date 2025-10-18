@@ -9,7 +9,7 @@ from taskiq.cli.worker.args import WorkerArgs
 from taskiq.cli.worker.run import run_worker
 
 from logging import getLogger
-logger = getLogger("astrbot_canary.core.worker")
+logger = getLogger("astrbot.module.core.worker")
 
 
 

@@ -91,7 +91,17 @@ pyahocorasick（文本处理）
 
 ## 覆盖率测试
 - uv tool install coverage
-coverage run -m pytest
+- coverage run -m pytest
+- 或者使用以下命令
+- pytest --cov=src --cov-report=term-missing
+
+- 输出为xml/json/html
+- pytest --cov=src --cov-report=xml
+- coverage xml/json/html
+
+查看覆盖率：
+- 点击最顶上的徽标即可
+
 
 ## 文档
 项目文档位于 `docs/`（仓库内）。  

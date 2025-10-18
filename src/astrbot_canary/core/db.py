@@ -3,7 +3,7 @@ from collections.abc import Generator, AsyncGenerator
 from pathlib import Path
 from typing import Any
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 from contextlib import contextmanager, asynccontextmanager
 
 class AstrbotDatabase:
+
     db_path: Path
     database_url: str
     engine: Engine | None
@@ -43,7 +44,7 @@ class AstrbotDatabase:
         return instance
 
     @classmethod
-    def init_db(cls, db_path: Path, base: Any) -> "AstrbotDatabase":
+    def init_base(cls, db_path: Path, base: type[DeclarativeBase]) -> AstrbotDatabase:
         """自动初始化数据库表结构
         db_path: Path - 数据库文件路径
         base: SQLAlchemy declarative_base 对象，包含所有模型的基类
@@ -63,6 +64,20 @@ class AstrbotDatabase:
         instance: AstrbotDatabase = cls.connect(db_path)
         instance.base = base
         return instance
+
+    def bind_base(self, base: type[DeclarativeBase]) -> None:
+        """
+        动态绑定DeclarativeBase基类，并自动创建表结构。
+        base: SQLAlchemy declarative_base对象，包含所有模型的基类
+        """
+        # 绑定base
+        self.base = base
+        # 确保父目录存在
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # 创建表结构
+        if self.engine is None:
+            self.engine = create_engine(self.database_url, future=True)
+        base.metadata.create_all(bind=self.engine)
 
     @contextmanager
     def session_scope(self) -> Generator[Session, None, None]:

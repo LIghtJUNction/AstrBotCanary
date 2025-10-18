@@ -22,7 +22,7 @@ from logging import getLogger
 依赖抽象，而非具体
 """
 
-logger = getLogger("astrbot_canary.module.core")
+logger = getLogger("astrbot.module.core")
 
 class AstrbotCoreConfig(BaseModel):
     """
@@ -47,7 +47,7 @@ class AstrbotCoreModule:
         cls,
     ) -> None:
         logger.info(f"{cls.info.get("name")} is awakening")
-
+        
 
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块

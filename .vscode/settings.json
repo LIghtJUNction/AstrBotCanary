@@ -5,6 +5,7 @@
         "asyncio",
         "atransaction",
         "hookspecs",
+        "levelname",
         "moduleimpl",
         "modulespec",
         "orjson",

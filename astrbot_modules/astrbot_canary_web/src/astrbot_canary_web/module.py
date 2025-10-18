@@ -3,6 +3,7 @@ from pathlib import Path
 # import uvicorn
 from logging import getLogger , Logger
 from typing import Literal
+from fastapi.responses import ORJSONResponse
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +17,7 @@ from astrbot_canary_web.frontend import AstrbotCanaryFrontend
 
 # from astrbot_canary_web.api import api_router
 
-logger: Logger = getLogger("astrbot_canary.module.web")
+logger: Logger = getLogger("astrbot.module.web")
 
 class AstrbotCanaryWebConfig(BaseModel):
     webroot: str
@@ -29,7 +30,6 @@ class AstrbotCanaryWebConfig(BaseModel):
 class AstrbotCanaryWeb():
 
     info: PackageMetadata
-
     ConfigEntry: type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]]
     paths: IAstrbotPaths
     database: IAstrbotDatabase
@@ -66,7 +66,13 @@ class AstrbotCanaryWeb():
         logger.info(f"Frontend files are ready in {Path(cls.cfg_web.value.webroot).absolute()}")
 
         # 初始化 FastAPI 应用并挂载子路由
-        cls.app = FastAPI()
+        
+        cls.app = FastAPI(
+            title="AstrBot Canary Web",
+            description="AstrBot Canary Web API",
+            version="0.1.0",
+            default_response_class=ORJSONResponse
+        )
 
         # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
         cls.app.include_router(api_router)
@@ -94,4 +100,4 @@ class AstrbotCanaryWeb():
     @classmethod
     @moduleimpl
     def OnDestroy(cls) -> None:
-        ...
+        logger.info(f"{cls.info.get('name')} is being destroyed.")

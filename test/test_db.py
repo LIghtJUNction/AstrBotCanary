@@ -22,7 +22,7 @@ def db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def db(db_path: Path):
-    db = AstrbotDatabase.init_db(db_path, Base)
+    db = AstrbotDatabase.init_base(db_path, Base)
     yield db
     db.close()
 
@@ -70,6 +70,36 @@ async def test_astrbot_database_sync_and_async(db: AstrbotDatabase):
     assert db.async_engine is None
     assert db.AsyncSessionLocal is None
 def test_session_scope_not_connected(tmp_path: Path):
+    db = AstrbotDatabase(tmp_path / "not_exist.db")
+    with pytest.raises(RuntimeError, match="Database not connected"):
+        with db.session_scope():
+            pass
+
+def test_bind_base(tmp_path: Path):
+    # 覆盖engine为None分支，需保证Base2已定义
+    class Base2(DeclarativeBase):
+        pass
+    class Item(Base2):
+        __tablename__ = "items"
+        id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        name: Mapped[str] = mapped_column(String)
+    db2 = AstrbotDatabase(tmp_path / "bind_base2.db")  # 此时engine为None
+    db2.bind_base(Base2)
+    rows2 = db2.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='items'")
+    assert rows2 and rows2[0][0] == "items"
+    dbfile = tmp_path / "bind_base.db"
+    db = AstrbotDatabase.connect(dbfile)
+    class Base2(DeclarativeBase):
+        pass
+    class Item(Base2):
+        __tablename__ = "items"
+        id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        name: Mapped[str] = mapped_column(String)
+    db.bind_base(Base2)
+    # 检查表是否创建成功
+    rows = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='items'")
+    assert rows and rows[0][0] == "items"
+    db.close()
     db = AstrbotDatabase(tmp_path / "not_exist.db")
     with pytest.raises(RuntimeError, match="Database not connected"):
         with db.session_scope():
@@ -161,7 +191,7 @@ async def test_aenter_auto_connect(tmp_path: Path):
         assert db2.async_engine is not None
     assert db.async_engine is None
 
-def test_exit_exception(monkeypatch, tmp_path: Path):
+def test_exit_exception(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     dbfile = tmp_path / "test_exit_exception.db"
     db = AstrbotDatabase.connect(dbfile)
     # monkeypatch close 抛异常，__exit__应捕获

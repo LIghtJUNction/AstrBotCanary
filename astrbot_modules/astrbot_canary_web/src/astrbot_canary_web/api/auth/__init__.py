@@ -7,16 +7,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from astrbot_canary_api.decorators import AstrbotInjector
 from astrbot_canary_api.interface import IAstrbotDatabase
-from astrbot_canary_web.models import Response
+from astrbot_canary_web.models import Base, Response
 from fastapi import APIRouter,HTTPException, Request
 
 
 from astrbot_canary_web.models import User
 import logging
 
-logger = logging.getLogger("astrbot.modules.auth")
-
-
+logger = logging.getLogger("astrbot.module.auth")
 
 __all__ = ["auth_router"]
 
@@ -44,6 +42,9 @@ async def login(request: Request) -> Response[LoginResponse]:
     password = data.get("password")
     logger.info(f"Received login attempt for username: {username}")
     db: IAstrbotDatabase = AstrbotInjector.get("CANARY_WEB_DB")
+    # 初始化表结构
+    db.bind_base(Base)
+    
     JWT_EXP_DAYS: int = AstrbotInjector.get("JWT_EXP_DAYS")
     # md5(astrbot) = 77b90590a8945a7d36c963981a307dc9
     is_default_password = (password == "77b90590a8945a7d36c963981a307dc9")  
@@ -84,13 +85,12 @@ async def login(request: Request) -> Response[LoginResponse]:
                 # 用户不存在 -> 返回错误响应
                 return Response[LoginResponse].error(message="未找到用户")
 
-            # 比对密码（使用 User.verify_password，基于 PBKDF2 + salt）
-            if not user.verify_password(password):
-                # 密码错误 -> 返回错误响应
+            # 比对密码（使用异步业务方法）
+            # 需新增 User 的 verify_password_async 和 issue_token_async 公共方法
+            if not await user.verify_password_async(password):
                 return Response[LoginResponse].error(message="密码错误")
 
-            # 登录成功（使用模型封装的签发方法）
-            token = user.issue_token(exp_days=JWT_EXP_DAYS)
+            token = await user.issue_token_async(exp_days=JWT_EXP_DAYS)
             return Response[LoginResponse].ok(
                 message="login successful", 
                 data=LoginResponse(username=username, token=token, change_pwd_hint=is_default_password)
@@ -156,18 +156,18 @@ async def edit_account(request: Request) -> Response[EditAccountResponse]:
         async with db.atransaction() as session:
             # Delegate token -> user resolution and verification entirely to model
             try:
-                user, _payload = await User.find_by_token_async(session, token, expected_iss="AstrBot.Canary")
+                user, _payload = await User.find_by_token_async(session, token, expected_iss="AstrBotCanary")
             except LookupError:
                 return Response[EditAccountResponse].error(message="无效的令牌")
 
-            # verify current password
-            if not user.verify_password(password):
+            # verify current password（异步业务方法）
+            if not await user.verify_password_async(password):
                 return Response[EditAccountResponse].error(message="当前密码错误")
 
             # update password
             if new_password:
                 # 如果新旧密码一致，告诉用户，不需要更改
-                if user.verify_password(new_password):
+                if await user.verify_password_async(new_password):
                     return Response[EditAccountResponse].error(message="新密码与当前密码相同，无需更改")
                 try:
                     await user.update_password_async(session, new_password)

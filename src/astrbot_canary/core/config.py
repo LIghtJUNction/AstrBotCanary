@@ -8,7 +8,7 @@ import toml
 from astrbot_canary_api.interface import T
 
 from logging import getLogger
-logger = getLogger("astrbot_canary.config")
+logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
 

@@ -8,7 +8,7 @@ from astrbot_canary_api.types import BROKER_TYPE, RESULT_BACKEND_TYPE
 from astrbot_canary_api import AstrbotResultBackendType
 
 from logging import getLogger , Logger
-logger: Logger = getLogger("astrbot_canary.core.backends")
+logger: Logger = getLogger("astrbot.module.core.backends")
 
 # 开发者必读：
 # https://taskiq-python.github.io/available-components/result-backends.html#nats-result-backend

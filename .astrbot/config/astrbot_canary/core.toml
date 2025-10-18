@@ -1,11 +1,13 @@
 name = "boot"
 group = "core"
-description = "核心模块配置项"
+description = "核心模块配置项modules: 已发现的全部模块boot: 启动模块列表log_what: 抓取谁的日志？（这会显示在webui的控制台中）可选：astrbot（默认，抓取全部），astrbot.module（抓取所有模块日志）astrbot.plugin（抓取插件日志）或者：astrbot.module.core（抓取指定模块日志）astrbot.plugin.xxx（抓取指定插件日志）"
 
 [value]
 modules = [ "canary_core", "canary_loader", "canary_web", "canary_tui",]
 boot = [ "canary_core", "canary_loader", "canary_web",]
+log_what = "astrbot.module"
 
 [default]
 modules = [ "canary_core", "canary_loader", "canary_web", "canary_tui",]
 boot = [ "canary_core", "canary_loader", "canary_web",]
+log_what = "astrbot.module"

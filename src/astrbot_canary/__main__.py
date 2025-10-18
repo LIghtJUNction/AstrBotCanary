@@ -13,6 +13,7 @@ from pluggy import PluginManager as ModuleManager # 为了区分加载器的 Plu
 from pydantic import BaseModel
 import rich.traceback
 from rich.logging import RichHandler
+
 from atexit import register
 from click import Choice, confirm, prompt
 from taskiq import InMemoryBroker
@@ -20,6 +21,7 @@ from taskiq import InMemoryBroker
 # import cProfile
 from astrbot_canary_helper import AstrbotCanaryHelper
 from astrbot_canary.core.db import AstrbotDatabase
+from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.config import AstrbotConfigEntry
 
@@ -46,7 +48,13 @@ basicConfig(
     handlers=[RichHandler(rich_tracebacks=True, markup=True)],
 )
 
-logger = getLogger("astrbot_canary.module.root")
+logger = getLogger("astrbot")
+handler = AsyncAstrbotLogHandler()
+
+# 注入日志处理器
+AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
+
+
 class AstrbotRootConfig(BaseModel):
     """
     核心模块配置项
@@ -55,6 +63,8 @@ class AstrbotRootConfig(BaseModel):
     """ 发现的模块 """
     boot: list[str]
     """ 启动Astrbot-模块启动顺序 """
+    log_what: str = "astrbot"
+    """ 抓谁的日志？ """
 
 """ 核心模块管理器实例 """
 
@@ -67,6 +77,7 @@ class AstrbotRootModule:
     @classmethod
     def Awake(cls) -> None:
         """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
+
         logger.info("AstrbotCanary 正在启动，加载模块...")
         cls.mm.add_hookspecs(AstrbotModuleSpec)
         cls.paths = AstrbotModule.Paths.getPaths("astrbot_canary")
@@ -78,10 +89,26 @@ class AstrbotRootModule:
             default=AstrbotRootConfig(
                 modules=["canary_core", "canary_loader", "canary_web", "canary_tui"],
                 boot=["canary_core", "canary_loader", "canary_web"],
+                log_what="astrbot",
             ),
-            description="核心模块配置项",
+            description="核心模块配置项" \
+            "modules: 已发现的全部模块" \
+            "boot: 启动模块列表" \
+            "log_what: 抓取谁的日志？（这会显示在webui的控制台中）" \
+            "可选：astrbot（默认，抓取全部），astrbot.module（抓取所有模块日志）" \
+            "astrbot.plugin（抓取插件日志）" \
+            "或者：" \
+            "astrbot.module.core（抓取指定模块日志）" \
+            "astrbot.plugin.xxx（抓取指定插件日志）",
             cfg_dir=cls.paths.config,
         )
+
+        match cls.cfg_root.value.log_what:
+            case "astrbot":
+                logger.addHandler(handler)
+            case _:
+                _logger = getLogger(cls.cfg_root.value.log_what)
+                _logger.addHandler(handler)
 
         # mm.load_setuptools_entrypoints(ASTRBOT_MODULES_HOOK_NAME)
         # 这里不用这个加载逻辑
