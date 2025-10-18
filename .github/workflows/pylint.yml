@@ -18,17 +18,15 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v6
 
-    - name: Install dependencies
+    - name: Create and activate uv virtualenv
       run: |
-        rm -rf .venv
         uv venv .venv
-        uv sync
         source .venv/bin/activate
-        
-        uv tool install pylint
+    - name: Install dependencies with uv
+      run: |
         uv pip install -e .[dev]
-
-      
+        uv pip install pylint
     - name: Analysing the code with pylint
       run: |
+        source .venv/bin/activate
         pylint $(git ls-files '*.py')
