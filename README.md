@@ -1,4 +1,5 @@
 # AstrBotCanary
+
 [![codecov](https://codecov.io/gh/LIghtJUNction/AstrBotCanary/branch/main/graph/badge.svg)](https://codecov.io/gh/LIghtJUNction/AstrBotCanary)
 
 注意：本项目为实验性分支，不是官方 AstrBot 版本。若需要稳定与兼容性更好的版本，请使用官方仓库：https://github.com/AstrBotDevs/AstrBot
@@ -23,7 +24,8 @@
 ---
 
 ## 关于
-AstrBotCanary 是 AstrBot 的一个实验性分支，面向追求最新语言特性和高性能 Web 运行时的开发者。通过引入像 Robyn、Rust 扩展等新技术，探索更高的性能和更简洁的实现路径。
+AstrBotCanary 是 AstrBot 的一个实验性分支。
+通过引入像 Rust 扩展等新技术，探索更高的性能和更简洁的实现路径。
 
 本分支可能包含不稳定、API 变更或依赖还在适配阶段的实现，不建议在生产环境直接替换官方版本。
 
