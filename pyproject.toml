@@ -23,7 +23,6 @@ dependencies = [
     "taskiq>=0.11.18",
     "pyzmq>=27.1.0",
     "orjson>=3.11.3",
-    "typer>=0.19.2",
     "aiosqlite>=0.21.0",
 ]
 
@@ -83,7 +82,14 @@ dev = [
     "pytest-asyncio",
     "pytest-mock",
     "pytest-cov",
-    "pytest"
+    "pytest",
+    "coverage",
+    "codecov",
+    # 免得pylint工作流找不到
+    "pluggy",
+    "pydantic",
+    "sqlalchemy",
+    "taskiq"
 ]
 [project.entry-points."astrbot.modules"]
 "canary_core" = "astrbot_canary.module:AstrbotCoreModule"
