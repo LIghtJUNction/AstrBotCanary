@@ -3,6 +3,9 @@ from .interface import (
     IAstrbotConfigEntry,
     IAstrbotPaths,
     IAstrbotDatabase,
+    IAstrbotNetwork,
+    IAstrbotLogHandler,
+    
     ASTRBOT_MODULES_HOOK_NAME,
     modulespec,
     moduleimpl,
@@ -17,8 +20,8 @@ __all__ = [
     "IAstrbotPaths",
     "IAstrbotDatabase",
     "IAstrbotModule",
-
-
+    "IAstrbotNetwork",
+    "IAstrbotLogHandler",
     # enum
     "AstrbotModuleType",
     "AstrbotBrokerType",

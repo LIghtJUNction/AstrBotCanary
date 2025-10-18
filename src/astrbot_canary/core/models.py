@@ -18,7 +18,6 @@ class AstrbotRootConfig(BaseModel):
     """ 日志缓存最大数量--这里是给web模块特供的handler使用的 """
 
 
-
 class AstrbotTasksConfig(BaseModel):
     """任务队列配置项
 
@@ -31,4 +30,3 @@ class AstrbotTasksConfig(BaseModel):
     broker_type: str = AstrbotBrokerType.INMEMORY.value
     backend_type: str = AstrbotResultBackendType.INMEMORY.value
 
-    

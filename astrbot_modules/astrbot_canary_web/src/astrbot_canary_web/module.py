@@ -67,30 +67,6 @@ class AstrbotCanaryWeb():
             raise FileNotFoundError("Failed to ensure frontend files in webroot.")
         logger.info(f"Frontend files are ready in {Path(cls.cfg_web.value.webroot).absolute()}")
 
-        # 初始化 FastAPI 应用并挂载子路由
-        
-        cls.app = FastAPI(
-            title="AstrBot Canary Web",
-            description="AstrBot Canary Web API",
-            version="0.1.0",
-            default_response_class=ORJSONResponse
-        )
-
-        # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
-        cls.app.include_router(api_router)
-
-        cls.app.mount(
-            path="/",
-            app=StaticFiles(directory=Path(cls.cfg_web.value.webroot) / "dist", html=True),
-            name="frontend",
-        )
-
-        cls.broker: AsyncBroker = AstrbotInjector.get("broker")  
-        
-    @classmethod
-    @moduleimpl
-    def Start(cls) -> None:
-        # 使用 Uvicorn 启动 FastAPI 应用
 
         @asynccontextmanager
         async def lifespan(app: FastAPI):
@@ -111,7 +87,31 @@ class AstrbotCanaryWeb():
             logger.info("关闭backend服务 ...")
             await cls.broker.result_backend.shutdown()
 
-        cls.app.router.lifespan_context = lifespan
+        # 初始化 FastAPI 应用并挂载子路由
+        
+        cls.app = FastAPI(
+            title="AstrBot Canary Web",
+            description="AstrBot Canary Web API",
+            version="0.1.0",
+            default_response_class=ORJSONResponse,
+            lifespan=lifespan,
+        )
+
+        # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
+        cls.app.include_router(api_router)
+
+        cls.app.mount(
+            path="/",
+            app=StaticFiles(directory=Path(cls.cfg_web.value.webroot) / "dist", html=True),
+            name="frontend",
+        )
+
+        cls.broker: AsyncBroker = AstrbotInjector.get("broker")  
+        
+    @classmethod
+    @moduleimpl
+    def Start(cls) -> None:
+        # 使用 Uvicorn 启动 FastAPI 应用
 
         uvicorn.run(
 			cls.app,

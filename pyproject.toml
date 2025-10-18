@@ -24,6 +24,8 @@ dependencies = [
     "pyzmq>=27.1.0",
     "orjson>=3.11.3",
     "aiosqlite>=0.21.0",
+    "yarl>=1.22.0",
+    "taskiq-pipelines>=0.1.4",
 ]
 
 [build-system]

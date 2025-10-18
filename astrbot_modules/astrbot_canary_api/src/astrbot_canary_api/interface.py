@@ -1,3 +1,5 @@
+
+#endregion
 from __future__ import annotations
 from collections.abc import AsyncIterable
 from logging import LogRecord
@@ -279,17 +281,208 @@ class IAstrbotLogHandler(Protocol):
 封装接口
 """
 
-class IAstrbotTasks(Protocol):
-    """ Taskiq 任务接口 """
 
+
+
+
+
+
+
+
+#                          (
+#                           )     (
+#                    ___...(-------)-....___
+#                .-""       )    (          ""-.
+#          .-'``'|-._             )         _.-|
+#         /  .--.|   `""---...........---""`   |
+#        /  /    |                             |
+#        |  |    |                             |
+#         \  \   |                             |
+#          `\ `\ |                             |
+#            `\ `|                             |
+#            _/ /\                             /
+#           (__/  \                           /
+#        _..---""` \                         /`""---.._
+#     .-'           \                       /          '-.
+#    :               `-.__             __.-'              :
+#    :                  ) ""---...---"" (                 :
+#     '._               `"--...___...--"`              _.'
+#       \""--..__                              __..--""/
+#        '._     """----.....______.....----"""     _.'
+#           `""--..,,_____            _____,,..--""`
+#                         `"""----"""`
+# 
+
+
+
+
+
+
+
+
+#region 主路由
+class IAstrbotNetwork(Protocol):
+    """ Astrbot Taskiq API: 仿FastAPI风格的taskiq封装
+    负责路由分发、中间件管理、异常处理和文档生成
+    """
+    scheme: str = "astrbot"
     broker: BROKER_TYPE
 
-    @classmethod
-    def get_broker(cls) -> BROKER_TYPE:
-        """ 获取 Taskiq Broker 实例 """
+    def __init__(
+            self, 
+            title: str , 
+            description: str,
+            lifespan: AsyncContextManager[Any] | None = None,
+        ) -> None:
+        """包含自己的子路由和路由"""
         ...
 
-    @classmethod
-    def get_result_backend(cls) -> RESULT_BACKEND_TYPE:
-        """ 获取 Taskiq 结果后端实例 """
+    def add_middleware(self, middleware: Any) -> None:
+        """添加中间件"""
         ...
+
+    def get(self, path: str):
+        """GET请求装饰器"""
+        ...
+
+    def post(self, path: str):
+        """POST请求装饰器"""
+        ...
+
+    def put(self, path: str):
+        """PUT请求装饰器"""
+        ...
+    
+    def delete(self, path: str):
+        """DELETE请求装饰器"""
+        ...
+
+    def head(self, path: str):
+        """HEAD请求装饰器"""
+        ...
+
+    def options(self, path: str):
+        """OPTIONS请求装饰器"""
+        ...
+
+    def patch(self, path: str):
+        """PATCH请求装饰器"""
+        ...
+
+    def api_route(self, path: str, methods: list[str]) -> Any:
+        """通用路由装饰器，接受所有HTTP方法"""
+        ...
+
+    def include_router(self, router: 'IAstrbotRouter', prefix: str = "") -> None:
+        """嵌套/挂载子路由，prefix为可选子路由前缀"""
+        ...
+
+    def get_routes(self) -> list[tuple[list[str], str, Any]]:
+        """获取所有注册的路由 (方法列表, 完整路径, handler)"""
+        ...
+
+    def exception_handler(self, exc_type: type[BaseException]):
+        """注册全局异常处理器，仿FastAPI"""
+        ...
+
+    def add_event_handler(self, event_type: str, handler: Any) -> None:
+        """注册生命周期事件（startup/shutdown等）"""
+        ...
+
+    def normalize_path(self, path: str) -> str:
+        """规范化路径，去除多余斜杠"""
+        ...
+
+#region 路由器
+class IAstrbotRouter(Protocol):
+    """
+    Astrbot Taskiq 路由器接口
+    支持嵌套子路由、装饰器注册、通用路由、include_router、路由获取等能力
+    """
+    scheme: str = "astrbot"
+
+    def __init__(self, prefix: str) -> None:
+        """包含自己的子路由和路由"""
+        ...
+
+    def add_middleware(self, middleware: Any) -> None:
+        """添加中间件"""
+        ...
+
+    def get(self, path: str):
+        """GET请求装饰器"""
+        ...
+
+    def post(self, path: str):
+        """POST请求装饰器"""
+        ...
+
+    def put(self, path: str):
+        """PUT请求装饰器"""
+        ...
+
+    def delete(self, path: str):
+        """DELETE请求装饰器"""
+        ...
+
+    def head(self, path: str):
+        """HEAD请求装饰器"""
+        ...
+
+    def options(self, path: str):
+        """OPTIONS请求装饰器"""
+        ...
+
+    def patch(self, path: str):
+        """PATCH请求装饰器"""
+        ...
+
+    def api_route(self, path: str, methods: list[str]) -> Any:
+        """通用路由装饰器，接受所有HTTP方法"""
+        ...
+
+    def include_router(self, router: 'IAstrbotRouter', prefix: str = "") -> None:
+        """嵌套/挂载子路由，prefix为可选子路由前缀"""
+        ...
+
+    def get_routes(self) -> list[tuple[list[str], str, Any]]:
+        """获取所有注册的路由 (方法列表, 完整路径, handler)"""
+        ...
+
+    def normalize_path(self, path: str) -> str:
+        """规范化路径，去除多余斜杠"""
+        ...
+
+
+#region 路由匹配器
+class IRouteMatcher(Protocol):
+    """
+    路由匹配器接口
+    支持路由查找、参数提取、反向查找等能力
+    """
+    def match(self, method: str, path: str) -> tuple[Any, dict[str, Any]] | None:
+        """
+        路由查找：根据方法和路径查找handler及参数
+        返回: (handler, 路径参数字典) 或 None
+        """
+        ...
+
+    def url_for(self, name: str, **path_params: dict[str, Any]) -> str:
+        """
+        反向查找：根据路由名和参数生成完整URL
+        """
+        ...
+
+    def add_route(self, method: str, path: str, handler: Any, name: str | None = None) -> None:
+        """
+        注册路由
+        """
+        ...
+
+    def get_routes(self) -> list[tuple[str, str, Any, str | None]]:
+        """
+        获取所有路由 (方法, 路径, handler, 路由名)
+        """
+        ...
+#endregion
+
