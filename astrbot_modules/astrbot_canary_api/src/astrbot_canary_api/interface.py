@@ -17,7 +17,6 @@ type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
 __all__ = [
     "IAstrbotPaths",
-    "IAstrbotConfig",
     "IAstrbotDatabase",
     "BROKER_TYPE",
     "RESULT_BACKEND_TYPE",
@@ -147,25 +146,6 @@ class IAstrbotConfigEntry(Protocol, Generic[T]):
         """重置为默认值并保存。"""
         ...
         
-
-@runtime_checkable
-class IAstrbotConfig(Protocol):
-    """按实例管理模块配置（与 core.config.AstrbotConfig 保持一致）。
-    将配置项定义为 IAstrbotConfig.Entry 的嵌套协议，以匹配 AstrbotConfig.Entry 的实现方式。
-    """
-
-    @classmethod
-    def getConfig(cls) -> IAstrbotConfig:
-        """返回一个新的配置实例"""
-        ...
-
-    def findEntry(self, group: str, name: str) -> IAstrbotConfigEntry[Any] | None:
-        """在本实例作用域查找配置项，找不到返回 None。"""
-        ...
-
-    def bindEntry(self, entry: IAstrbotConfigEntry[Any]) -> IAstrbotConfigEntry[Any]:
-        """绑定（或覆盖）一个配置项到本实例。"""
-        ...
 
 #endregion
 

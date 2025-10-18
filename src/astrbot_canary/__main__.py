@@ -21,14 +21,13 @@ from taskiq import InMemoryBroker
 from astrbot_canary_helper import AstrbotCanaryHelper
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.paths import AstrbotPaths
-from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
+from astrbot_canary.core.config import AstrbotConfigEntry
 
 from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType
 from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
 from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
 
 # region 注入实现
-AstrbotModule.Config = AstrbotConfig
 AstrbotModule.ConfigEntry = AstrbotConfigEntry
 AstrbotModule.Paths = AstrbotPaths
 AstrbotModule.Database = AstrbotDatabase
@@ -70,21 +69,18 @@ class AstrbotRootModule:
         """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
         logger.info("AstrbotCanary 正在启动，加载模块...")
         cls.mm.add_hookspecs(AstrbotModuleSpec)
-        cls.config = AstrbotModule.Config.getConfig()
         cls.paths = AstrbotModule.Paths.getPaths("astrbot_canary")
         cls.ConfigEntry = AstrbotModule.ConfigEntry
-        
-        cls.cfg_root: IAstrbotConfigEntry[AstrbotRootConfig] = cls.config.bindEntry(
-            entry=cls.ConfigEntry.bind(
-                group="core",
-                name="boot",
-                default=AstrbotRootConfig(
-                    modules=["canary_core", "canary_loader", "canary_web", "canary_tui"],
-                    boot=["canary_core", "canary_loader", "canary_web"],
-                ),
-                description="核心模块配置项",
-                cfg_dir=cls.paths.config,
-            )
+
+        cls.cfg_root: IAstrbotConfigEntry[AstrbotRootConfig] = cls.ConfigEntry.bind(
+            group="core",
+            name="boot",
+            default=AstrbotRootConfig(
+                modules=["canary_core", "canary_loader", "canary_web", "canary_tui"],
+                boot=["canary_core", "canary_loader", "canary_web"],
+            ),
+            description="核心模块配置项",
+            cfg_dir=cls.paths.config,
         )
 
         # mm.load_setuptools_entrypoints(ASTRBOT_MODULES_HOOK_NAME)
@@ -181,7 +177,7 @@ class AstrbotRootModule:
     def atExit() -> None:
         logger.info("AstrbotCanary 正在退出，执行清理操作...")
         AstrbotRootModule.mm.hook.OnDestroy()
-        AstrbotRootModule.cfg_root.save()
+        # AstrbotRootModule.cfg_root.save()
 
 if __name__ == "__main__":
     # profiler = cProfile.Profile()

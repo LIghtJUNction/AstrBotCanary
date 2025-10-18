@@ -15,14 +15,12 @@ name（即入口点名称）将被写入配置方便下次快速启动
 """
 from inspect import signature
 from importlib.metadata import Distribution, distribution , PackageMetadata
-from pydantic import BaseModel
 from taskiq import AsyncBroker
 from typing import Any, ParamSpec, TypeVar
 from collections.abc import Callable
 
 from astrbot_canary_api import (
     AstrbotModuleType, 
-    IAstrbotConfig, 
     IAstrbotDatabase, 
     IAstrbotPaths,
     IAstrbotConfigEntry
@@ -36,8 +34,7 @@ class AstrbotModuleMeta(type):
     """ 用于设置AstrbotModule的类属性
     """
     _paths_impl: type[IAstrbotPaths] | None = None
-    _config_impl: type[IAstrbotConfig] | None = None
-    _config_entry_impl: type[IAstrbotConfigEntry[BaseModel]] | None = None
+    _config_entry_impl: type[IAstrbotConfigEntry[Any]] | None = None
     _database_impl: type[IAstrbotDatabase] | None = None
     _broker_impl: AsyncBroker | None = None
 
@@ -52,26 +49,16 @@ class AstrbotModuleMeta(type):
     def Paths(cls, value: type[IAstrbotPaths]) -> None:
         type(cls)._paths_impl = value
 
-    @property
-    def Config(cls) -> type[IAstrbotConfig]:
-        impl = type(cls)._config_impl
-        if impl is None:
-            raise RuntimeError("IAstrbotConfig 未注入，请在启动时设置 AstrbotModule.Config = <实现类>")
-        return impl
-
-    @Config.setter
-    def Config(cls, value: type[IAstrbotConfig]) -> None:
-        type(cls)._config_impl = value
 
     @property
-    def ConfigEntry(cls) -> type[IAstrbotConfigEntry[BaseModel]]:
+    def ConfigEntry(cls) -> type[IAstrbotConfigEntry[Any]]:
         impl = type(cls)._config_entry_impl
         if impl is None:
             raise RuntimeError("IAstrbotConfigEntry 未注入，请在启动时设置 AstrbotModule.ConfigEntry = <实现类>")
         return impl
 
     @ConfigEntry.setter
-    def ConfigEntry(cls, value: type[IAstrbotConfigEntry[BaseModel]]) -> None:
+    def ConfigEntry(cls, value: type[IAstrbotConfigEntry[Any]]) -> None:
         type(cls)._config_entry_impl = value
 
     @property
@@ -129,19 +116,17 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
         else:
             cls.info = self.info
 
-        impl_config = type(self).Config
         impl_config_entry = type(self).ConfigEntry
         impl_paths = type(self).Paths
         impl_db = type(self).Database
 
         # 注入实现
-        cls.Config = impl_config
         cls.Paths = impl_paths
         cls.Database = impl_db
         cls.ConfigEntry = impl_config_entry
 
         # 创建实例
-        cls.config = impl_config.getConfig()
+
         cls.paths = impl_paths.getPaths(cls.pypi_name)
         cls.database = impl_db.connect(cls.paths.data / f"{cls.pypi_name}.db")
 

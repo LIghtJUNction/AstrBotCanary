@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from astrbot_canary_api.decorators import AstrbotModule
 from astrbot_canary_api import (
     AstrbotModuleType,
-    IAstrbotConfig,
     IAstrbotDatabase,
     IAstrbotPaths,
     IAstrbotConfigEntry,
@@ -39,7 +38,6 @@ class AstrbotCoreModule:
     ConfigEntry: type[IAstrbotConfigEntry[AstrbotCoreConfig]]
 
     paths: IAstrbotPaths
-    config: IAstrbotConfig
     database: IAstrbotDatabase
 
 #region 基本生命周期
