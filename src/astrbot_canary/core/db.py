@@ -147,10 +147,12 @@ class AstrbotDatabase:
 
     # 支持同步上下文管理（with db: ...）
     def __enter__(self) -> "AstrbotDatabase":
-        # 如果尚未连接则尝试 connect
         if self.engine is None:
-            self.connect(self.db_path)
+            # 直接在当前实例上初始化 engine
+            self.engine = create_engine(self.database_url, future=True)
+            self.SessionLocal = sessionmaker(bind=self.engine, future=True, expire_on_commit=False)
         return self
+
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # 退出同步上下文时关闭同步资源

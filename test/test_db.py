@@ -1,3 +1,4 @@
+
 import pytest
 from pathlib import Path
 from sqlalchemy import Integer, String, text
@@ -68,3 +69,151 @@ async def test_astrbot_database_sync_and_async(db: AstrbotDatabase):
     await db.aclose()
     assert db.async_engine is None
     assert db.AsyncSessionLocal is None
+def test_session_scope_not_connected(tmp_path: Path):
+    db = AstrbotDatabase(tmp_path / "not_exist.db")
+    with pytest.raises(RuntimeError, match="Database not connected"):
+        with db.session_scope():
+            pass
+
+def test_execute_not_connected(tmp_path: Path):
+    db = AstrbotDatabase(tmp_path / "not_exist.db")
+    with pytest.raises(RuntimeError, match="Database not connected"):
+        db.execute("SELECT 1")
+
+def test_execute_params_none_and_no_rows(tmp_path: Path):
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+    # 非查询语句，params=None，result.returns_rows=False
+    assert db.execute("INSERT INTO t (id) VALUES (1)") is None
+    db.close()
+
+def test_execute_params_and_returns_rows(tmp_path: Path):
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+    db.execute("INSERT INTO t (id) VALUES (2)")
+    rows = db.execute("SELECT id FROM t WHERE id=:id", {"id": 2})
+    assert rows[0][0] == 2
+    db.close()
+
+def test_session_scope_rollback(tmp_path: Path):
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+    try:
+        with db.session_scope() as session:
+            session.execute("INSERT INTO t (id) VALUES (3)") # type: ignore
+            raise Exception("force rollback")
+    except Exception:
+        pass
+    # 插入未提交，应无数据
+    rows = db.execute("SELECT * FROM t WHERE id=3")
+    assert rows == []
+    db.close()
+
+def test_transaction_rollback(tmp_path: Path):
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+    try:
+        with db.transaction() as session:
+            session.execute("INSERT INTO t (id) VALUES (4)") # type: ignore
+            raise Exception("force rollback")
+    except Exception:
+        pass
+    rows = db.execute("SELECT * FROM t WHERE id=4")
+    assert rows == []
+    db.close()
+
+def test_enter_exit(tmp_path: Path):
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    with db as db2:
+        assert db2.engine is not None
+    assert db.engine is None  # __exit__ 应关闭引擎
+
+def test_aenter_aexit(tmp_path: Path):
+    import asyncio
+    dbfile = tmp_path / "test.db"
+    db = AstrbotDatabase.connect(dbfile)
+    async def run():
+        async with db as db2:
+            assert db2.engine is not None
+        assert db.async_engine is None
+    asyncio.run(run())
+
+
+def test_enter_auto_connect(tmp_path: Path):
+    dbfile = tmp_path / "test_auto_connect.db"
+    db = AstrbotDatabase(dbfile)  # 此时 engine 为 None
+    # __enter__ 应自动 connect
+    with db as db2:
+        assert db2.engine is not None
+    assert db.engine is None
+
+@pytest.mark.asyncio
+async def test_aenter_auto_connect(tmp_path: Path):
+    dbfile = tmp_path / "test_auto_connect_async.db"
+    db = AstrbotDatabase(dbfile)
+    # 此时engine/async_engine均为None，__aenter__应自动connect
+    async with db as db2:
+        assert db2.async_engine is not None
+    assert db.async_engine is None
+
+def test_exit_exception(monkeypatch, tmp_path: Path):
+    dbfile = tmp_path / "test_exit_exception.db"
+    db = AstrbotDatabase.connect(dbfile)
+    # monkeypatch close 抛异常，__exit__应捕获
+    def bad_close():
+        raise Exception("close error")
+    db.close = bad_close
+    try:
+        db.__exit__(None, None, None)
+    except Exception:
+        pytest.fail("__exit__ should suppress exception")
+
+@pytest.mark.asyncio
+async def test_aexit_exception(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    dbfile = tmp_path / "test_aexit_exception.db"
+    db = AstrbotDatabase.connect(dbfile)
+    async def bad_aclose():
+        raise Exception("aclose error")
+    db.aclose = bad_aclose
+    try:
+        await db.__aexit__(None, None, None)
+    except Exception:
+        pytest.fail("__aexit__ should suppress exception")
+
+@pytest.mark.asyncio
+async def test_atransaction_rollback(tmp_path: Path):
+    dbfile = tmp_path / "test_atrans_rollback.db"
+    db = AstrbotDatabase.connect(dbfile)
+    # 初始化async_engine/AsyncSessionLocal
+    async with db.atransaction() as session:
+        pass
+    # patch session.rollback 以检测被调用
+    class DummySession:
+        def __init__(self):
+            self.rolled = False
+        async def __aenter__(self): return self
+        async def __aexit__(self, exc_type, exc, tb): return False
+        async def rollback(self): self.rolled = True
+        class DummyBegin:
+            async def __aenter__(self_): return self_
+            async def __aexit__(self_, exc_type, exc, tb): return False
+        def begin(self):
+            return DummySession.DummyBegin()
+    dummy = DummySession()
+    class DummyAsyncSessionLocal:
+        def __call__(self):
+            class Ctx:
+                async def __aenter__(self_): return dummy
+                async def __aexit__(self_, exc_type, exc, tb): return False
+            return Ctx()
+    db.AsyncSessionLocal = DummyAsyncSessionLocal()
+    # 触发异常，检查rollback
+    with pytest.raises(ValueError):
+        async with db.atransaction() as session:
+            raise ValueError("force error")
+    assert dummy.rolled
