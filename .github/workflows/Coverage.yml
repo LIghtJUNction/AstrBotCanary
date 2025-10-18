@@ -26,7 +26,8 @@ jobs:
         run: |
           uv sync
           uv pip install -e .[dev]
-          uv tool install pytest
+          python -m ensurepip --upgrade
+          pip install pytest
           uv tool install codecov
           uv tool install coverage
 
