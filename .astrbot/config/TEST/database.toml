@@ -4,16 +4,16 @@ description = "主数据库配置"
 
 [value]
 type_1 = "option_a"
-type_2 = "option_x"
-host = "127.0.0.1"
+type_2 = "<Type2.OPTION_X: 'option_x'>"
+host = "localhost"
 port = 5432
 user = "user"
 password = "password"
 
 [default]
 type_1 = "option_a"
-type_2 = "option_x"
-host = "127.0.0.1"
+type_2 = "<Type2.OPTION_X: 'option_x'>"
+host = "localhost"
 port = 5432
 user = "user"
 password = "password"

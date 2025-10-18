@@ -131,7 +131,7 @@ class IAstrbotConfigEntry(Protocol, Generic[T]):
     value: T
     default: T
     description: str
-    _cfg_file: Path | None
+    cfg_file: Path | None
 
     @classmethod
     def bind(cls: type[IAstrbotConfigEntry[T]], group: str, name: str, default: T, description: str, cfg_dir: Path) -> IAstrbotConfigEntry[T]:
