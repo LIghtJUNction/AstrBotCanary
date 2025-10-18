@@ -2,8 +2,9 @@
 omit =
     test/*
     */test_*.py
-
+    */__main__.py
 [report]
 omit =
     test/*
     */test_*.py
+    */__main__.py
