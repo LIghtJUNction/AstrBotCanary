@@ -1,9 +1,11 @@
+from contextlib import asynccontextmanager
 from importlib.metadata import PackageMetadata
 from pathlib import Path
 # import uvicorn
 from logging import getLogger , Logger
 from typing import Literal
 from fastapi.responses import ORJSONResponse
+from taskiq import AsyncBroker, AsyncTaskiqDecoratedTask, AsyncTaskiqTask, TaskiqResult
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -60,7 +62,7 @@ class AstrbotCanaryWeb():
         logger.info(f"Web Config initialized: {Path(cls.cfg_web.value.webroot).absolute()}, {cls.cfg_web.value.host}:{cls.cfg_web.value.port}")
         AstrbotInjector.set("JWT_EXP_DAYS", cls.cfg_web.value.jwt_exp_days)
         AstrbotInjector.set("CANARY_WEB_DB", cls.database)
-        logger.info(f"DI: JWT_EXP_DAYS={cls.cfg_web.value.jwt_exp_days}, CANARY_WEB_DB={cls.database}")
+
         if not AstrbotCanaryFrontend.ensure(Path(cls.cfg_web.value.webroot).absolute()):
             raise FileNotFoundError("Failed to ensure frontend files in webroot.")
         logger.info(f"Frontend files are ready in {Path(cls.cfg_web.value.webroot).absolute()}")
@@ -83,13 +85,34 @@ class AstrbotCanaryWeb():
             name="frontend",
         )
 
-        # Response.deps["MODULE"] = cls
-        # 准备启动...
-
+        cls.broker: AsyncBroker = AstrbotInjector.get("broker")  
+        
     @classmethod
     @moduleimpl
     def Start(cls) -> None:
         # 使用 Uvicorn 启动 FastAPI 应用
+
+        @asynccontextmanager
+        async def lifespan(app: FastAPI):
+            logger.info("启动broker ...")
+            await cls.broker.startup()
+            logger.info("启动backend服务 ...")
+            await cls.broker.result_backend.startup()
+            echo_task_handler: AsyncTaskiqDecoratedTask[..., str] | None = cls.broker.find_task("astrbot://echo")
+            if echo_task_handler is None:
+                raise ValueError("无法找到任务 astrbot://echo !!! 请检查核心模块!!!")
+            task: AsyncTaskiqTask[str] = await echo_task_handler.kiq("Hello from Astrbot Canary Web!")
+            result: TaskiqResult[str] = await task.wait_result()
+            logger.info(f"测试任务 astrbot://echo 返回结果：{result.return_value}")
+
+            yield
+            logger.info("关闭broker ...")
+            await cls.broker.shutdown()
+            logger.info("关闭backend服务 ...")
+            await cls.broker.result_backend.shutdown()
+
+        cls.app.router.lifespan_context = lifespan
+
         uvicorn.run(
 			cls.app,
 			host=cls.cfg_web.value.host,

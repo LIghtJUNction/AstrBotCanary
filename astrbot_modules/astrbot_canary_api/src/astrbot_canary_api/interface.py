@@ -273,3 +273,23 @@ class IAstrbotLogHandler(Protocol):
 
 
 #endregion
+
+#region Taskiq!
+"""AstrbotTaskiq!
+封装接口
+"""
+
+class IAstrbotTasks(Protocol):
+    """ Taskiq 任务接口 """
+
+    broker: BROKER_TYPE
+
+    @classmethod
+    def get_broker(cls) -> BROKER_TYPE:
+        """ 获取 Taskiq Broker 实例 """
+        ...
+
+    @classmethod
+    def get_result_backend(cls) -> RESULT_BACKEND_TYPE:
+        """ 获取 Taskiq 结果后端实例 """
+        ...

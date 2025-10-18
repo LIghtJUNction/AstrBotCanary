@@ -132,10 +132,6 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
 
         return cls
 
-
-
-
-
 # 类型安全的依赖注入装饰器（推荐用法）
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -144,7 +140,23 @@ class AstrbotInjector:
     """
     Astrbot依赖注入器
     推荐用法：@AstrbotInjector.decorator
-    支持全局依赖注入，类型安全，签名保留。
+    支持全局依赖注入，类型安全
+    例子：
+        @AstrbotInjector
+        def my_function(db: IAstrbotDatabase, config: IAstrbotConfigEntry[MyConfig]) -> None:
+            ...
+
+        # 注入依赖
+        AstrbotInjector.set("db", my_database_instance)
+        AstrbotInjector.set("config", my_config_entry_instance)
+
+        # 调用函数时会自动注入依赖
+        my_function()  # db 和 config 会被自动传入
+
+    不保留签名，直接装饰
+        保留签名：使用get方法获取依赖
+        再写一个函数式装饰器我认为没必要
+
     """
     global_dependencies: dict[str, Any] = {}
 

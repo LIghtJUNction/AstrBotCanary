@@ -9,9 +9,9 @@ from astrbot_canary_api.interface import LogHistoryItem, LogHistoryResponseData,
 class AsyncAstrbotLogHandler(Handler):
     queue: Queue[LogHistoryItem]
     """ 日志处理器 """
-    def __init__(self):
+    def __init__(self,maxsize: int = 500):
         super().__init__()
-        self.queue: Queue[LogHistoryItem] = Queue()
+        self.queue: Queue[LogHistoryItem] = Queue(maxsize=maxsize)
 
     def emit(self, record: LogRecord):
         msg = record.getMessage()

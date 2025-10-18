@@ -10,32 +10,30 @@ updated: 2025-10-18
 from importlib.metadata import EntryPoints
 from logging import INFO, getLogger , basicConfig
 from pluggy import PluginManager as ModuleManager # 为了区分加载器的 PluginManager...
-from pydantic import BaseModel
 import rich.traceback
 from rich.logging import RichHandler
 
 from atexit import register
 from click import Choice, confirm, prompt
-from taskiq import InMemoryBroker
 
 # import cProfile
 from astrbot_canary_helper import AstrbotCanaryHelper
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
+from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.config import AstrbotConfigEntry
+from astrbot_canary.core.tasks import AstrbotTasks
 
 from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType
 from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
+from astrbot_canary_api.enums import AstrbotBrokerType
 from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
 
 # region 注入实现
 AstrbotModule.ConfigEntry = AstrbotConfigEntry
 AstrbotModule.Paths = AstrbotPaths
 AstrbotModule.Database = AstrbotDatabase
-# 注入broker
-AstrbotInjector.set("broker", InMemoryBroker()) 
-# 后续这里可替换为更复杂的broker实例
 
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
@@ -49,25 +47,10 @@ basicConfig(
 )
 
 logger = getLogger("astrbot")
-handler = AsyncAstrbotLogHandler()
-
-# 注入日志处理器
-AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
 
 
-class AstrbotRootConfig(BaseModel):
-    """
-    核心模块配置项
-    """
-    modules: list[str]
-    """ 发现的模块 """
-    boot: list[str]
-    """ 启动Astrbot-模块启动顺序 """
-    log_what: str = "astrbot"
-    """ 抓谁的日志？ """
 
-""" 核心模块管理器实例 """
-
+#region Awake
 class AstrbotRootModule:
     """ Astrbot根模块
     请勿参考本模块进行开发
@@ -90,22 +73,46 @@ class AstrbotRootModule:
                 modules=["canary_core", "canary_loader", "canary_web", "canary_tui"],
                 boot=["canary_core", "canary_loader", "canary_web"],
                 log_what="astrbot",
+                log_maxsize=500,
             ),
             description="核心模块配置项" \
             "modules: 已发现的全部模块" \
             "boot: 启动模块列表" \
             "log_what: 抓取谁的日志？（这会显示在webui的控制台中）" \
-            "可选：astrbot（默认，抓取全部），astrbot.module（抓取所有模块日志）" \
-            "astrbot.plugin（抓取插件日志）" \
-            "或者：" \
-            "astrbot.module.core（抓取指定模块日志）" \
-            "astrbot.plugin.xxx（抓取指定插件日志）",
+            "  可选：astrbot（默认，抓取全部），astrbot.module（抓取所有模块日志）" \
+            "  astrbot.plugin（抓取插件日志）" \
+            "  或者：" \
+            "  astrbot.module.core（抓取指定模块日志）" \
+            "  astrbot.plugin.xxx（抓取指定插件日志）" \
+            "  none表示：我不需要用到这个功能！" \
+            "log_maxsize: 日志缓存最大数量--这里是给web模块特供的handler使用的",
             cfg_dir=cls.paths.config,
         )
+
+        cls.cfg_tasks : IAstrbotConfigEntry[AstrbotTasksConfig] = cls.ConfigEntry.bind(
+            group="core",
+            name="tasks",
+            default=AstrbotTasksConfig(
+                broker_type=AstrbotBrokerType.INMEMORY.value,
+            ), 
+            description="任务队列配置项",
+            cfg_dir=cls.paths.config,
+        )
+
+        AstrbotTasks.init(cls.cfg_tasks)
+        AstrbotModule.broker = AstrbotTasks.broker
+        AstrbotInjector.set("broker", AstrbotModule.broker)
+
+        handler = AsyncAstrbotLogHandler(maxsize=cls.cfg_root.value.log_maxsize)
+        # 注入日志处理器
+        AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
 
         match cls.cfg_root.value.log_what:
             case "astrbot":
                 logger.addHandler(handler)
+            case "none":
+                del handler
+                AstrbotInjector.remove("AsyncAstrbotLogHandler")
             case _:
                 _logger = getLogger(cls.cfg_root.value.log_what)
                 _logger.addHandler(handler)
@@ -171,6 +178,7 @@ class AstrbotRootModule:
         cls.mm.hook.Awake()
         """ 根模块仅负责唤醒，不负责启动，核心模块负责启动 """
 
+    #region Start
     @classmethod
     def Start(cls):
         cls.mm.hook.Start()
@@ -199,6 +207,7 @@ class AstrbotRootModule:
                     unknown_module.append(module)
         return unknown_module,core_module,loader_module,web_module,tui_module
 
+    #region Destroy
     @staticmethod
     @register
     def atExit() -> None:

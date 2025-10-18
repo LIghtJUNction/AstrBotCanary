@@ -8,6 +8,7 @@ astrbot_canary 核心模块
 
 """
 from pydantic import BaseModel
+
 from astrbot_canary_api.decorators import AstrbotModule
 from astrbot_canary_api import (
     AstrbotModuleType,
@@ -48,8 +49,6 @@ class AstrbotCoreModule:
     ) -> None:
         logger.info(f"{cls.info.get("name")} is awakening")
         
-
-
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod
     @moduleimpl
