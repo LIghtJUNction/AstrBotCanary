@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Generic, Literal, Self, TypeVar, overload
 from uuid import uuid4
 from pydantic import BaseModel, Field
 from sqlalchemy import String
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, declarative_base, mapped_column, Mapped
 
 from jwt import decode, encode # type: ignore
@@ -145,12 +146,12 @@ class User(Base):
     #region 增删改查 CRUD
     # --- 增删改查 CRUD helpers -------------------------------------------------
     @classmethod
-    def create(cls, session: Session, username: str, password: str, jwt_secret: str | None = None) -> "User":
+    async def create(cls, session: AsyncSession, username: str, password: str, jwt_secret: str | None = None) -> "User":
         """创建新用户并设置密码（含随机盐）与 jwt_secret，然后添加到 session。
 
         如果用户名已存在会抛出 ValueError。调用者负责提交事务。
         """
-        exists = session.get(cls, username)
+        exists = await session.get(cls, username)
         if exists:
             raise ValueError("username already exists")
 
@@ -163,12 +164,12 @@ class User(Base):
         return user
 
     @classmethod
-    def create_and_issue_token(cls, session: Session, username: str, password: str, exp_days: int) -> tuple["User", str]:
-        """创建用户并返回 (user, jwt_token)。
+    async def create_and_issue_token(cls, session: AsyncSession, username: str, password: str, exp_days: int) -> tuple["User", str]:
+        """异步创建用户并返回 (user, jwt_token)。
 
         创建与 token 签发均在模型内完成，外层调用方无需处理任何密码学细节。
         """
-        user = cls.create(session, username=username, password=password)
+        user = await cls.create(session, username=username, password=password)
         token = user.generate_jwt(username=username, exp=exp_days)
         return user, token
 
@@ -263,7 +264,6 @@ class User(Base):
 DataT = TypeVar("DataT")
 
 class Response(BaseModel,Generic[DataT]):
-    deps: ClassVar[dict[str, Any]] = {}
     status: Literal["ok", "error"] = "ok"
     message: str | None = None
     data: DataT | None = None

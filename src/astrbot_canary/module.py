@@ -17,16 +17,11 @@ from astrbot_canary_api import (
     IAstrbotConfigEntry,
     moduleimpl,
 )
+from importlib.metadata import PackageMetadata
+from logging import getLogger
 """
 依赖抽象，而非具体
 """
-
-from importlib.metadata import PackageMetadata
-
-"""
-稳定第三方库直接依赖
-"""
-from logging import getLogger
 
 logger = getLogger("astrbot_canary.module.core")
 
@@ -56,8 +51,6 @@ class AstrbotCoreModule:
         logger.info(f"{cls.info.get("name")} is awakening")
 
 
-        
-        
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod
@@ -69,7 +62,7 @@ class AstrbotCoreModule:
     @classmethod
     @moduleimpl
     def OnDestroy(cls) -> None:
-        logger.info(f"destroyed.")
+        logger.info("destroyed.")
 
 
 

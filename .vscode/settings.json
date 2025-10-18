@@ -2,13 +2,16 @@
     "deepscan.enable": true,
     "cSpell.words": [
         "Astrbot",
+        "atransaction",
         "hookspecs",
         "moduleimpl",
         "modulespec",
         "orjson",
+        "sessionmaker",
         "taskiq",
         "tryfirst",
-        "trylast"
+        "trylast",
+        "webroot"
     ],
     "python.analysis.aiHoverSummaries": true,
     "python.analysis.autoFormatStrings": true,

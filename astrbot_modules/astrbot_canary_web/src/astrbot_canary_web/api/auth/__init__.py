@@ -2,13 +2,21 @@
 1. 第一次登录无需默认账密
 2. 密码由md5改为sha256 ,并且加盐存储在数据库
 """
+from __future__ import annotations
 from pydantic import BaseModel
+from sqlalchemy import select
+from astrbot_canary_api.decorators import AstrbotInjector
 from astrbot_canary_api.interface import IAstrbotDatabase
 from astrbot_canary_web.models import Response
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter,HTTPException, Request
+
 
 from astrbot_canary_web.models import User
-from fastapi import HTTPException
+import logging
+
+logger = logging.getLogger("astrbot.modules.auth")
+
+
 
 __all__ = ["auth_router"]
 
@@ -29,19 +37,14 @@ class LoginResponse(BaseModel):
 
 @auth_router.post("/login")
 async def login(request: Request) -> Response[LoginResponse]:
-
-    # 本函数依赖注入的 db 实例，用于处理登录逻辑
-    web_module = Response.deps.get("MODULE")
-    if not web_module:
-        return Response[LoginResponse].error(message="数据库连接失败：模块未正确初始化")
-    JWT_EXP_DAYS = web_module.cfg_web.value.jwt_exp_days
-    print("JWT_EXP_DAYS",JWT_EXP_DAYS)
-    db: IAstrbotDatabase = web_module.db
+    logger.info(f"[login] request from {request.client.host if hasattr(request, 'client') and request.client else 'unknown'}")
 
     data = await request.json()
     username = data.get("username")
     password = data.get("password")
-
+    logger.info(f"Received login attempt for username: {username}")
+    db: IAstrbotDatabase = AstrbotInjector.get("CANARY_WEB_DB")
+    JWT_EXP_DAYS: int = AstrbotInjector.get("JWT_EXP_DAYS")
     # md5(astrbot) = 77b90590a8945a7d36c963981a307dc9
     is_default_password = (password == "77b90590a8945a7d36c963981a307dc9")  
     # 检测是否使用默认密码登录(不再需要)
@@ -53,12 +56,13 @@ async def login(request: Request) -> Response[LoginResponse]:
     try:
         async with db.atransaction() as session:
             # 检查是否有任何用户存在
-            existing_users = session.query(User).all()
+            result = await session.execute(select(User))
+            existing_users = result.scalars().all()
 
             if len(existing_users) == 0:
                 # 首次登录：接受任意账号/密码并写入数据库作为默认用户
                 # 使用 User.create_and_issue_token 将创建与 token 签发都封装在模型里
-                _result = User.create_and_issue_token(
+                _result = await User.create_and_issue_token(
                     session=session, 
                     username=username, 
                     password=password, 
@@ -75,7 +79,7 @@ async def login(request: Request) -> Response[LoginResponse]:
                 )
 
             # 非首次：查找指定用户名 (username 为主键，使用 session.get)
-            user = session.get(User, username)
+            user = await session.get(User, username)
             if not user:
                 # 用户不存在 -> 返回错误响应
                 return Response[LoginResponse].error(message="未找到用户")
@@ -113,8 +117,10 @@ data: None
 class EditAccountResponse(BaseModel):
     ...
 
+
 @auth_router.post("/account/edit")
 async def edit_account(request: Request) -> Response[EditAccountResponse]:
+    logger.info(f"[edit_account] request from {request.client.host if hasattr(request, 'client') and request.client else 'unknown'}")
     """Change current user's password/username.
 
     Expects JSON body:
@@ -126,10 +132,7 @@ async def edit_account(request: Request) -> Response[EditAccountResponse]:
 
     Authentication: Bearer <token> header is required to identify the user (token payload must contain `sub`).
     """
-    web_module = Response.deps.get("MODULE")
-    if not web_module:
-        return Response[EditAccountResponse].error(message="模块未初始化：无法访问数据库")
-    db: IAstrbotDatabase = web_module.db
+    db: IAstrbotDatabase = AstrbotInjector.get("CANARY_WEB_DB")
 
     data = await request.json()
     password = data.get("password")
@@ -153,7 +156,7 @@ async def edit_account(request: Request) -> Response[EditAccountResponse]:
         async with db.atransaction() as session:
             # Delegate token -> user resolution and verification entirely to model
             try:
-                user, _payload = User.find_by_token(session, token, expected_iss="AstrBot.Canary")
+                user, _payload = await User.find_by_token_async(session, token, expected_iss="AstrBot.Canary")
             except LookupError:
                 return Response[EditAccountResponse].error(message="无效的令牌")
 
@@ -161,25 +164,22 @@ async def edit_account(request: Request) -> Response[EditAccountResponse]:
             if not user.verify_password(password):
                 return Response[EditAccountResponse].error(message="当前密码错误")
 
-
             # update password
             if new_password:
                 # 如果新旧密码一致，告诉用户，不需要更改
                 if user.verify_password(new_password):
                     return Response[EditAccountResponse].error(message="新密码与当前密码相同，无需更改")
                 try:
-                    user.update_password(session, new_password)
+                    await user.update_password_async(session, new_password)
                 except Exception:
                     return Response[EditAccountResponse].error(message="更新密码失败")
- 
 
             # update username (check uniqueness)
             if new_username and new_username != user.username:
                 try:
-                    user.update_username(session, new_username)
+                    await user.update_username_async(session, new_username)
                 except ValueError:
                     return Response[EditAccountResponse].error(message="新用户名已被占用")
-
 
             # commit happens on context exit
             return Response[EditAccountResponse].ok(message="账户信息更新成功", data=EditAccountResponse())

@@ -1,0 +1,15 @@
+name = "common"
+group = "basic"
+description = "Web UI 监听的主机地址"
+
+[value]
+webroot = ".astrbot\\webroot"
+host = "127.0.0.1"
+port = 6185
+jwt_exp_days = 7
+
+[default]
+webroot = ".astrbot\\webroot"
+host = "127.0.0.1"
+port = 6185
+jwt_exp_days = 7

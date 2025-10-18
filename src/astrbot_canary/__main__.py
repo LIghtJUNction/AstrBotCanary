@@ -15,15 +15,16 @@ import rich.traceback
 from rich.logging import RichHandler
 from atexit import register
 from click import Choice, confirm, prompt
+from taskiq import InMemoryBroker
 
 # import cProfile
-
+from astrbot_canary_helper import AstrbotCanaryHelper
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.config import AstrbotConfig, AstrbotConfigEntry
 
 from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType
-from astrbot_canary_api.decorators import AstrbotModule
+from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
 from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
 
 # region 注入实现
@@ -31,9 +32,9 @@ AstrbotModule.Config = AstrbotConfig
 AstrbotModule.ConfigEntry = AstrbotConfigEntry
 AstrbotModule.Paths = AstrbotPaths
 AstrbotModule.Database = AstrbotDatabase
-
-# 导入Helper库
-from astrbot_canary_helper import AstrbotCanaryHelper
+# 注入broker
+AstrbotInjector.set("broker", InMemoryBroker()) 
+# 后续这里可替换为更复杂的broker实例
 
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
@@ -93,7 +94,7 @@ class AstrbotRootModule:
         """ 启动列表 """
 
         # 决定是否发现模块启动还是直接从配置启动
-        if confirm(f"从配置文件启动？",default=True):
+        if confirm("从配置文件启动？",default=True):
             _boot = cls.cfg_root.value.boot
             for i in _boot:
                 ep = AstrbotCanaryHelper.getSingleEntryPoint(ASTRBOT_MODULES_HOOK_NAME,i)

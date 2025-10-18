@@ -4,7 +4,6 @@ import toml
 from pathlib import Path
 from typing import Any, Generic
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
 from astrbot_canary_api.interface import T, IAstrbotConfigEntry
 
@@ -13,7 +12,7 @@ logger = getLogger("astrbot_canary.config")
 
 __all__ = ["AstrbotConfig"]
 
-class AstrbotConfigEntry(BaseSettings, Generic[T]):
+class AstrbotConfigEntry(BaseModel, Generic[T]):
     name: str
     group: str
     value: T
@@ -54,19 +53,18 @@ class AstrbotConfigEntry(BaseSettings, Generic[T]):
     def load(self) -> None:
         """从本地文件加载配置"""
         if self._cfg_file and self._cfg_file.exists():
-            config_file = self._cfg_file
             try:
-                file_data = toml.load(config_file.open("r", encoding="utf-8"))
+                file_data: dict[str, Any] = toml.load(self._cfg_file.open("r", encoding="utf-8"))
+                self = self.model_validate(file_data)
                 # 用 pydantic 校验和赋值
-                entry = self.model_validate(file_data)
-                val: Any = entry.value
-                try:
-                    self.value = self.default.model_validate(val)
-                except Exception:
-                    self.value = self.default
-                self.description = entry.description
+                # try:
+                #     self.value = self.default.model_validate(file_data.get("value", {}))
+                # except Exception:
+                #     self.value = self.default
+            
             except Exception as e:
-                logger.error(f"Error loading config {config_file}: {e}")
+                logger.error(f"Error loading config {self._cfg_file}: {e}")
+    
     def save(self) -> None:
         """将配置保存回本地文件"""
         if self._cfg_file is None:

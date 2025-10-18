@@ -13,9 +13,12 @@ name（即入口点名称）将被写入配置方便下次快速启动
 
 
 """
+from inspect import signature
 from importlib.metadata import Distribution, distribution , PackageMetadata
 from pydantic import BaseModel
 from taskiq import AsyncBroker
+from typing import Any, ParamSpec, TypeVar
+from collections.abc import Callable
 
 from astrbot_canary_api import (
     AstrbotModuleType, 
@@ -115,6 +118,7 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
         self.module_type : AstrbotModuleType = module_type
 
     def __call__(self, cls: type) -> type:
+        # 注入元数据
         cls.pypi_name = self.pypi_name
         cls.name = self.name
         cls.module_type = self.module_type
@@ -142,6 +146,47 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
         cls.database = impl_db.connect(cls.paths.data / f"{cls.pypi_name}.db")
 
         return cls
+
+
+
+
+
+# 类型安全的依赖注入装饰器（推荐用法）
+P = ParamSpec('P')
+R = TypeVar('R')
+
+class AstrbotInjector:
+    """
+    Astrbot依赖注入器
+    推荐用法：@AstrbotInjector.decorator
+    支持全局依赖注入，类型安全，签名保留。
+    """
+    global_dependencies: dict[str, Any] = {}
+
+    # 兼容老用法：@AstrbotInjector
+    def __init__(self, func: Callable[..., Any]) -> None:
+        self.func = func
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        sig = signature(self.func)
+        # 只注入目标函数声明的参数
+        for name, dep in AstrbotInjector.global_dependencies.items():
+            if name in sig.parameters and name not in kwargs:
+                kwargs[name] = dep
+        return self.func(*args, **kwargs)
+
+    @classmethod
+    def set(cls, name: str, value: Any) -> None:
+        cls.global_dependencies[name] = value
+
+    @classmethod
+    def get(cls, name: str) -> Any:
+        return cls.global_dependencies.get(name)
+
+    @classmethod
+    def remove(cls, name: str) -> None:
+        cls.global_dependencies.pop(name, None)
+
 
 if __name__ == "__main__":
     @AstrbotModule("astrbot_canary_api", "canary_test", AstrbotModuleType.UNKNOWN)

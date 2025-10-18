@@ -207,7 +207,7 @@ class IAstrbotDatabase(Protocol):
         """
         ...
 
-    def execute(self, query: str, params: Any = ()) -> Any:
+    def execute(self, query: str, params: dict[str, Any] | tuple[Any, ...] | None = None) -> Any:
         """执行原生SQL或ORM查询"""
         ...
 
