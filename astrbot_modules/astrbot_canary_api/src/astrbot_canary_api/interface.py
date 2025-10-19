@@ -5,7 +5,9 @@ from collections.abc import AsyncIterable
 from logging import LogRecord
 from pathlib import Path
 
+
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable, ContextManager, AsyncContextManager
+from yarl import URL
 
 from pluggy import HookimplMarker, HookspecMarker
 from pydantic import BaseModel
@@ -393,7 +395,7 @@ class IAstrbotNetwork(Protocol):
 
 
 #region 路由匹配器
-class IRouteMatcher(Protocol):
+class IAstrbotRouteMatcher(Protocol):
     """
     路由匹配器接口
     支持路由查找、参数提取、反向查找等能力
@@ -422,5 +424,152 @@ class IRouteMatcher(Protocol):
         获取所有路由 (方法, 路径, handler, 路由名)
         """
         ...
+
+
 #endregion
 
+#region Requests
+class IAstrbotRequests(Protocol):
+    """ Astrbot Taskiq 请求封装接口
+    """
+    @staticmethod
+    def send(
+        method: str,
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    def get(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    def post(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    def put(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    def delete(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    def patch(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    # 异步版本
+    @staticmethod
+    async def asend(
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    async def aget(
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    async def apost(
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    async def aput(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    async def adelete(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+    @staticmethod
+    async def apatch(
+        url: URL,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        json: Any = None,
+        timeout: float | None = None,
+    ) -> Any:
+        ...
+
+
+#endregion
