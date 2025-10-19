@@ -5,6 +5,7 @@ from pathlib import Path
 from logging import getLogger , Logger
 from typing import Literal
 from fastapi.responses import ORJSONResponse
+from fastapi_radar import Radar #type: ignore 用于监控
 from taskiq import AsyncBroker, AsyncTaskiqDecoratedTask, AsyncTaskiqTask, TaskiqResult
 import uvicorn
 from fastapi import FastAPI
@@ -70,6 +71,7 @@ class AstrbotCanaryWeb():
 
         @asynccontextmanager
         async def lifespan(app: FastAPI):
+            """ 以下为测试代码-TODO: 删除 """
             logger.info("启动broker ...")
             await cls.broker.startup()
             logger.info("启动backend服务 ...")
@@ -97,6 +99,13 @@ class AstrbotCanaryWeb():
             lifespan=lifespan,
         )
 
+        engine = cls.database.engine
+        if engine is None:
+            raise ValueError("Database engine is not initialized!")
+        radar = Radar( app=cls.app, db_engine=engine)
+        radar.create_tables()
+        logger.info("Radar monitoring initialized.")
+
         # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
         cls.app.include_router(api_router)
 
@@ -112,7 +121,8 @@ class AstrbotCanaryWeb():
     @moduleimpl
     def Start(cls) -> None:
         # 使用 Uvicorn 启动 FastAPI 应用
-
+        logger.info(f"访问监控面板：http://{cls.cfg_web.value.host}:{cls.cfg_web.value.port}/__radar/")
+        logger.info(f"访问DOCS：http://{cls.cfg_web.value.host}:{cls.cfg_web.value.port}/docs")
         uvicorn.run(
 			cls.app,
 			host=cls.cfg_web.value.host,

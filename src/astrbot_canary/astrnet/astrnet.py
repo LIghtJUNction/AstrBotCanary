@@ -1,15 +1,39 @@
+"""原型构建阶段
+
+astrbot通信核心
+
+"""
+
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from types import CoroutineType
 from taskiq import AsyncTaskiqDecoratedTask, InMemoryBroker
 from yarl import URL
 from astrbot_canary_api.interface import BROKER_TYPE
-from typing import Any, AsyncContextManager
+from typing import Any, AsyncContextManager, get_type_hints, TypeVar, Generic
+import asyncio
+import re
+import inspect
+from pydantic import BaseModel
 
-class Response:
-    def __init__(self, body: Any) -> None:
-        self.body: Any = body
+ResponseBody = TypeVar('ResponseBody', bound=BaseModel)
+
+class Response(BaseModel, Generic[ResponseBody]):
+    body: ResponseBody
+    status_code: int = 200
+    headers: dict[str, str] = {}
+
+
+class Request(BaseModel):
+    method: str
+    path: str
+    query_params: dict[str, str]
+    body: BaseModel | None = None
+
+
+Handler = Callable[..., Coroutine[Any, Any, Response[Any]]]
+Middleware = Callable[[Handler], Handler]
 
 
 class AstrbotRouteMatcher():
@@ -24,13 +48,17 @@ class AstrbotRouteMatcher():
     def match(self, method: str, path: str) -> tuple[Any, dict[str, Any]] | None:
         """
         路由查找：根据方法和路径查找handler及参数
-        返回: (handler, 路径参数字典) 或 None
+        返回: (handler, 参数字典) 或 None
         """
-        # 简单实现：精确匹配
         for m, p, handler, name in self.routes:
-            if m == method and p == path:
-                # 这里可以返回 name 作为参数之一，便于后续扩展
-                return handler, {"route_name": name}
+            if m == method:
+                # 支持路径参数，如 /user/{id}
+                pattern = re.sub(r'\{([^}]+)\}', r'(?P<\1>[^/]+)', p)
+                match = re.match(f'^{pattern}$', path)
+                if match:
+                    params = match.groupdict()
+                    params["route_name"] = name
+                    return handler, params
         return None
 
     def url_for(self, name: str, **path_params: dict[str, Any]) -> str:
@@ -59,9 +87,6 @@ class AstrbotRouteMatcher():
         # 返回所有路由，包含路由名
         return [(m, p, handler, name) for m, p, handler, name in self.routes]
 
-
-
-
 class AstrbotNetwork():
     """ Astrbot Taskiq Network: 仿FastAPI风格的taskiq封装
     负责路由分发、中间件管理、异常处理
@@ -70,6 +95,7 @@ class AstrbotNetwork():
     broker: BROKER_TYPE
     routes: dict[tuple[str, str], Any]
     sub_routers: dict[str, 'AstrbotNetwork']
+    middlewares: list[Middleware]
 
     def __init__(
             self,
@@ -80,8 +106,16 @@ class AstrbotNetwork():
         self.broker = broker
         self.routes = {}
         self.sub_routers = {}
-        self.prefix = str(URL(prefix).with_path(f"/{prefix.strip('/')}/") if prefix else URL("/"))
+        self.middlewares = []
+        if prefix:
+            self.prefix = (URL("/") / prefix.strip("/")).path
+        else:
+            self.prefix = "/"
         self.matcher = AstrbotRouteMatcher()
+    
+    def add_middleware(self, middleware: Middleware) -> None:
+        """添加中间件"""
+        self.middlewares.append(middleware)
     
     def add_router(self, router: AstrbotNetwork) -> None:
         """添加子路由器"""
@@ -90,7 +124,7 @@ class AstrbotNetwork():
         for methods, path, handler in router.get_routes():
             for method in methods:
                 if path:
-                    full_path = str(URL(router.prefix) / path.strip("/"))
+                    full_path = f"{router.prefix.rstrip('/')}/{path.lstrip('/')}"
                 else:
                     full_path = router.prefix
                 self.matcher.add_route(method, full_path, handler)
@@ -98,36 +132,40 @@ class AstrbotNetwork():
     def get_routes(self) -> list[tuple[list[str], str, Any]]:
         routes: list[tuple[list[str], str, Any]] = []
         for (method, path), handler in self.routes.items():
-            if path:
-                full_path = str(URL(self.prefix) / path.strip("/"))
-            else:
-                full_path = self.prefix
-            routes.append(([method], full_path, handler))
+            routes.append(([method], path, handler))
         for prefix, router in self.sub_routers.items():
             sub_routes = router.get_routes()
             for methods, sub_path, handler in sub_routes:
                 if sub_path:
-                    full_path = str(URL(prefix) / sub_path.strip("/"))
+                    full_path = f"{prefix.rstrip('/')}/{sub_path.lstrip('/')}"
                 else:
                     full_path = prefix
                 routes.append((methods, full_path, handler))
         return routes
 
-    def get(self, path: str, **kwargs: Any) -> Callable[[Callable[..., Awaitable[Any]]], Any]:
-        def decorator(func: Callable[..., Awaitable[Any]]) -> AsyncTaskiqDecoratedTask[Any, CoroutineType[Any, Any, Response]]:
-            norm_path = str(URL(path).with_path(f"/{path.strip('/')}/"))
-            task_name = f"{self.scheme}://{norm_path}"
-            @self.broker.task(task_name=task_name, **kwargs)
-            async def wrapper(*args: Any, **kwargs: Any) -> Response:
-                result = await func(*args, **kwargs)
-                return Response(result)
-            for k, v in kwargs.items():
-                setattr(wrapper, k, v)
-            self.routes[("GET", norm_path)] = wrapper
+    def get(self, path: str, **kwargs: Any) -> Callable[[Callable[..., Coroutine[Any, Any, Response[Any]]]], Callable[..., Coroutine[Any, Any, Response[Any]]]]:
+        """ 路径（用于生成任务名，示例：/echo ）+标签 """
+        
+        def decorator(func: Callable[..., Awaitable[Any]]) -> AsyncTaskiqDecoratedTask[Any, CoroutineType[Any, Any, Response[Any]]]:
+            url = URL(path)
+            norm_path = url.path
+
+            rel = norm_path.lstrip('/')
+            # build URL using yarl's chainable API: start with scheme, then append relative path
+            base_url = URL().with_scheme(self.scheme)
+            if rel:
+                url = base_url / rel
+                norm_path = url.path
+            else:
+                url = base_url
+                norm_path = "/"
+            task_name: str = str(url)
+
+            self.routes[("GET", norm_path)] = func
             # 注册到 matcher
-            full_path = str(URL(self.prefix) / path.strip("/"))
-            self.matcher.add_route("GET", full_path, wrapper)
-            return wrapper
+            full_path = f"{self.prefix.rstrip('/')}/{norm_path.lstrip('/')}"
+            self.matcher.add_route("GET", full_path, func)
+            return func
         return decorator
     
     def post(self, path: str):
@@ -171,26 +209,67 @@ class AstrbotRequests:
     @classmethod
     def get(cls, path: str | URL) -> Any:
         """发送GET请求，模拟调用路由。network 通过 set_network 共享。"""
+        return cls._send_request("GET", path)
+
+    @classmethod
+    def post(cls, path: str | URL, body: BaseModel | None = None) -> Any:
+        """发送POST请求，模拟调用路由。network 通过 set_network 共享。"""
+        return cls._send_request("POST", path, body)
+
+    @classmethod
+    def _send_request(cls, method: str, path: str | URL, body: BaseModel | None = None) -> Any:
         if cls._network is None:
             raise RuntimeError("AstrbotRequests network not set. Call set_network first.")
-        if isinstance(path, URL):
-            path_str = path.path.lstrip("/")
+        if isinstance(path, str):
+            url = URL(path)
+            norm_path = url.path
+            rel = norm_path.lstrip('/')
+            query_params = dict(url.query)
+            url = URL("/") / rel if rel else URL("/")
         else:
-            path_str = str(path).lstrip("/")
-        url = URL().with_scheme("astrbot") / path_str
-        print(f"Sending GET request to {url}")
-        # 查找路径统一以 / 开头
-        full_path = "/" + path_str.lstrip("/")
-        handler_info = cls._network.matcher.match("GET", full_path)
+            url = path
+            query_params = {}
+        norm_path = url.path
+        if not norm_path.startswith('/'):
+            norm_path = '/' + norm_path
+        print(f"Sending {method} request to astrbot:{norm_path}")
+        handler_info = cls._network.matcher.match(method, norm_path)
         if handler_info:
-            handler, _ = handler_info
-            import asyncio
-            result = asyncio.run(handler())
-            print(f"Response: {result.body}")
-            return result.body
+            handler: Handler = handler_info[0]  # type: ignore
+            params = handler_info[1]
+            # 获取 handler 参数类型
+            sig = inspect.signature(handler)
+            param_types = get_type_hints(handler)
+            args: list[Any] = []
+            for param_name, param in sig.parameters.items():
+                if param_name in param_types:
+                    param_type = param_types[param_name]
+                    if param_type == Request:
+                        args.append(Request(method=method, path=norm_path, query_params=query_params, body=body))
+                    elif issubclass(param_type, BaseModel):
+                        # 创建模型实例
+                        model_data = {k: v for k, v in params.items() if k in param_type.model_fields}
+                        args.append(param_type(**model_data))
+                    else:
+                        args.append(params.get(param_name))
+                else:
+                    args.append(params.get(param_name))
+            # 应用中间件（从外到内）
+            for middleware in reversed(cls._network.middlewares):
+                handler = middleware(handler)
+            try:
+                result = asyncio.run(handler(*args))  # type: ignore
+                print(f"Response: {result.status_code} {result.body}")
+                return result.body
+            except Exception as e:
+                print(f"Error running handler: {e}")
+                return None
         else:
             print("404 Not Found")
             return None
+
+
+
 
 
 
@@ -199,26 +278,56 @@ if __name__ == "__main__":
     broker = InMemoryBroker()
     root_network = AstrbotNetwork(broker=broker)
 
+    # 添加中间件示例
+    def logging_middleware(handler: Handler) -> Handler:
+        async def wrapper(*args: Any, **kwargs: Any) -> Response[Any]:
+            print(f"Before handler: {args} {kwargs}")
+            result = await handler(*args, **kwargs)
+            print(f"After handler: {result.status_code} {result.body}")
+            return result
+        return wrapper
+
+    root_network.add_middleware(logging_middleware)
+
     sub_network = AstrbotNetwork(broker=broker, prefix="/api")
 
-    @root_network.get("/hello")
-    async def hello_handler() -> str:
-        return "Hello, Astrbot!"
+    class Hello(BaseModel):
+        foo: int
+        bar: str
+
+    class HelloResponse(BaseModel):
+        message: str
+
+    class StatusResponse(BaseModel):
+        status: str
+        query_params: dict[str, str]
+
+    class InfoResponse(BaseModel):
+        info: str
+        query_params: dict[str, str]
+
+
+    @root_network.get("/hello/{foo}/{bar}")
+    async def hello_handler(data: Hello) -> Response[HelloResponse]:
+        return Response(body=HelloResponse(message=f"Hello, Astrbot! foo={data.foo}, bar={data.bar}"), status_code=200)
     
     @sub_network.get("/status")
-    async def status_handler() -> str:
-        return "Status: OK"
+    async def status_handler(request: Request) -> Response[StatusResponse]:
+        return Response(body=StatusResponse(status="OK", query_params=request.query_params), status_code=200)
     
     sub_sub_network = AstrbotNetwork(broker=broker, prefix="/v1")
     @sub_sub_network.get("/info")
-    async def info_handler() -> str:
-        return "Info: Astrbot Canary v1.0"
+    async def info_handler(request: Request) -> Response[InfoResponse]:
+        return Response(body=InfoResponse(info="Astrbot Canary v1.0", query_params=request.query_params), status_code=200)
     
     sub_network.add_router(sub_sub_network)
 
     root_network.add_router(sub_network)
 
     AstrbotRequests.set_network(root_network)
-    AstrbotRequests.get("/api/status")
-
-    AstrbotRequests.get("/api/v1/info")
+    result1 = AstrbotRequests.get("/hello/123/test")
+    print(f"Result1: {result1.message}")
+    result2 = AstrbotRequests.get("/api/status?status=active")
+    print(f"Result2: {result2.status} {result2.query_params}")
+    result3 = AstrbotRequests.get("/api/v1/info?version=1.0")
+    print(f"Result3: {result3.info} {result3.query_params}")
