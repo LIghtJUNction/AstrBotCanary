@@ -20,8 +20,6 @@ class AsyncAstrbotLogHandler(Handler):
             time=datetime.now(UTC).isoformat(),
             data=msg
         )
-        print(f"[DEBUG] Log added: {log_item.level} {log_item.time} {log_item.data}")
-
         try:
             loop = get_running_loop()
             loop.create_task(self.queue.put(log_item))

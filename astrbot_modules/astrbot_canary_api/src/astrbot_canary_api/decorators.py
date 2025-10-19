@@ -104,35 +104,36 @@ class AstrbotModule(metaclass=AstrbotModuleMeta):
         self.name : str = name
         self.module_type : AstrbotModuleType = module_type
 
-    def __call__(self, cls: type) -> type:
+    def __call__(self, cls: Any) -> type:
         # 注入元数据
-        cls.pypi_name = self.pypi_name
-        cls.name = self.name
-        cls.module_type = self.module_type
+        DecoratedClass = type(cls.__name__, (cls,), {})
+
+        # 注入元数据
+        DecoratedClass.pypi_name = self.pypi_name
+        DecoratedClass.name = self.name
+        DecoratedClass.module_type = self.module_type
         if self.info is None:
             dist: Distribution = distribution(self.pypi_name)
             meta: PackageMetadata = dist.metadata
-            cls.info = meta
+            DecoratedClass.info = meta
         else:
-            cls.info = self.info
+            DecoratedClass.info = self.info
 
         impl_config_entry = type(self).ConfigEntry
         impl_paths = type(self).Paths
         impl_db = type(self).Database
 
         # 注入实现
-        cls.Paths = impl_paths
-        cls.Database = impl_db
-        cls.ConfigEntry = impl_config_entry
+        DecoratedClass.Paths = impl_paths
+        DecoratedClass.Database = impl_db
+        DecoratedClass.ConfigEntry = impl_config_entry
 
-        # 创建实例
+        # 创建实例属性
+        DecoratedClass.paths = impl_paths.getPaths(DecoratedClass.pypi_name)
+        DecoratedClass.database = impl_db.connect(DecoratedClass.paths.data / f"{DecoratedClass.pypi_name}.db")
 
-        cls.paths = impl_paths.getPaths(cls.pypi_name)
-        cls.database = impl_db.connect(cls.paths.data / f"{cls.pypi_name}.db")
+        return DecoratedClass
 
-        return cls
-
-# 类型安全的依赖注入装饰器（推荐用法）
 P = ParamSpec('P')
 R = TypeVar('R')
 
