@@ -11,7 +11,7 @@ from logging import getLogger , Logger
 
 logger: Logger = getLogger("astrbot.module.loader")
 
-@AstrbotModule("astrbot_canary_loader","canary_loader",AstrbotModuleType.LOADER)
+@AstrbotModule("astrbot-canary-loader","canary_loader",AstrbotModuleType.LOADER)
 class AstrbotLoader():
     info : PackageMetadata
 

@@ -31,9 +31,11 @@ from astrbot_canary_api.enums import AstrbotBrokerType
 from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
 
 # region 注入实现
-AstrbotModule.ConfigEntry = AstrbotConfigEntry
-AstrbotModule.Paths = AstrbotPaths
-AstrbotModule.Database = AstrbotDatabase
+
+AstrbotInjector.set("AstrbotPaths", AstrbotPaths)
+AstrbotInjector.set("AstrbotConfigEntry", AstrbotConfigEntry)
+AstrbotInjector.set("AstrbotDatabase", AstrbotDatabase)
+
 
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
@@ -48,9 +50,8 @@ basicConfig(
 
 logger = getLogger("astrbot")
 
-
-
 #region Awake
+@AstrbotModule("astrbot-canary","canary_root",AstrbotModuleType.CORE)
 class AstrbotRootModule:
     """ Astrbot根模块
     请勿参考本模块进行开发
@@ -63,8 +64,6 @@ class AstrbotRootModule:
 
         logger.info("AstrbotCanary 正在启动，加载模块...")
         cls.mm.add_hookspecs(AstrbotModuleSpec)
-        cls.paths = AstrbotModule.Paths.getPaths("astrbot_canary")
-        cls.ConfigEntry = AstrbotModule.ConfigEntry
 
         cls.cfg_root: IAstrbotConfigEntry[AstrbotRootConfig] = cls.ConfigEntry.bind(
             group="core",
@@ -183,6 +182,12 @@ class AstrbotRootModule:
     def Start(cls):
         cls.mm.hook.Start()
 
+
+    @classmethod
+    def OnDestroy(cls):
+        cls.mm.hook.OnDestroy()
+        cls.cfg_root.save()
+
     @classmethod
     def group_modules(cls, eps: EntryPoints) -> tuple[list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule], list[IAstrbotModule]]:
         """ 分组模块 """
@@ -212,9 +217,8 @@ class AstrbotRootModule:
     @register
     def atExit() -> None:
         logger.info("AstrbotCanary 正在退出，执行清理操作...")
-        AstrbotRootModule.mm.hook.OnDestroy()
-        # AstrbotRootModule.cfg_root.save()
-
+        AstrbotRootModule.OnDestroy()
+  
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()

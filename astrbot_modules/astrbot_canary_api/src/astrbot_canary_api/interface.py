@@ -2,6 +2,7 @@
 #endregion
 from __future__ import annotations
 from collections.abc import AsyncIterable
+from importlib.metadata import PackageMetadata
 from logging import LogRecord
 from pathlib import Path
 
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from taskiq import AsyncBroker, AsyncResultBackend
 
 from astrbot_canary_api.enums import AstrbotModuleType
+
+# from astrbot_canary_api.enums import AstrbotModuleType
 
 type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
@@ -44,13 +47,27 @@ moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
 
 # 此协议用于type hint
 # 模块实现应该按照ModuleSpec写
+
+@runtime_checkable
 class IAstrbotModule(Protocol):
-    module_type: AstrbotModuleType
+    """Astrbot 模块接口协议
+    请使用@AstrbotModule注入必要的元数据
+    以及注入一些实用的类/实例
+    本协议仅供检查/规范
+    以及类型提示使用
+    """
+    Paths: type[IAstrbotPaths]
+    ConfigEntry: type[IAstrbotConfigEntry[Any]]
+    Database: type[IAstrbotDatabase]
+    broker: BROKER_TYPE
+    paths: IAstrbotPaths
+
     pypi_name: str
-    """ 唯一，即项目名，例如：astrbot_canary """
     name: str
-    """ 唯一，即入口点名，例如：canary_core """
-    
+    module_type: AstrbotModuleType
+    info: PackageMetadata
+
+
     @classmethod
     def Awake(cls) -> None:
         ...

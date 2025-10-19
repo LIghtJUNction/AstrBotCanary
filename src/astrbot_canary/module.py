@@ -34,10 +34,9 @@ class AstrbotCoreConfig(BaseModel):
 @AstrbotModule("astrbot_canary", "canary_core", AstrbotModuleType.CORE)
 class AstrbotCoreModule:
     info: PackageMetadata
-
     pypi_name: str
     ConfigEntry: type[IAstrbotConfigEntry[AstrbotCoreConfig]]
-
+    
     paths: IAstrbotPaths
     database: IAstrbotDatabase
 
@@ -60,8 +59,6 @@ class AstrbotCoreModule:
     @moduleimpl
     def OnDestroy(cls) -> None:
         logger.info("destroyed.")
-
-
 
 #endregion
 
