@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 from types import CoroutineType
 from taskiq import AsyncTaskiqDecoratedTask, InMemoryBroker
 from yarl import URL
-from astrbot_canary_api.interface import BROKER_TYPE, IAstrbotNetwork, IAstrbotRequests, IAstrbotRouteMatcher
+from astrbot_canary_api.interface import BROKER_TYPE
 from typing import Any, AsyncContextManager
 
 class Response:
@@ -205,7 +205,16 @@ if __name__ == "__main__":
     async def status_handler() -> str:
         return "Status: OK"
     
+    sub_sub_network = AstrbotNetwork(broker=broker, prefix="/v1")
+    @sub_sub_network.get("/info")
+    async def info_handler() -> str:
+        return "Info: Astrbot Canary v1.0"
+    
+    sub_network.add_router(sub_sub_network)
+
     root_network.add_router(sub_network)
 
     AstrbotRequests.set_network(root_network)
     AstrbotRequests.get("/api/status")
+
+    AstrbotRequests.get("/api/v1/info")

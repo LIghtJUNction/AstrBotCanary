@@ -70,12 +70,15 @@ class IAstrbotModule(Protocol):
 
     @classmethod
     def Awake(cls) -> None:
+        """ 模块自身初始化时调用 """
         ...
     @classmethod
     def Start(cls) -> None:
+        """ 模块启动时调用 """
         ...
     @classmethod
     def OnDestroy(cls) -> None:
+        """ 模块卸载时调用 """
         ...
 
 class AstrbotModuleSpec:

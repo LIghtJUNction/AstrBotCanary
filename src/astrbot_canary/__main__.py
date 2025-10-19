@@ -9,6 +9,7 @@ updated: 2025-10-18
 """
 from importlib.metadata import EntryPoints
 from logging import INFO, getLogger , basicConfig
+from typing import Any
 from pluggy import PluginManager as ModuleManager # 为了区分加载器的 PluginManager...
 import rich.traceback
 from rich.logging import RichHandler
@@ -18,6 +19,7 @@ from click import Choice, confirm, prompt
 
 # import cProfile
 from astrbot_canary_helper import AstrbotCanaryHelper
+from taskiq import AsyncBroker
 from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
@@ -25,7 +27,7 @@ from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.config import AstrbotConfigEntry
 from astrbot_canary.core.tasks import AstrbotTasks
 
-from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType
+from astrbot_canary_api import ASTRBOT_MODULES_HOOK_NAME, IAstrbotModule, AstrbotModuleType, IAstrbotPaths
 from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
 from astrbot_canary_api.enums import AstrbotBrokerType
 from astrbot_canary_api.interface import AstrbotModuleSpec, IAstrbotConfigEntry
@@ -58,6 +60,11 @@ class AstrbotRootModule:
     本模块为入口模块  
     """
     mm = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
+    ConfigEntry: type[IAstrbotConfigEntry[Any]]
+
+    paths: IAstrbotPaths
+    broker: AsyncBroker
+
     @classmethod
     def Awake(cls) -> None:
         """ AstrbotCanary 主入口函数，负责加载模块并调用其生命周期方法 """
@@ -99,8 +106,9 @@ class AstrbotRootModule:
         )
 
         AstrbotTasks.init(cls.cfg_tasks)
-        AstrbotModule.broker = AstrbotTasks.broker
-        AstrbotInjector.set("broker", AstrbotModule.broker)
+
+        cls.broker = AstrbotTasks.broker
+        AstrbotInjector.set("broker", cls.broker)
 
         handler = AsyncAstrbotLogHandler(maxsize=cls.cfg_root.value.log_maxsize)
         # 注入日志处理器
