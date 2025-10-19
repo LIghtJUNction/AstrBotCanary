@@ -18,8 +18,9 @@ from inspect import signature
 from importlib.metadata import Distribution, PackageNotFoundError, distribution , PackageMetadata
 from packaging.utils import canonicalize_name
 from taskiq import AsyncBroker
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, overload
 from collections.abc import Callable
+from functools import wraps
 
 from astrbot_canary_api import (
     AstrbotModuleType, 
@@ -59,13 +60,49 @@ class AstrbotInjector:
 
     """
     global_dependencies: dict[str, Any] = {}
+    local_injector : dict[str, AstrbotInjector] = {}
 
-    def __init__(self, func: Callable[..., Any]) -> None:
-        self.func = func
+    
+    @overload
+    def __init__(self, arg: Callable[..., Any]) -> None: ...
+
+    @overload
+    def __init__(self, arg: str) -> None: ...
+
+    def __init__(self, arg: Callable[..., Any] | str) -> None:
+        if callable(arg):
+            self.func = arg
+            self.name = None
+            self.local_dependencies: dict[str, Any] = {}
+        else:
+            self.name = arg
+            self.func = None
+            self.local_dependencies: dict[str, Any] = {}
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if self.func is None:
+            # If used as decorator with str init, set func and return wrapper
+            if len(args) == 1 and callable(args[0]) and not kwargs:
+                func = args[0]
+                @wraps(func)
+                def wrapper(*a: Any, **kw: Any) -> Any:
+                    sig = signature(func)
+                    # 注入局部依赖优先，然后全局
+                    for name, dep in self.local_dependencies.items():
+                        if name in sig.parameters and name not in kw:
+                            kw[name] = dep
+                    for name, dep in AstrbotInjector.global_dependencies.items():
+                        if name in sig.parameters and name not in kw:
+                            kw[name] = dep
+                    return func(*a, **kw)
+                return wrapper
+            else:
+                raise TypeError("This injector instance is not callable. Use as a decorator only when initialized with a function.")
         sig = signature(self.func)
-        # 只注入目标函数声明的参数
+        # 注入局部依赖优先，然后全局
+        for name, dep in self.local_dependencies.items():
+            if name in sig.parameters and name not in kwargs:
+                kwargs[name] = dep
         for name, dep in AstrbotInjector.global_dependencies.items():
             if name in sig.parameters and name not in kwargs:
                 kwargs[name] = dep
@@ -82,6 +119,23 @@ class AstrbotInjector:
     @classmethod
     def remove(cls, name: str) -> None:
         cls.global_dependencies.pop(name, None)
+
+    @classmethod
+    def getInjector(cls, injector_name: str) -> AstrbotInjector:
+        if injector_name not in cls.local_injector:
+            cls.local_injector[injector_name] = AstrbotInjector(injector_name)
+        return cls.local_injector[injector_name]
+
+    # 局部依赖注入器
+    def set_local(self, name: str, value: Any) -> None:
+        self.local_dependencies[name] = value
+
+    def get_local(self, name: str) -> Any:
+        return self.local_dependencies.get(name)
+
+    def remove_local(self, name: str) -> None:
+        self.local_dependencies.pop(name, None)
+
 
 
 class AstrbotModuleMeta(type):
@@ -285,7 +339,59 @@ class AstrbotModule():
 if __name__ == "__main__":
     @AstrbotModule("astrbot_canary_api", "canary_test", AstrbotModuleType.UNKNOWN)
     class TestModule:
-        pass
+        @classmethod
+        def Awake(cls):
+            pass
+            
+        @classmethod
+        def Start(cls):
+            pass
+        
+        @classmethod
+        def OnDestroy(cls):
+            pass
 
-    tm = TestModule()
-    print(tm.info)
+    # 只能从类访问
+    try:
+        tm = TestModule()
+        print(tm.info)
+    except Exception as e:
+        print(f"Error: {e}")
+    
+    print(TestModule.info)
+
+    # 注入器快速演示
+    # 局部注入器
+    injector = AstrbotInjector("demo_injector")
+    injector.set_local("db", "local_db_instance")
+    injector.set_local("config", "local_config_instance")
+    injector.set_local("extra", "local_extra_instance")
+
+    # 直接get_local也行
+
+
+    @injector
+    def demo_function(db: str, config: str, extra: str = "default"):
+        return f"db={db}, config={config}, extra={extra}"
+
+    result = demo_function()
+    print(f"Demo function result: {result}")
+
+    print(signature(demo_function))
+
+    print("全局依赖注入演示")
+
+    # 全局注入器
+    AstrbotInjector.set("db", "global_db_instance")
+    AstrbotInjector.set("config", "global_config_instance")
+    AstrbotInjector.set("extra", "global_extra_instance")
+    @AstrbotInjector
+    def _demo_function(db: str, config: str, extra: str = "default"):
+        return f"db={db}, config={config}, extra={extra}"
+    result = _demo_function()
+
+    print(f"Demo --- IGNORE ---")
+    print(f"function result: {result}")
+    print(signature(_demo_function))
+
+

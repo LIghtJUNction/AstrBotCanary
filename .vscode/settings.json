@@ -4,6 +4,7 @@
         "Astrbot",
         "asyncio",
         "atransaction",
+        "cumtime",
         "hookspecs",
         "Inmemory",
         "levelname",
@@ -18,7 +19,8 @@
         "taskiq",
         "tryfirst",
         "trylast",
-        "webroot"
+        "webroot",
+        "webui"
     ],
     "python.analysis.aiHoverSummaries": true,
     "python.analysis.autoFormatStrings": true,

@@ -89,7 +89,11 @@ class AstrbotNetwork():
         # 合并 matcher 路由
         for methods, path, handler in router.get_routes():
             for method in methods:
-                self.matcher.add_route(method, path, handler)
+                if path:
+                    full_path = str(URL(router.prefix) / path.strip("/"))
+                else:
+                    full_path = router.prefix
+                self.matcher.add_route(method, full_path, handler)
 
     def get_routes(self) -> list[tuple[list[str], str, Any]]:
         routes: list[tuple[list[str], str, Any]] = []
