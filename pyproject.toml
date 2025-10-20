@@ -68,8 +68,6 @@ astrbot-canary-loader = { workspace = true }
 astrbot-canary-loader-api = { workspace = true }
 astrbot-canary-helper = { workspace = true }
 
-
-# 后续将上述组件改为可选依赖
 [dependency-groups]
 dev = [
     "astrbot-canary-loader",
