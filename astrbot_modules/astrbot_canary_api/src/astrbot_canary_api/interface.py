@@ -1,24 +1,32 @@
-
-#endregion
+# endregion
 from __future__ import annotations
+
 from collections.abc import AsyncIterable
 from importlib.metadata import PackageMetadata
 from logging import LogRecord
 from pathlib import Path
-
-
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable, ContextManager, AsyncContextManager
-from yarl import URL
-
-from pluggy import HookimplMarker, HookspecMarker
-from pydantic import BaseModel
-
-from sqlalchemy import Engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
-from taskiq import AsyncBroker, AsyncResultBackend
+from typing import (
+    Any,
+    AsyncContextManager,
+    ContextManager,
+    Generic,
+    Protocol,
+    TypeVar,
+    runtime_checkable,
+)
 
 from astrbot_canary_api.enums import AstrbotModuleType
+from pluggy import HookimplMarker, HookspecMarker
+from pydantic import BaseModel
+from sqlalchemy import Engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+)
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from taskiq import AsyncBroker, AsyncResultBackend
+from yarl import URL
 
 # from astrbot_canary_api.enums import AstrbotModuleType
 
@@ -31,22 +39,25 @@ __all__ = [
     "RESULT_BACKEND_TYPE",
     "ASTRBOT_MODULES_HOOK_NAME",
     "modulespec",
-    "moduleimpl"
+    "moduleimpl",
 ]
 
-#region Interfaces
+# region Interfaces
 
-#region Module
+# region Module
 # ---------------------------------------------------------------------------
 # Pluggy hookspecs for modules
 # ---------------------------------------------------------------------------
-ASTRBOT_MODULES_HOOK_NAME = "astrbot.modules"  # Must match the name used in PluginManager
+ASTRBOT_MODULES_HOOK_NAME = (
+    "astrbot.modules"  # Must match the name used in PluginManager
+)
 # Hook markers - plugins must use the same project name for @hookimpl
 modulespec = HookspecMarker(ASTRBOT_MODULES_HOOK_NAME)
 moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
 
 # 此协议用于type hint
 # 模块实现应该按照ModuleSpec写
+
 
 @runtime_checkable
 class IAstrbotModule(Protocol):
@@ -56,6 +67,7 @@ class IAstrbotModule(Protocol):
     本协议仅供检查/规范
     以及类型提示使用
     """
+
     Paths: type[IAstrbotPaths]
     ConfigEntry: type[IAstrbotConfigEntry[Any]]
     Database: type[IAstrbotDatabase]
@@ -67,19 +79,21 @@ class IAstrbotModule(Protocol):
     module_type: AstrbotModuleType
     info: PackageMetadata
 
-
     @classmethod
     def Awake(cls) -> None:
-        """ 模块自身初始化时调用 """
+        """模块自身初始化时调用"""
         ...
+
     @classmethod
     def Start(cls) -> None:
-        """ 模块启动时调用 """
+        """模块启动时调用"""
         ...
+
     @classmethod
     def OnDestroy(cls) -> None:
-        """ 模块卸载时调用 """
+        """模块卸载时调用"""
         ...
+
 
 class AstrbotModuleSpec:
     """Astrbot 模块规范
@@ -98,6 +112,7 @@ class AstrbotModuleSpec:
             ！无需使用@atexit注册退出钩子，模块框架会统一调用 OnDestroy
 
     """
+
     @classmethod
     @modulespec
     def Awake(cls) -> None:
@@ -113,43 +128,49 @@ class AstrbotModuleSpec:
     def OnDestroy(cls) -> None:
         """Called when the module is unloaded."""
 
-#endregion
 
-#region Paths
+# endregion
+
+
+# region Paths
 @runtime_checkable
 class IAstrbotPaths(Protocol):
     """Interface for Astrbot path management."""
 
     astrbot_root: Path
-    def __init__(self,pypi_name: str) -> None:
-        ...
-    
+    pypi_name: str
+
+    def __init__(self, pypi_name: str) -> None: ...
+
     @classmethod
     def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
-        """ 返回模块路径根实例，用于访问模块的各类目录 """
+        """返回模块路径根实例，用于访问模块的各类目录"""
         ...
 
     @property
     def config(self) -> Path:
-        """ 返回模块配置目录 """
+        """返回模块配置目录"""
         ...
 
     @property
     def data(self) -> Path:
-        """ 返回模块数据目录 """
+        """返回模块数据目录"""
         ...
 
     @property
     def log(self) -> Path:
-        """ 返回模块日志目录 """
+        """返回模块日志目录"""
         ...
 
-#endregion
-#region Config
+
+# endregion
+# region Config
 T = TypeVar("T", bound=BaseModel)
+
 
 class IAstrbotConfigEntry(Protocol, Generic[T]):
     """单个配置项的协议（作为 IAstrbotConfig 的内部类）"""
+
     name: str
     group: str
     value: T
@@ -158,31 +179,43 @@ class IAstrbotConfigEntry(Protocol, Generic[T]):
     cfg_file: Path | None
 
     @classmethod
-    def bind(cls: type[IAstrbotConfigEntry[T]], group: str, name: str, default: T, description: str, cfg_dir: Path) -> IAstrbotConfigEntry[T]:
+    def bind(
+        cls: type[IAstrbotConfigEntry[T]],
+        group: str,
+        name: str,
+        default: T,
+        description: str,
+        cfg_dir: Path,
+    ) -> IAstrbotConfigEntry[T]:
         """按 group 保存到 {cfg_dir}/{group}.toml，并返回绑定好的条目实例。"""
         ...
+
     def load(self) -> None:
         """从所在组文件加载本项数据（不影响同组其它项）。"""
         ...
+
     def save(self) -> None:
         """将本项合并到所在组文件并保存（不覆盖同组其它项）。"""
         ...
+
     def reset(self) -> None:
         """重置为默认值并保存。"""
         ...
-        
 
-#endregion
 
-#region database
+# endregion
+
+# region database
 
 """Transaction context aliases to match contextmanager/asynccontextmanager return types."""
 TransactionContext = ContextManager[Session]
 AsyncTransactionContext = AsyncContextManager[AsyncSession]
 
+
 @runtime_checkable
 class IAstrbotDatabase(Protocol):
     """Interface for Astrbot database management, optimized for SQLAlchemy ORM."""
+
     db_path: Path
     """ 数据库文件路径 """
     database_url: str
@@ -216,7 +249,11 @@ class IAstrbotDatabase(Protocol):
         """实例化后绑定Base（DeclarativeBase），用于动态绑定模型基类。"""
         ...
 
-    def execute(self, query: str, params: dict[str, Any] | tuple[Any, ...] | None = None) -> Any:
+    def execute(
+        self,
+        query: str,
+        params: dict[str, Any] | tuple[Any, ...] | None = None,
+    ) -> Any:
         """执行原生SQL或ORM查询"""
         ...
 
@@ -264,27 +301,33 @@ class IAstrbotDatabase(Protocol):
         """同步上下文管理器出口（如果实现）。"""
         ...
 
-#endregion
+
+# endregion
 class LogHistoryItem(BaseModel):
     level: str
     time: str
     data: str
+
 
 class LogSSEItem(BaseModel):
     type: str
     level: str
     time: str
     data: str
+
+
 class LogHistoryResponseData(BaseModel):
     logs: list[LogHistoryItem]
 
-#region 日志处理器
+
+# region 日志处理器
 class IAstrbotLogHandler(Protocol):
-    """ 前端的控制台使用 """
+    """前端的控制台使用"""
 
     def emit(self, record: LogRecord) -> None:
         """处理并记录日志"""
         ...
+
     async def event_stream(self) -> AsyncIterable[str]:
         """异步日志流生成器，用于 SSE 推送"""
         while True:
@@ -296,19 +339,12 @@ class IAstrbotLogHandler(Protocol):
         ...
 
 
-#endregion
+# endregion
 
-#region Taskiq!
+# region Taskiq!
 """AstrbotTaskiq!
 封装接口
 """
-
-
-
-
-
-
-
 
 
 #                          (
@@ -333,27 +369,22 @@ class IAstrbotLogHandler(Protocol):
 #        '._     """----.....______.....----"""     _.'
 #           `""--..,,_____            _____,,..--""`
 #                         `"""----"""`
-# 
+#
 
 
-
-
-
-
-
-
-#region 主路由
+# region 主路由
 class IAstrbotNetwork(Protocol):
-    """ Astrbot Taskiq API: 仿FastAPI风格的taskiq封装
+    """Astrbot Taskiq API: 仿FastAPI风格的taskiq封装
     负责路由分发、中间件管理、异常处理和文档生成
     """
+
     scheme: str = "astrbot"
     broker: BROKER_TYPE
 
     def __init__(
-            self, 
-            lifespan: AsyncContextManager[Any] | None = None,
-        ) -> None:
+        self,
+        lifespan: AsyncContextManager[Any] | None = None,
+    ) -> None:
         """包含自己的子路由和路由"""
         ...
 
@@ -372,7 +403,7 @@ class IAstrbotNetwork(Protocol):
     def put(self, path: str):
         """PUT请求装饰器"""
         ...
-    
+
     def delete(self, path: str):
         """DELETE请求装饰器"""
         ...
@@ -414,12 +445,13 @@ class IAstrbotNetwork(Protocol):
         ...
 
 
-#region 路由匹配器
+# region 路由匹配器
 class IAstrbotRouteMatcher(Protocol):
     """
     路由匹配器接口
     支持路由查找、参数提取、反向查找等能力
     """
+
     def match(self, method: str, path: str) -> tuple[Any, dict[str, Any]] | None:
         """
         路由查找：根据方法和路径查找handler及参数
@@ -433,7 +465,13 @@ class IAstrbotRouteMatcher(Protocol):
         """
         ...
 
-    def add_route(self, method: str, path: str, handler: Any, name: str | None = None) -> None:
+    def add_route(
+        self,
+        method: str,
+        path: str,
+        handler: Any,
+        name: str | None = None,
+    ) -> None:
         """
         注册路由
         """
@@ -446,12 +484,13 @@ class IAstrbotRouteMatcher(Protocol):
         ...
 
 
-#endregion
+# endregion
 
-#region Requests
+
+# region Requests
 class IAstrbotRequests(Protocol):
-    """ Astrbot Taskiq 请求封装接口
-    """
+    """Astrbot Taskiq 请求封装接口"""
+
     @staticmethod
     def send(
         method: str,
@@ -462,8 +501,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     def get(
@@ -472,8 +510,7 @@ class IAstrbotRequests(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     def post(
@@ -484,8 +521,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     def put(
@@ -496,8 +532,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     def delete(
@@ -506,8 +541,7 @@ class IAstrbotRequests(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     def patch(
@@ -518,8 +552,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     # 异步版本
     @staticmethod
@@ -532,8 +565,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     async def aget(
@@ -542,8 +574,7 @@ class IAstrbotRequests(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     async def apost(
@@ -554,8 +585,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     async def aput(
@@ -566,8 +596,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     async def adelete(
@@ -576,8 +605,7 @@ class IAstrbotRequests(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @staticmethod
     async def apatch(
@@ -588,8 +616,7 @@ class IAstrbotRequests(Protocol):
         data: Any = None,
         json: Any = None,
         timeout: float | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
-#endregion
+# endregion

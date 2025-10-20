@@ -1,7 +1,10 @@
 import shutil
-import pytest
 from pathlib import Path
+
+import pytest
+
 from astrbot_canary.core.paths import AstrbotPaths
+
 
 def test_astrbot_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     # 设置环境变量，确保 astrbot_root 在临时目录下

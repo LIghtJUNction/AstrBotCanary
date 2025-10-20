@@ -1,15 +1,24 @@
-...
-from logging import getLogger , Logger
+from importlib.metadata import PackageMetadata
+from logging import Logger, getLogger
+
+from astrbot_canary_api import AstrbotModuleType
+from astrbot_canary_api.decorators import AstrbotModule
+
 logger: Logger = getLogger("astrbot.module.tui")
 
-class AstrbotCanaryTui():
-    ...
 
-    def Awake(self) -> None:
-        logger.info(f"{self.name} v{self.version} is awakening.")
+@AstrbotModule("astrbot_canary_tui", "canary_tui", AstrbotModuleType.TUI)
+class AstrbotCanaryTui:
+    info: PackageMetadata
 
-    def Start(self) -> None:
-        logger.info(f"{self.name} v{self.version} has started.")
+    @classmethod
+    def Awake(cls) -> None:
+        logger.info(f"{cls.info.get('Name')} is awakening.")
 
-    def OnDestroy(self) -> None:
-        logger.info(f"{self.name} v{self.version} is being destroyed.")
+    @classmethod
+    def Start(cls) -> None:
+        logger.info(f"{cls.info.get('Name')} has started.")
+
+    @classmethod
+    def OnDestroy(cls) -> None:
+        logger.info(f"{cls.info.get('Name')} is being destroyed.")

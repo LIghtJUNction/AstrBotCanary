@@ -3,13 +3,18 @@ from datetime import UTC, datetime
 from logging import Handler, LogRecord
 
 import orjson
+from astrbot_canary_api.interface import (
+    LogHistoryItem,
+    LogHistoryResponseData,
+    LogSSEItem,
+)
 
-from astrbot_canary_api.interface import LogHistoryItem, LogHistoryResponseData, LogSSEItem
 
 class AsyncAstrbotLogHandler(Handler):
     queue: Queue[LogHistoryItem]
     """ 日志处理器 """
-    def __init__(self,maxsize: int = 500):
+
+    def __init__(self, maxsize: int = 500):
         super().__init__()
         self.queue: Queue[LogHistoryItem] = Queue(maxsize=maxsize)
 
@@ -18,7 +23,7 @@ class AsyncAstrbotLogHandler(Handler):
         log_item = LogHistoryItem(
             level=record.levelname,
             time=datetime.now(UTC).isoformat(),
-            data=msg
+            data=msg,
         )
         try:
             loop = get_running_loop()
@@ -33,7 +38,7 @@ class AsyncAstrbotLogHandler(Handler):
                 type="log",
                 time=log_item.time,
                 level=log_item.level,
-                data=log_item.data
+                data=log_item.data,
             )
             json_str = orjson.dumps(sse_item.model_dump()).decode()
             yield f"data: {json_str}\n\n"
@@ -46,4 +51,3 @@ class AsyncAstrbotLogHandler(Handler):
         while not self.queue.empty():
             items.append(await self.queue.get())
         return LogHistoryResponseData(logs=items)
-

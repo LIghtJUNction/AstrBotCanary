@@ -1,20 +1,22 @@
 from __future__ import annotations
-from collections.abc import Generator, AsyncGenerator
+
+from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Any
+
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
-    create_async_engine,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
+    create_async_engine,
 )
-from contextlib import contextmanager, asynccontextmanager
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
 
 class AstrbotDatabase:
-
     db_path: Path
     database_url: str
     engine: Engine | None
@@ -40,7 +42,11 @@ class AstrbotDatabase:
         instance = cls(db_path)
         # 在这里创建 engine 和 session factory（不要在实例上保存单个 Session）
         instance.engine = create_engine(instance.database_url, future=True)
-        instance.SessionLocal = sessionmaker(bind=instance.engine, future=True, expire_on_commit=False)
+        instance.SessionLocal = sessionmaker(
+            bind=instance.engine,
+            future=True,
+            expire_on_commit=False,
+        )
         return instance
 
     @classmethod
@@ -120,7 +126,6 @@ class AstrbotDatabase:
         # 注意：async_engine 的释放需要在异步上下文中完成。
         # 请在异步代码中调用 `await db.aclose()` 来释放 async 引擎和会话工厂。
 
-
     async def aclose(self) -> None:
         """异步释放 AsyncEngine 和 AsyncSession 工厂。仅在 async 函数中调用。"""
         if self.async_engine is not None:
@@ -129,7 +134,6 @@ class AstrbotDatabase:
             self.async_engine = None
         if self.AsyncSessionLocal is not None:
             self.AsyncSessionLocal = None
-
 
     @contextmanager
     def transaction(self) -> Generator[Session, None, None]:
@@ -148,9 +152,17 @@ class AstrbotDatabase:
         if self.AsyncSessionLocal is None:
             if self.async_engine is None:
                 # 构造基于 aiosqlite 的 async url（sqlite:/// -> sqlite+aiosqlite:///）
-                async_db_url = self.database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
+                async_db_url = self.database_url.replace(
+                    "sqlite:///",
+                    "sqlite+aiosqlite:///",
+                )
                 self.async_engine = create_async_engine(async_db_url, future=True)
-            self.AsyncSessionLocal = async_sessionmaker(bind=self.async_engine, expire_on_commit=False, class_=AsyncSession, future=True)
+            self.AsyncSessionLocal = async_sessionmaker(
+                bind=self.async_engine,
+                expire_on_commit=False,
+                class_=AsyncSession,
+                future=True,
+            )
 
         async with self.AsyncSessionLocal() as session:
             async with session.begin():
@@ -165,9 +177,12 @@ class AstrbotDatabase:
         if self.engine is None:
             # 直接在当前实例上初始化 engine
             self.engine = create_engine(self.database_url, future=True)
-            self.SessionLocal = sessionmaker(bind=self.engine, future=True, expire_on_commit=False)
+            self.SessionLocal = sessionmaker(
+                bind=self.engine,
+                future=True,
+                expire_on_commit=False,
+            )
         return self
-
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # 退出同步上下文时关闭同步资源
@@ -182,9 +197,17 @@ class AstrbotDatabase:
             # lazy create async engine/session factory
             if self.engine is None:
                 self.connect(self.db_path)
-            async_db_url = self.database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
+            async_db_url = self.database_url.replace(
+                "sqlite:///",
+                "sqlite+aiosqlite:///",
+            )
             self.async_engine = create_async_engine(async_db_url, future=True)
-            self.AsyncSessionLocal = async_sessionmaker(bind=self.async_engine, expire_on_commit=False, class_=AsyncSession, future=True)
+            self.AsyncSessionLocal = async_sessionmaker(
+                bind=self.async_engine,
+                expire_on_commit=False,
+                class_=AsyncSession,
+                future=True,
+            )
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -192,4 +215,3 @@ class AstrbotDatabase:
             await self.aclose()
         except Exception:
             pass
-

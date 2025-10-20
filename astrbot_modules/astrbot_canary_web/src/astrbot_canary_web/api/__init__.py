@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from .auth import auth_router
 from .chat import chat_router
 from .config import config_router
@@ -14,9 +15,7 @@ from .t2i import t2i_router
 from .tools import tools_router
 from .update import update_router
 
-
-
-api_router  = APIRouter(prefix="/api", tags=["API"])
+api_router = APIRouter(prefix="/api", tags=["API"])
 
 api_router.include_router(auth_router)
 api_router.include_router(chat_router)

@@ -5,15 +5,20 @@
         "asyncio",
         "atransaction",
         "cumtime",
+        "dotenv",
         "hookspecs",
         "Inmemory",
+        "isort",
         "levelname",
         "moduleimpl",
         "modulespec",
+        "mypy",
         "orjson",
         "pluggy",
         "pydantic",
+        "pyproject",
         "pytest",
+        "rabbitmq",
         "sessionmaker",
         "sqlalchemy",
         "taskiq",
@@ -62,5 +67,5 @@
 "python.testing.unittestEnabled": false,
 "python.testing.pytestEnabled": true
 
-    
+
 }

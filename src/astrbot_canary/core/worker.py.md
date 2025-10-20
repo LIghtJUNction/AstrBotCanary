@@ -85,4 +85,3 @@ class AstrbotWorker:
         result = run_worker(args=cls.args)
         logger.info(f"Worker started with result: {result}")
         return result
-    

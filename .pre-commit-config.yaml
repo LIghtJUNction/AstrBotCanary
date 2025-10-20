@@ -1,0 +1,66 @@
+repos:
+  # 基础检查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-ast
+        exclude: ^(test/|examples/)
+      - id: trailing-whitespace
+        exclude: ^(test/|examples/)
+      - id: check-toml
+      - id: end-of-file-fixer
+        exclude: ^(test/|examples/)
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # 添加尾随逗号，有助于 black 格式化
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v4.0.0
+    hooks:
+      - id: add-trailing-comma
+        exclude: ^(test/|examples/)
+
+  # 代码格式化
+  - repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+        language_version: python3
+        exclude: ^(test/|examples/)
+
+  # 导入排序
+  - repo: https://github.com/PyCQA/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+        exclude: ^(test/|examples/)
+
+  # 代码检查 (考虑用 ruff 替代 flake8，ruff 更快)
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.14.1
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^(test/|examples/)
+      - id: ruff-format
+        exclude: ^(test/|examples/)
+
+  # 类型检查
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        args: [--config-file=pyproject.toml, --exclude=.*\.pyi$]
+        exclude: ^(test/|examples/)
+        additional_dependencies: [types-toml]
+
+  # 自动生成类型存根
+  - repo: local
+    hooks:
+      - id: generate-stubs
+        name: Generate .pyi stub files
+        entry: uv run python scripts/generate_stubs.py
+        language: system
+        files: ^(astrbot_modules/|src/|astrbot_plugins/)
+        pass_filenames: false

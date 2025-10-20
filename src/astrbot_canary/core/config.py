@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from logging import getLogger
 from pathlib import Path
 from typing import Generic
-from pydantic import BaseModel, Field
+
 import toml
-
 from astrbot_canary_api.interface import T
+from pydantic import BaseModel, Field
 
-from logging import getLogger
 logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
+
 
 class AstrbotConfigEntry(BaseModel, Generic[T]):
     name: str
@@ -96,5 +97,3 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
             f"Description: {self.description}\n"
             f"Default: {self.default}"
         )
-    
-    

@@ -1,5 +1,5 @@
-
 from astrbot_canary_api.enums import AstrbotModuleType
+
 
 def test_is_ui():
     # WEB 和 TUI 都应为 UI

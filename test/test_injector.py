@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Test script for AstrbotInjector"""
 
-import sys
 import os
+import sys
 
 # Add the module path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'astrbot_modules', 'astrbot_canary_api', 'src'))
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(__file__), "astrbot_modules", "astrbot_canary_api", "src"
+    ),
+)
 
 from astrbot_canary_api.decorators import AstrbotInjector
+
 
 def test_global_injection():
     """Test global dependency injection"""
@@ -27,6 +33,7 @@ def test_global_injection():
     assert result == expected, f"Expected {expected}, got {result}"
     print("Global injection test passed!")
 
+
 def test_local_injection():
     """Test local dependency injection"""
     print("Testing local injection...")
@@ -45,6 +52,7 @@ def test_local_injection():
     expected = "db=local_db_instance, config=local_config_instance, extra=test"
     assert result == expected, f"Expected {expected}, got {result}"
     print("Local injection test passed!")
+
 
 def test_priority():
     """Test that local dependencies override global"""
@@ -67,6 +75,7 @@ def test_priority():
     assert result == expected, f"Expected {expected}, got {result}"
     print("Priority test passed!")
 
+
 def test_not_callable():
     """Test that non-callable instance raises error"""
     print("Testing non-callable instance...")
@@ -78,6 +87,7 @@ def test_not_callable():
     except TypeError as e:
         assert "not callable" in str(e)
         print("Non-callable test passed!")
+
 
 if __name__ == "__main__":
     test_global_injection()

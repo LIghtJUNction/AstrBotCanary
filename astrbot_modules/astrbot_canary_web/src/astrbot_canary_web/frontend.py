@@ -1,20 +1,24 @@
-from pathlib import Path
 import zipfile
-import requests
-from logging import getLogger , Logger
+from logging import Logger, getLogger
+from pathlib import Path
 
+import requests  # type: ignore[import-untyped]
 from tqdm import tqdm
 
 logger: Logger = getLogger("astrbot.module.web.frontend")
 
-class AstrbotCanaryFrontend():
-    """ 直接使用Astrbot官方前端 """
-    webroot : Path
-    dashboard_release_url: str = "https://github.com/AstrBotDevs/AstrBot/releases/{version}/download/dist.zip"
+
+class AstrbotCanaryFrontend:
+    """直接使用Astrbot官方前端"""
+
+    webroot: Path
+    dashboard_release_url: str = (
+        "https://github.com/AstrBotDevs/AstrBot/releases/{version}/download/dist.zip"
+    )
 
     @classmethod
     def ensure(cls, webroot: Path) -> bool:
-        """ 确保前端文件存在 """
+        """确保前端文件存在"""
         cls.webroot = webroot
         if cls.check(webroot):
             return True
@@ -41,19 +45,19 @@ class AstrbotCanaryFrontend():
 
     @classmethod
     def check(cls, webroot: Path) -> bool:
-        """ 检查前端文件夹文件结构是否正确 """
+        """检查前端文件夹文件结构是否正确"""
         index_file = webroot / "dist" / "index.html"
         return index_file.exists() and index_file.is_file()
-    
+
     @classmethod
     def need_update(cls, webroot: Path) -> bool:
-        """ 检查是否需要更新前端文件 """
-        ...
+        """检查是否需要更新前端文件"""
+        return False  # TODO: 实现更新检查逻辑
 
     # TODO
     @classmethod
-    def download(cls, webroot: Path, version: str = "latest" ) -> Path:
-        """ 同步下载前端文件到webroot--异步循环外 
+    def download(cls, webroot: Path, version: str = "latest") -> Path:
+        """同步下载前端文件到webroot--异步循环外
         返回：dist.zip文件路径
         """
         cls.webroot = webroot
@@ -69,7 +73,12 @@ class AstrbotCanaryFrontend():
         tmp_zip = webroot / (zip_path.name + ".tmp")
 
         # download to temporary zip file with requests (streamed)
-        resp = requests.get(_url, headers={"User-Agent": "python-requests/2"}, stream=True, timeout=30)
+        resp = requests.get(
+            _url,
+            headers={"User-Agent": "python-requests/2"},
+            stream=True,
+            timeout=30,
+        )
         resp.raise_for_status()
 
         # try to get total size from headers
@@ -85,7 +94,12 @@ class AstrbotCanaryFrontend():
         with open(tmp_zip, "wb") as out_f:
             # stream with progress
             if total_size is not None:
-                with tqdm(total=total_size, unit="B", unit_scale=True, desc=zip_path.name) as pbar:
+                with tqdm(
+                    total=total_size,
+                    unit="B",
+                    unit_scale=True,
+                    desc=zip_path.name,
+                ) as pbar:
                     for chunk in resp.iter_content(chunk_size=chunk_size):
                         if not chunk:
                             continue

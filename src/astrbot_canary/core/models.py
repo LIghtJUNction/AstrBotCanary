@@ -1,13 +1,12 @@
-
-from pydantic import BaseModel
-
 from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
+from pydantic import BaseModel
 
 
 class AstrbotRootConfig(BaseModel):
     """
     核心模块配置项
     """
+
     modules: list[str]
     """ 发现的模块 """
     boot: list[str]
@@ -27,6 +26,6 @@ class AstrbotTasksConfig(BaseModel):
     Returns:
         ... : _description_
     """
+
     broker_type: str = AstrbotBrokerType.INMEMORY.value
     backend_type: str = AstrbotResultBackendType.INMEMORY.value
-

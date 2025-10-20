@@ -1,5 +1,6 @@
 from collections.abc import Iterable
-from importlib.metadata import entry_points, EntryPoint , EntryPoints
+from importlib.metadata import EntryPoint, EntryPoints, entry_points
+
 
 class AstrbotCanaryHelper:
     eps: EntryPoints = entry_points()
@@ -10,7 +11,12 @@ class AstrbotCanaryHelper:
             cls.eps = entry_points()
 
     @classmethod
-    def getSingleEntryPoint(cls, group: str, name: str, refresh: bool = False) -> EntryPoint | None:
+    def getSingleEntryPoint(
+        cls,
+        group: str,
+        name: str,
+        refresh: bool = False,
+    ) -> EntryPoint | None:
         """获取指定组-名字的单个入口点，找不到返回 None。"""
         cls._ensure_loaded(refresh=refresh)
         for ep in cls.eps.select(group=group, name=name):
@@ -24,7 +30,11 @@ class AstrbotCanaryHelper:
         return cls.eps.select(group=group)
 
     @classmethod
-    def getMultiGroupAllEntryPoints(cls, groups: list[str], refresh: bool = False) -> EntryPoints:
+    def getMultiGroupAllEntryPoints(
+        cls,
+        groups: list[str],
+        refresh: bool = False,
+    ) -> EntryPoints:
         """获取多个组的所有入口点并合并，保持首次出现顺序且去重。"""
         cls._ensure_loaded(refresh=refresh)
         merged: list[EntryPoint] = []
@@ -51,7 +61,3 @@ class AstrbotCanaryHelper:
                 seen.add(key)
                 merged.append(ep)
         return EntryPoints(merged)
-    
-
-        
-    

@@ -1,4 +1,4 @@
-""" Q&A
+"""Q&A
 AstrbotModule 装饰器为什么需要
 pypi_name / name两个参数？并且两者都要唯一性？
 
@@ -13,29 +13,37 @@ name（即入口点名称）将被写入配置方便下次快速启动
 
 
 """
+
 from __future__ import annotations
-from inspect import signature
-from importlib.metadata import Distribution, PackageNotFoundError, distribution , PackageMetadata
-from packaging.utils import canonicalize_name
-from taskiq import AsyncBroker
-from typing import Any, ParamSpec, TypeVar, overload
+
 from collections.abc import Callable
 from functools import wraps
+from importlib.metadata import (
+    Distribution,
+    PackageMetadata,
+    PackageNotFoundError,
+    distribution,
+)
+from inspect import signature
+from logging import Logger, getLogger
+from typing import Any, ParamSpec, TypeVar, overload
 
 from astrbot_canary_api import (
-    AstrbotModuleType, 
-    IAstrbotDatabase, 
+    AstrbotModuleType,
+    IAstrbotConfigEntry,
+    IAstrbotDatabase,
     IAstrbotPaths,
-    IAstrbotConfigEntry
 )
 from astrbot_canary_api.interface import IAstrbotModule
+from packaging.utils import canonicalize_name
+from taskiq import AsyncBroker
 
-from logging import getLogger , Logger
 logger: Logger = getLogger("astrbot.module.api")
 
 
-P = ParamSpec('P')
-R = TypeVar('R')
+P = ParamSpec("P")
+R = TypeVar("R")
+
 
 class AstrbotInjector:
     """
@@ -59,10 +67,13 @@ class AstrbotInjector:
         再写一个函数式装饰器我认为没必要
 
     """
-    global_dependencies: dict[str, Any] = {}
-    local_injector : dict[str, AstrbotInjector] = {}
 
-    
+    global_dependencies: dict[str, Any] = {}
+    local_injector: dict[str, AstrbotInjector] = {}
+
+    func: Callable[..., Any] | None
+    name: str | None
+
     @overload
     def __init__(self, arg: Callable[..., Any]) -> None: ...
 
@@ -70,20 +81,20 @@ class AstrbotInjector:
     def __init__(self, arg: str) -> None: ...
 
     def __init__(self, arg: Callable[..., Any] | str) -> None:
+        self.local_dependencies: dict[str, Any] = {}
         if callable(arg):
             self.func = arg
             self.name = None
-            self.local_dependencies: dict[str, Any] = {}
         else:
             self.name = arg
             self.func = None
-            self.local_dependencies: dict[str, Any] = {}
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if self.func is None:
             # If used as decorator with str init, set func and return wrapper
             if len(args) == 1 and callable(args[0]) and not kwargs:
                 func = args[0]
+
                 @wraps(func)
                 def wrapper(*a: Any, **kw: Any) -> Any:
                     sig = signature(func)
@@ -95,9 +106,12 @@ class AstrbotInjector:
                         if name in sig.parameters and name not in kw:
                             kw[name] = dep
                     return func(*a, **kw)
+
                 return wrapper
             else:
-                raise TypeError("This injector instance is not callable. Use as a decorator only when initialized with a function.")
+                raise TypeError(
+                    "This injector instance is not callable. Use as a decorator only when initialized with a function.",
+                )
         sig = signature(self.func)
         # 注入局部依赖优先，然后全局
         for name, dep in self.local_dependencies.items():
@@ -137,10 +151,9 @@ class AstrbotInjector:
         self.local_dependencies.pop(name, None)
 
 
-
 class AstrbotModuleMeta(type):
-    """ 用于设置AstrbotModule的类属性
-    """
+    """用于设置AstrbotModule的类属性"""
+
     _modules_registry: dict[str, type] = {}
 
     _paths_impl: type[IAstrbotPaths] | None = None
@@ -151,7 +164,7 @@ class AstrbotModuleMeta(type):
 
     # 单一实例
     _paths: IAstrbotPaths | None = None
-    _config_entry : IAstrbotConfigEntry[Any] | None = None
+    _config_entry: IAstrbotConfigEntry[Any] | None = None
     _database: IAstrbotDatabase | None = None
 
     # 其他元数据
@@ -160,16 +173,19 @@ class AstrbotModuleMeta(type):
     _module_type: AstrbotModuleType
     _info: PackageMetadata | None = None
 
-    def __new__(cls, name: str, bases: tuple[type, ...], attrs: dict[str, Any]) -> type[IAstrbotModule]:
+    def __new__(
+        cls,
+        name: str,
+        bases: tuple[type, ...],
+        attrs: dict[str, Any],
+    ) -> type[IAstrbotModule]:
         # 检测类名冲突
         if name in cls._modules_registry:
             raise ValueError(f"模块冲突: {name}")
         cls._modules_registry[name] = super().__new__(cls, name, bases, attrs)
 
         # 检测是否实现了必要接口
-        if (
-            not isinstance(cls._modules_registry[name], IAstrbotModule) 
-        ):
+        if not isinstance(cls._modules_registry[name], IAstrbotModule):
             raise TypeError(f"类 {name} 未实现 IAstrbotModule 协议")
 
         return cls._modules_registry[name]
@@ -182,13 +198,15 @@ class AstrbotModuleMeta(type):
                 type(cls)._paths_impl = Paths_impl
                 impl = Paths_impl
             else:
-                raise RuntimeError("AstrbotPaths 未注入，请在启动时设置 AstrbotInjector.set('AstrbotPaths', <实现类>)")
+                raise RuntimeError(
+                    "AstrbotPaths 未注入，请在启动时设置 AstrbotInjector.set('AstrbotPaths', <实现类>)",
+                )
         return impl
 
     @Paths.setter
     def Paths(cls, value: type[IAstrbotPaths]) -> None:
         type(cls)._paths_impl = value
-        
+
     @property
     def ConfigEntry(cls) -> type[IAstrbotConfigEntry[Any]]:
         impl = type(cls)._config_entry_impl
@@ -197,7 +215,9 @@ class AstrbotModuleMeta(type):
                 type(cls)._config_entry_impl = ConfigEntry_impl
                 impl = ConfigEntry_impl
             else:
-                raise RuntimeError("AstrbotConfigEntry 未注入，请在启动时设置 AstrbotInjector.set('AstrbotConfigEntry', <实现类>)")
+                raise RuntimeError(
+                    "AstrbotConfigEntry 未注入，请在启动时设置 AstrbotInjector.set('AstrbotConfigEntry', <实现类>)",
+                )
         return impl
 
     @ConfigEntry.setter
@@ -212,7 +232,9 @@ class AstrbotModuleMeta(type):
                 type(cls)._database_impl = Database_impl
                 impl = Database_impl
             else:
-                raise RuntimeError("AstrbotDatabase 未注入，请在启动时设置 AstrbotInjector.set('AstrbotDatabase', <实现类>)")
+                raise RuntimeError(
+                    "AstrbotDatabase 未注入，请在启动时设置 AstrbotInjector.set('AstrbotDatabase', <实现类>)",
+                )
         return impl
 
     @Database.setter
@@ -229,7 +251,9 @@ class AstrbotModuleMeta(type):
                 type(cls)._broker_impl = broker_impl
                 impl = broker_impl
             else:
-                raise RuntimeError("AsyncBroker 未注入，请在启动时设置 AstrbotInjector.set('broker', <全局单例>)")
+                raise RuntimeError(
+                    "AsyncBroker 未注入，请在启动时设置 AstrbotInjector.set('broker', <全局单例>)",
+                )
         return impl
 
     @broker.setter
@@ -239,7 +263,7 @@ class AstrbotModuleMeta(type):
     @property
     def paths(cls) -> IAstrbotPaths:
         if cls._paths:
-            return  cls._paths
+            return cls._paths
         return cls.Paths.getPaths(cls.pypi_name)
 
     @paths.setter
@@ -260,7 +284,7 @@ class AstrbotModuleMeta(type):
     @property
     def pypi_name(cls) -> str:
         return cls._pypi_name
-    
+
     @pypi_name.setter
     def pypi_name(cls, value: str) -> None:
         # 检查是否是合法的PyPI包名
@@ -270,7 +294,7 @@ class AstrbotModuleMeta(type):
     @property
     def name(cls) -> str:
         return cls._name
-    
+
     @name.setter
     def name(cls, value: str) -> None:
         cls._name: str = value
@@ -281,13 +305,13 @@ class AstrbotModuleMeta(type):
         return cls._module_type
 
     @module_type.setter
-    def module_type(cls, value: str | AstrbotModuleType ) -> None:
+    def module_type(cls, value: str | AstrbotModuleType) -> None:
         if isinstance(value, str):
             try:
                 value = AstrbotModuleType[value.upper()]
             except KeyError:
                 raise ValueError(f"未知的模块类型：{value}")
-        
+
         cls._module_type: AstrbotModuleType = value
 
     @property
@@ -297,7 +321,9 @@ class AstrbotModuleMeta(type):
                 dist: Distribution = distribution(cls.pypi_name)
                 cls._info = dist.metadata
             except PackageNotFoundError:
-                raise RuntimeError(f"未找到包：{cls.pypi_name}，请确认包已安装且名称正确！")
+                raise RuntimeError(
+                    f"未找到包：{cls.pypi_name}，请确认包已安装且名称正确！",
+                )
         return cls._info
 
     @info.setter
@@ -305,8 +331,8 @@ class AstrbotModuleMeta(type):
         cls._info = value
 
 
-class AstrbotModule():
-    """ 装饰器类，用于标记模块并自动提取元数据，注入抽象接口的具体实现 
+class AstrbotModule:
+    """装饰器类，用于标记模块并自动提取元数据，注入抽象接口的具体实现
     大写开头表示这是一个类
     小写开头表示这是一个实例
     注意：
@@ -314,19 +340,20 @@ class AstrbotModule():
     注入：
         核心模块负责注入具体实现
     """
+
     def __init__(
         self,
         pypi_name: str,
         name: str,
         module_type: AstrbotModuleType,
-        info: PackageMetadata | None = None
+        info: PackageMetadata | None = None,
     ):
         self.pypi_name = pypi_name
         self.name = name
         self.module_type = module_type
         self.info = info
 
-    def __call__(self, cls: type) -> type[IAstrbotModule]:
+    def __call__(self, cls: type) -> type:
         DecoratedClass = AstrbotModuleMeta(cls.__name__, (cls,), {})
         DecoratedClass.pypi_name = self.pypi_name
         DecoratedClass.name = self.name
@@ -334,64 +361,3 @@ class AstrbotModule():
         if self.info is not None:
             DecoratedClass.info = self.info
         return DecoratedClass
-
-
-if __name__ == "__main__":
-    @AstrbotModule("astrbot_canary_api", "canary_test", AstrbotModuleType.UNKNOWN)
-    class TestModule:
-        @classmethod
-        def Awake(cls):
-            pass
-            
-        @classmethod
-        def Start(cls):
-            pass
-        
-        @classmethod
-        def OnDestroy(cls):
-            pass
-
-    # 只能从类访问
-    try:
-        tm = TestModule()
-        print(tm.info)
-    except Exception as e:
-        print(f"Error: {e}")
-    
-    print(TestModule.info)
-
-    # 注入器快速演示
-    # 局部注入器
-    injector = AstrbotInjector("demo_injector")
-    injector.set_local("db", "local_db_instance")
-    injector.set_local("config", "local_config_instance")
-    injector.set_local("extra", "local_extra_instance")
-
-    # 直接get_local也行
-
-
-    @injector
-    def demo_function(db: str, config: str, extra: str = "default"):
-        return f"db={db}, config={config}, extra={extra}"
-
-    result = demo_function()
-    print(f"Demo function result: {result}")
-
-    print(signature(demo_function))
-
-    print("全局依赖注入演示")
-
-    # 全局注入器
-    AstrbotInjector.set("db", "global_db_instance")
-    AstrbotInjector.set("config", "global_config_instance")
-    AstrbotInjector.set("extra", "global_extra_instance")
-    @AstrbotInjector
-    def _demo_function(db: str, config: str, extra: str = "default"):
-        return f"db={db}, config={config}, extra={extra}"
-    result = _demo_function()
-
-    print(f"Demo --- IGNORE ---")
-    print(f"function result: {result}")
-    print(signature(_demo_function))
-
-

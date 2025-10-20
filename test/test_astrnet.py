@@ -1,5 +1,6 @@
 import pytest
 from taskiq import InMemoryBroker
+
 from astrbot_canary.astrnet.astrnet import AstrbotNetwork
 
 
@@ -7,6 +8,8 @@ from astrbot_canary.astrnet.astrnet import AstrbotNetwork
 def astrnet():
     broker = InMemoryBroker()
     return AstrbotNetwork(broker=broker)
+
+
 def test_echo_route_registration(astrnet: AstrbotNetwork):
     # 注册路由
     @astrnet.get("/echo", tag1="a", tag2="b")
@@ -23,10 +26,11 @@ def test_echo_route_registration(astrnet: AstrbotNetwork):
     assert getattr(task, "tag1", None) == "a"
     assert getattr(task, "tag2", None) == "b"
 
+
 @pytest.mark.asyncio
 async def test_echo_route_call(astrnet: AstrbotNetwork):
     @astrnet.get("/echo")
-    async def echo(msg: str) -> str: # type: ignore
+    async def echo(msg: str) -> str:  # type: ignore
         return msg
 
     # 获取注册的任务

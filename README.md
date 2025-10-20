@@ -115,7 +115,7 @@ pyahocorasick（文本处理）
 
 
 ## 文档
-项目文档位于 `docs/`（仓库内）。  
+项目文档位于 `docs/`（仓库内）。
 在本项目语境下，区分：
 - 模块（Module）：项目的核心功能组件
 - 插件（Plugin）：由社区或第三方提供的扩展功能
@@ -135,7 +135,7 @@ pyahocorasick（文本处理）
 ## 快速使用（Windows）
 下面为最小化的上手提示，仅供参考：
 
-1. 安装 Python（建议使用 3.13.8）  
+1. 安装 Python（建议使用 3.13.8）
    推荐使用 Microsoft Store 的 Python 管理器或 Windows 的包管理工具（详见下方小贴士）。
 本项目已上传至pypi，后续通过pypi进行安装
 
@@ -146,8 +146,8 @@ uv tool install aStrBoT.-_-_cAnarY
 ---
 
 ## 小贴士 (TIPS)
-- 若使用 Windows，推荐使用 Microsoft 的 Python 安装管理器（应用商店或 `uv`/`py` 管理工具）来管理多个 Python 版本。示例：  
-  - 安装 Microsoft Store 的 Python 管理器（BETA 版）：https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN  
+- 若使用 Windows，推荐使用 Microsoft 的 Python 安装管理器（应用商店或 `uv`/`py` 管理工具）来管理多个 Python 版本。示例：
+  - 安装 Microsoft Store 的 Python 管理器（BETA 版）：https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN
   - 使用该管理器安装：`py install 3.13.8`
   - 查看可用版本：`uv python list`
   - 同步项目版本（若使用 uv 管理）：`uv sync`
@@ -157,14 +157,15 @@ uv tool install aStrBoT.-_-_cAnarY
 ---
 
 # 开发指南
-uv pip install -e .[all]
-
+- uv pip install -e .[dev]
+- 请使用pre-commit
+- pre-commit install
 
 ## 贡献与联系
-欢迎贡献代码、Issue、PR 与讨论。  
+欢迎贡献代码、Issue、PR 与讨论。
 请在提交前阅读仓库中的贡献指南（若有）与 `CODE_OF_CONDUCT`。
 
-项目主页 / 参考： https://github.com/AstrBotDevs/AstrBot  
+项目主页 / 参考： https://github.com/AstrBotDevs/AstrBot
 
 
 Canary仓库维护者：LIghtJUNction
@@ -177,4 +178,3 @@ Canary仓库维护者：LIghtJUNction
 GPLV3
 
 ---
-

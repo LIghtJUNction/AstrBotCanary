@@ -1,8 +1,7 @@
+from astrbot_canary_api import IAstrbotConfigEntry
 from taskiq import AsyncBroker, InMemoryBroker
 
 from astrbot_canary.core.models import AstrbotTasksConfig
-from astrbot_canary_api import IAstrbotConfigEntry
-
 
 # AstrbotBrokerType
 # INMEMORY = "inmemory"
@@ -24,11 +23,13 @@ from astrbot_canary_api import IAstrbotConfigEntry
 # S3 = "s3"
 # YDB = "ydb"
 
+
 # Astrbot 任务管理器
 class AstrbotTasks:
-    """ Astrbot 任务管理器
+    """Astrbot 任务管理器
     提供全局任务队列和结果后端
     """
+
     broker: AsyncBroker = InMemoryBroker()
 
     @classmethod
@@ -71,18 +72,22 @@ class AstrbotTasks:
             case "ydb":
                 cls.init_ydb_backend(cfg_tasks.value)
             case _:
-                raise ValueError(f"不支持的结果后端类型：{cfg_tasks.value.backend_type}")
+                raise ValueError(
+                    f"不支持的结果后端类型：{cfg_tasks.value.backend_type}",
+                )
 
-
-        @cls.broker.task("astrbot://echo" , description = "Echo --Welcome to Astrbot Tasks!" , group = "core" )
+        @cls.broker.task(
+            "astrbot://echo",
+            description="Echo --Welcome to Astrbot Tasks!",
+            group="core",
+        )
         def echo(msg: str) -> str:
             return msg
 
         # 注册到全局！
         AsyncBroker.global_task_registry["astrbot://echo"] = echo
 
-
-    #region broker
+    # region broker
 
     @classmethod
     def init_inmemory_broker(cls, cfg: AstrbotTasksConfig) -> None:
@@ -120,8 +125,8 @@ class AstrbotTasks:
     @classmethod
     def init_custom_broker(cls, cfg: AstrbotTasksConfig) -> None:
         raise NotImplementedError("CUSTOM broker暂未实现")
-    
-    #region backend
+
+    # region backend
 
     @classmethod
     def init_inmemory_backend(cls, cfg: AstrbotTasksConfig) -> None:
@@ -152,5 +157,3 @@ class AstrbotTasks:
     @classmethod
     def init_ydb_backend(cls, cfg: AstrbotTasksConfig) -> None:
         raise NotImplementedError("YDB 结果后端暂未实现")
-    
-
