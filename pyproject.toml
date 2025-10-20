@@ -141,3 +141,10 @@ disallow_incomplete_defs = false
 [[tool.mypy.overrides]]
 module = "test.*"
 ignore_errors = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
