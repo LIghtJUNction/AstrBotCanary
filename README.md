@@ -157,7 +157,7 @@ uv tool install aStrBoT.-_-_cAnarY
 ---
 
 # 开发指南
-- uv pip install -e .[dev]
+- uv sync --dev
 - 请使用pre-commit
 - pre-commit install
 
