@@ -82,11 +82,6 @@ dev = [
     "pytest",
     "coverage",
     "codecov",
-    # 免得pylint工作流找不到
-    "pluggy",
-    "pydantic",
-    "sqlalchemy",
-    "taskiq",
     # pre-commit相关
     "pre-commit",
     "black",
