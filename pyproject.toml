@@ -35,10 +35,38 @@ dependencies = [
     "types-orjson>=3.6.2",
     "hatch-vcs>=0.5.0",
 ]
+[dependency-groups]
+dev = [
+    "astrbot-canary-loader",
+    "astrbot-canary-tui",
+    "astrbot-canary-web",
+    # 测试相关
+    "pytest-asyncio",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest",
+    "coverage",
+    "codecov",
+    # pre-commit相关
+    "pre-commit",
+    "darglint",
+    "docstring-checker",
+    "mypy>=1.18.2",
+    "types-pyjwt>=1.7.1",
+    "types-requests>=2.32.4.20250913",
+    "commitizen>=4.9.1",
+]
+[project.optional-dependencies]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+web = ["astrbot-canary-web"]
+loader = ["astrbot-canary-loader"]
+tui = ["astrbot-canary-tui"]
+
+all = [
+    "astrbot-canary-loader",
+    "astrbot-canary-tui",
+    "astrbot-canary-web"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -69,51 +97,6 @@ astrbot-canary-loader = { workspace = true }
 astrbot-canary-loader-api = { workspace = true }
 astrbot-canary-helper = { workspace = true }
 
-[dependency-groups]
-dev = [
-    "astrbot-canary-loader",
-    "astrbot-canary-tui",
-    "astrbot-canary-web",
-    # 测试相关
-    "pytest-asyncio",
-    "pytest-mock",
-    "pytest-cov",
-    "pytest",
-    "coverage",
-    "codecov",
-    # pre-commit相关
-    "pre-commit",
-    "darglint",
-    "docstring-checker",
-    "mypy>=1.18.2",
-    "types-pyjwt>=1.7.1",
-    "types-requests>=2.32.4.20250913",
-
-]
-
-[project.optional-dependencies]
-
-web = ["astrbot-canary-web"]
-loader = ["astrbot-canary-loader"]
-tui = ["astrbot-canary-tui"]
-
-all = [
-    "astrbot-canary-loader",
-    "astrbot-canary-tui",
-    "astrbot-canary-web"
-]
-[project.entry-points."astrbot.modules"]
-"canary_core" = "astrbot_canary.module:AstrbotCoreModule"
-
-# [tool.uv.sources]
-# orjson = { git = "https://github.com/ijl/orjson.git" ,tag = "3.11.0"}
-# pyo3最新支持到3.13
-# 等后续pyo3支持到14后直接升级到14
-
-# 对于插件项目：
-# [project.entry-points."astrbot.plugins"]
-# "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
-
 [tool.mypy]
 python_version = "3.13"
 check_untyped_defs = true
@@ -140,3 +123,31 @@ python_functions = ["test_*"]
 
 [tool.ruff]
 select = ["ALL"]
+fix = true
+show-fixes = true
+exclude=[
+"test",
+"examples",
+"*.pyi"
+]
+ignore = []
+per-file-ignores = {}
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "pep440"
+version_provider = "uv"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[project.entry-points."astrbot.modules"]
+"canary_core" = "astrbot_canary.module:AstrbotCoreModule"
+
+# 对于插件项目：
+# [project.entry-points."astrbot.plugins"]
+# "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

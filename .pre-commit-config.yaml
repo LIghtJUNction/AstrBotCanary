@@ -1,35 +1,46 @@
-# uv run pre-commit autoupdate
 repos:
-  # 基础检查
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: check-ast
-        exclude: ^(test/|examples/)
-      - id: trailing-whitespace
-        exclude: ^(test/|examples/)
-      - id: check-toml
-      - id: end-of-file-fixer
-        exclude: ^(test/|examples/)
-      - id: check-merge-conflict
-      - id: check-added-large-files
-
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.14.1
-    hooks:
-      - id: ruff-check
-        types_or: [python, pyi]
-        args: [--fix, --exit-non-zero-on-fix]
-        exclude: ^(test/|examples/)
-      - id: ruff-format
-        types_or: [python, pyi]
-        exclude: ^(test/|examples/)
-
-  # 类型检查
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        args: [--config-file=pyproject.toml, --exclude=.*\.pyi$]
-        exclude: ^(test/|examples/)
-        additional_dependencies: [types-toml]
+- hooks:
+  - exclude: ^(test/|examples/)
+    id: check-ast
+  - exclude: ^(test/|examples/)
+    id: trailing-whitespace
+  - id: check-toml
+  - exclude: ^(test/|examples/)
+    id: end-of-file-fixer
+  - id: check-merge-conflict
+  - id: check-added-large-files
+  repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+- hooks:
+  - args:
+    - --fix
+    - --exit-non-zero-on-fix
+    exclude: ^(test/|examples/)
+    id: ruff-check
+    types_or:
+    - python
+    - pyi
+  - exclude: ^(test/|examples/)
+    id: ruff-format
+    types_or:
+    - python
+    - pyi
+  repo: https://github.com/charliermarsh/ruff-pre-commit
+  rev: v0.14.1
+- hooks:
+  - additional_dependencies:
+    - types-toml
+    args:
+    - --config-file=pyproject.toml
+    - --exclude=.*\.pyi$
+    exclude: ^(test/|examples/)
+    id: mypy
+  repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.18.2
+- hooks:
+  - id: commitizen
+  - id: commitizen-branch
+    stages:
+    - pre-push
+  repo: https://github.com/commitizen-tools/commitizen
+  rev: v4.9.1
