@@ -51,7 +51,7 @@ AstrBotCanary 是 AstrBot 的一个实验性分支。
 > uv tool install astrbot_canary
 
 如果你希望前端路径自定义？
-你可以修改config/metadata.webroot.toml内的值
+配置文件夹：config/
 但是一般不建议自定义路径
 
 ______________________________________________________________________
