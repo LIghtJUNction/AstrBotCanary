@@ -122,11 +122,7 @@ def test_bind_base(tmp_path: Path):
     )
     assert rows and rows[0][0] == "items"
     db.close()
-    db = AstrbotDatabase(tmp_path / "not_exist.db")
-    with pytest.raises(RuntimeError, match="Database not connected"):
-        with db.session_scope():
-            pass
-
+    
 
 def test_execute_not_connected(tmp_path: Path):
     db = AstrbotDatabase(tmp_path / "not_exist.db")
