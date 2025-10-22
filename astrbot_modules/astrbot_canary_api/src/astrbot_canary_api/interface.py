@@ -31,8 +31,6 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
     from taskiq import AsyncBroker, AsyncResultBackend
 
-    # Removed commented-out code per ruff ERA001
-
 
 type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
