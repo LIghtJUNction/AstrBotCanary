@@ -5,26 +5,21 @@ from .interface import (
     IAstrbotDatabase,
     IAstrbotLogHandler,
     IAstrbotModule,
-    IAstrbotNetwork,
     IAstrbotPaths,
     moduleimpl,
     modulespec,
 )
 
 __all__ = [
-    # interfaces
-    "IAstrbotConfigEntry",
-    "IAstrbotPaths",
-    "IAstrbotDatabase",
-    "IAstrbotModule",
-    "IAstrbotNetwork",
-    "IAstrbotLogHandler",
-    # enum
-    "AstrbotModuleType",
-    "AstrbotBrokerType",
-    "AstrbotResultBackendType",
-    # pluggy
     "ASTRBOT_MODULES_HOOK_NAME",
-    "modulespec",
+    "AstrbotBrokerType",
+    "AstrbotModuleType",
+    "AstrbotResultBackendType",
+    "IAstrbotConfigEntry",
+    "IAstrbotDatabase",
+    "IAstrbotLogHandler",
+    "IAstrbotModule",
+    "IAstrbotPaths",
     "moduleimpl",
+    "modulespec",
 ]

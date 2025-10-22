@@ -9,16 +9,19 @@ logger: Logger = getLogger("astrbot.module.tui")
 
 @AstrbotModule("astrbot_canary_tui", "canary_tui", AstrbotModuleType.TUI)
 class AstrbotCanaryTui:
-    info: PackageMetadata
+    info: PackageMetadata | None = None
 
     @classmethod
     def Awake(cls) -> None:
-        logger.info(f"{cls.info.get('Name')} is awakening.")
+        logger.info("%s is awakening.", cls.info.get("Name") if cls.info else "unknown")
 
     @classmethod
     def Start(cls) -> None:
-        logger.info(f"{cls.info.get('Name')} has started.")
+        logger.info("%s has started.", cls.info.get("Name") if cls.info else "unknown")
 
     @classmethod
     def OnDestroy(cls) -> None:
-        logger.info(f"{cls.info.get('Name')} is being destroyed.")
+        logger.info(
+            "%s is being destroyed.",
+            cls.info.get("Name") if cls.info else "unknown",
+        )

@@ -1,6 +1,8 @@
-from asyncio import Queue, get_running_loop
+from asyncio import Queue, Task, get_running_loop
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from logging import Handler, LogRecord
+from typing import override
 
 import orjson
 from astrbot_canary_api.interface import (
@@ -11,14 +13,16 @@ from astrbot_canary_api.interface import (
 
 
 class AsyncAstrbotLogHandler(Handler):
-    queue: Queue[LogHistoryItem]
-    """ 日志处理器 """
+    """日志处理器"""
 
-    def __init__(self, maxsize: int = 500):
+    def __init__(self, maxsize: int = 500) -> None:
         super().__init__()
         self.queue: Queue[LogHistoryItem] = Queue(maxsize=maxsize)
+        self._tasks: list[Task[None]] = []
 
-    def emit(self, record: LogRecord):
+    @override
+    def emit(self, record: LogRecord) -> None:
+        """发送."""
         msg = record.getMessage()
         log_item = LogHistoryItem(
             level=record.levelname,
@@ -27,11 +31,12 @@ class AsyncAstrbotLogHandler(Handler):
         )
         try:
             loop = get_running_loop()
-            loop.create_task(self.queue.put(log_item))
+            task = loop.create_task(self.queue.put(log_item))
+            self._tasks.append(task)
         except RuntimeError:
             self.queue.put_nowait(log_item)
 
-    async def event_stream(self):
+    async def event_stream(self) -> AsyncGenerator[str]:
         while True:
             log_item = await self.queue.get()
             sse_item = LogSSEItem(
@@ -44,9 +49,7 @@ class AsyncAstrbotLogHandler(Handler):
             yield f"data: {json_str}\n\n"
 
     async def get_log_history(self) -> LogHistoryResponseData:
-        """
-        获取结构化日志历史，返回 LogHistoryResponseData
-        """
+        """获取结构化日志历史,返回 LogHistoryResponseData."""
         items: list[LogHistoryItem] = []
         while not self.queue.empty():
             items.append(await self.queue.get())

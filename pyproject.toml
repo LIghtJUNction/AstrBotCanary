@@ -1,12 +1,20 @@
 [project]
 name = "astrbot-canary"
-version = "0.1.2"
 description = "This is an official support Astrbot."
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
+dynamic = ["version","urls"]
+
 requires-python = ">=3.13.8"
+license = { file = "LICENSE" }
+keywords = [
+    "Astrbot",
+    "Astrbot Module",
+    "Astrbot Plugin"
+]
+
 dependencies = [
     "asyncio>=4.0.0",
     "click>=8.3.0",
@@ -55,13 +63,20 @@ dev = [
     "types-pyjwt>=1.7.1",
     "types-requests>=2.32.4.20250913",
     "commitizen>=4.9.1",
+    "tox>=4.31.0",
+    "mdformat>=1.0.0",
 ]
-[project.optional-dependencies]
 
+[tool.hatch.metadata.hooks.vcs.urls]
+Funding = "https://github.com/AstrBotDevs/"
+Homepage = "https://github.com/LIghtJUNction/astrbot_canary"
+Issues = "https://github.com/LIghtJUNction/astrbot_canary/issues"
+source_archive = "https://github.com/LIghtJUNction/astrbot_canary/archive/{commit_hash}.zip"
+
+[project.optional-dependencies]
 web = ["astrbot-canary-web"]
 loader = ["astrbot-canary-loader"]
 tui = ["astrbot-canary-tui"]
-
 all = [
     "astrbot-canary-loader",
     "astrbot-canary-tui",
@@ -97,23 +112,6 @@ astrbot-canary-loader = { workspace = true }
 astrbot-canary-loader-api = { workspace = true }
 astrbot-canary-helper = { workspace = true }
 
-[tool.mypy]
-python_version = "3.13"
-check_untyped_defs = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-show_error_codes = true
-exclude = ["test/", "examples/", "**/*.pyi"]
-mypy_path = ["astrbot_modules/"]
-ignore_missing_imports = true
-disallow_untyped_calls = false
-disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-module = "test.*"
-ignore_errors = true
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["test"]
@@ -121,17 +119,46 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 
+[tool.mypy]
+python_version = "3.13"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+exclude = ["test/", "examples/", '.*\.pyi$', "__about__.py"]
+mypy_path = ["astrbot_modules/","astrbot_plugins", "src/"]
+ignore_missing_imports = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_return_any = true
+warn_unused_configs = true
+strict_optional = true
+allow_redefinition = false
+
 [tool.ruff]
-select = ["ALL"]
 fix = true
 show-fixes = true
-exclude=[
-"test",
-"examples",
-"*.pyi"
+
+[tool.ruff.lint]
+select = ["ALL"]
+exclude = [
+    "*.venv",
+    "*test*",
+    "*scripts*",
+    "*examples*",
+    "*.pyi",
+    "*.ipynb"
 ]
-ignore = []
+ignore = ["N", "D"]
+
 per-file-ignores = {}
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["pydantic.dataclasses.dataclass"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -147,7 +174,12 @@ major_version_zero = true
 # 对于插件项目：
 # [project.entry-points."astrbot.plugins"]
 # "example-plugin" = "examples.plugin_example:Plugin"      # 指向插件类
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "__about__.py"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"

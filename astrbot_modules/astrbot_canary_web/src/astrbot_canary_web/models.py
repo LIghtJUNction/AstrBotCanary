@@ -2,16 +2,27 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from collections.abc import AsyncIterable
-from datetime import datetime, timedelta, timezone
-from typing import Any, ClassVar, Generic, Literal, Self, TypeVar, overload
+from datetime import UTC, datetime, timedelta
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    Self,
+    TypeVar,
+    overload,
+)
 
 from fastapi.responses import StreamingResponse
 from jwt import decode, encode
 from pydantic import BaseModel
 from sqlalchemy import String, select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # PyJWT
@@ -20,10 +31,10 @@ class Base(DeclarativeBase): ...
 
 # region User 模型
 class User(Base):
-    """SQLAlchemy ORM 用户模型。
+    """SQLAlchemy ORM 用户模型..
 
-    存储用户的用户名、带盐密码哈希、随机盐值和用于签发/验证 JWT 的每用户对称密钥。
-    所有密码学操作（加盐哈希、验证、JWT 签发/验证）均封装为实例/类方法。
+    存储用户的用户名,带盐密码哈希,随机盐值和用于签发/验证 JWT 的每用户对称密钥.
+    所有密码学操作(加盐哈希,验证,JWT 签发/验证)均封装为实例/类方法.
     """
 
     __tablename__ = "users"
@@ -35,8 +46,8 @@ class User(Base):
         unique=True,
         index=True,
     )
-    password: Mapped[str] = mapped_column(String, nullable=False)  # 存储哈希（hex）
-    salt: Mapped[str] = mapped_column(String, nullable=False)  # 存储随机盐（hex）
+    password: Mapped[str] = mapped_column(String, nullable=False)  # 存储哈希(hex)
+    salt: Mapped[str] = mapped_column(String, nullable=False)  # 存储随机盐(hex)
     jwt_secret: Mapped[str] = mapped_column(String, nullable=False)
 
     # PBKDF2 参数
@@ -47,14 +58,14 @@ class User(Base):
         return f"<User {self.username!r} >"
 
     def to_dict(self) -> dict[str, Any]:
-        """返回用户的简要序列化表示。
+        """返回用户的简要序列化表示..
 
-        注意：在生产 API 中不要暴露 password、salt 或 jwt_secret。
+        注意:在生产 API 中不要暴露 password,salt 或 jwt_secret.
         """
         return {"username": self.username}
 
     # region 公共接口
-    async def verify_password_async(self: "User", password: str) -> bool:
+    async def verify_password_async(self: User, password: str) -> bool:
         salt_bytes = bytes.fromhex(self.salt)
         hash_bytes = hashlib.pbkdf2_hmac(
             self._HASH_NAME,
@@ -64,8 +75,8 @@ class User(Base):
         )
         return self.password == hash_bytes.hex()
 
-    async def issue_token_async(self: "User", exp_days: int = 7) -> str:
-        return self._generate_jwt(self.username, exp=exp_days)
+    async def issue_token_async(self: User, exp_days: int = 7) -> str:
+        return self.generate_jwt(self.username, exp=exp_days)
 
     @classmethod
     async def create_and_issue_token(
@@ -74,9 +85,9 @@ class User(Base):
         username: str,
         password: str,
         exp_days: int,
-    ) -> tuple["User", str]:
+    ) -> tuple[User, str]:
         user = await cls._create(session, username=username, password=password)
-        token = user._generate_jwt(username=username, exp=exp_days)
+        token = user.generate_jwt(username=username, exp=exp_days)
         return user, token
 
     @classmethod
@@ -85,37 +96,38 @@ class User(Base):
         session: AsyncSession,
         token: str,
         expected_iss: str | None = None,
-    ) -> tuple["User", dict[str, Any]]:
-        from typing import cast
-
+    ) -> tuple[User, dict[str, Any]]:
         last_exc: Exception | None = None
         try:
             unverified = decode(token, options={"verify_signature": False})
-        except Exception:
+        except ValueError:
             unverified = None
         if isinstance(unverified, dict):
-            aud = cast(str | None, unverified.get("aud"))
-            if aud:
+            aud = unverified.get("aud")
+            if isinstance(aud, str) and aud:
                 candidate = await session.get(cls, aud)
                 if candidate:
                     try:
-                        payload = candidate._verify_jwt(
+                        payload = candidate.verify_jwt(
                             token,
                             expected_iss=expected_iss,
                             expected_aud=aud,
                         )
-                        return candidate, payload
-                    except Exception as e:
+                    except (ValueError, TypeError) as e:
                         last_exc = e
+                    else:
+                        return candidate, payload
         result = await session.execute(select(cls))
         users = result.scalars().all()
         for user in users:
             try:
-                payload = user._verify_jwt(token, expected_iss=expected_iss)
-                return user, payload
-            except Exception as e:
+                payload = user.verify_jwt(token, expected_iss=expected_iss)
+            except (ValueError, TypeError) as e:
                 last_exc = e
-        raise LookupError("no user matches token") from last_exc
+            else:
+                return user, payload
+        msg = "no user matches token"
+        raise LookupError(msg) from last_exc
 
     async def update_password_async(
         self,
@@ -133,7 +145,8 @@ class User(Base):
     ) -> None:
         exists = await session.get(User, new_username)
         if exists:
-            raise ValueError("username already taken")
+            msg = "username already taken"
+            raise ValueError(msg)
         self.username = new_username
         session.add(self)
         await session.flush()
@@ -147,7 +160,7 @@ class User(Base):
         session: AsyncSession,
         username: str,
         password: str,
-    ) -> "User":
+    ) -> User:
         user = cls(
             username=username,
             salt=secrets.token_hex(16),
@@ -168,11 +181,11 @@ class User(Base):
         )
         self.password = hash_bytes.hex()
 
-    def _generate_jwt(self, username: str, exp: int = 7) -> str:
-        now = datetime.now(timezone.utc)
+    def generate_jwt(self, username: str, exp: int = 7) -> str:
+        now = datetime.now(UTC)
         payload = {
             "iss": "AstrBotCanary",  # 签发者
-            "sub": username,  # 主题（用户唯一标识）
+            "sub": username,  # 主题(用户唯一标识)
             "aud": username,  # 接收方
             "exp": int((now + timedelta(days=exp)).timestamp()),  # 过期时间
             "nbf": int(now.timestamp()),  # 生效时间
@@ -181,7 +194,7 @@ class User(Base):
         }
         return encode(payload, self.jwt_secret, algorithm="HS256").decode("utf-8")
 
-    def _verify_jwt(
+    def verify_jwt(
         self,
         token: str,
         expected_iss: str | None = None,
@@ -194,21 +207,28 @@ class User(Base):
             algorithms=["HS256"],
             audience=self.username,
         )
-        now = int(datetime.now(timezone.utc).timestamp())
+        now = int(datetime.now(UTC).timestamp())
         if expected_iss and payload.get("iss") != expected_iss:
-            raise ValueError("issuer mismatch")
+            msg = "issuer mismatch"
+            raise ValueError(msg)
         if expected_aud and payload.get("aud") != expected_aud:
-            raise ValueError("audience mismatch")
+            msg = "audience mismatch"
+            raise ValueError(msg)
         if expected_sub and payload.get("sub") != expected_sub:
-            raise ValueError("subject mismatch")
+            msg = "subject mismatch"
+            raise ValueError(msg)
         if "nbf" in payload and payload["nbf"] > now:
-            raise ValueError("token not yet valid")
+            msg = "token not yet valid"
+            raise ValueError(msg)
         if "iat" in payload and payload["iat"] > now:
-            raise ValueError("token issued in future")
+            msg = "token issued in future"
+            raise ValueError(msg)
         if "exp" in payload and payload["exp"] < now:
-            raise ValueError("token expired")
+            msg = "token expired"
+            raise ValueError(msg)
         if "jti" not in payload:
-            raise ValueError("missing JWT ID")
+            msg = "missing JWT ID"
+            raise ValueError(msg)
         return payload
         # endregion
 
@@ -218,7 +238,7 @@ class User(Base):
 
 # region Response 模型
 """
-# 响应包结构：
+# 响应包结构:
 {
     status: str | None,
     message: str | None,
@@ -229,26 +249,26 @@ class User(Base):
 DataT = TypeVar("DataT")
 
 
-class Response(BaseModel, Generic[DataT]):
+class Response[DataT](BaseModel):
     status: Literal["ok", "error"] = "ok"
     message: str | None = None
     data: DataT | None = None
 
-    # 两个重载：
-    # 1) 调用者传入具体的 DataT，返回 Response[DataT]
+    # 两个重载:
+    # 1) 调用者传入具体的 DataT,返回 Response[DataT]
     @overload
     @classmethod
     def ok(cls, data: DataT, message: str | None = "ok") -> Response[DataT]: ...
 
-    # 2) 调用者使用 kwargs 构建匿名 dict 数据，返回 Response[dict[str, Any]]
+    # 2) 调用者使用 kwargs 构建匿名 dict 数据,返回 Response[dict[str, Any]]
     @overload
     @classmethod
     def ok(
         cls,
         data: None = None,
         message: str | None = "ok",
-        **data_fields: Any,
-    ) -> Response[dict[str, Any]]: ...
+        **data_fields: object,
+    ) -> Response[dict[str, object]]: ...
 
     @classmethod
     def ok(
@@ -257,15 +277,15 @@ class Response(BaseModel, Generic[DataT]):
         message: str | None = "ok",
         **data_fields: Any,
     ) -> Response[dict[str, Any]] | Response[DataT]:
-        """创建一个成功响应（OK）。
+        """创建一个成功响应(OK)..
 
-        使用方式示例：
+        使用方式示例:
         - Response[LoginResponse].ok(LoginResponse(...))
         - Response[LoginResponse].ok({"username":..., "token": ...})
         - Response[LoginResponse].ok(username=..., token=...)
         """
         if data is None and data_fields:
-            # 如果传入 kwargs，则把它们当作一个简单的 dict 作为 data
+            # 如果传入 kwargs,则把它们当作一个简单的 dict 作为 data
             data = dict(data_fields)
         return cls(status="ok", message=message, data=data)
 
@@ -278,12 +298,10 @@ class Response(BaseModel, Generic[DataT]):
         stream: AsyncIterable[str],
         headers: dict[str, str] | None = None,
     ) -> StreamingResponse:
+        r"""用于返回标准 SSE 响应.
+        stream: async 生成器,yield 每条 data: ...\n\n
+        headers: 可选自定义响应头(如 Content-Type,Cache-Control 等).
         """
-        用于返回标准 SSE 响应。
-        stream: async 生成器，yield 每条 data: ...\n\n
-        headers: 可选自定义响应头（如 Content-Type、Cache-Control 等）
-        """
-
         default_headers = {
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",

@@ -159,7 +159,7 @@ def test_session_scope_rollback(tmp_path: Path):
     db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
     try:
         with db.session_scope() as session:
-            session.execute("INSERT INTO t (id) VALUES (3)")  # type: ignore
+            session.execute("INSERT INTO t (id) VALUES (3)")
             raise Exception("force rollback")
     except Exception:
         pass
@@ -175,7 +175,7 @@ def test_transaction_rollback(tmp_path: Path):
     db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
     try:
         with db.transaction() as session:
-            session.execute("INSERT INTO t (id) VALUES (4)")  # type: ignore
+            session.execute("INSERT INTO t (id) VALUES (4)")
             raise Exception("force rollback")
     except Exception:
         pass

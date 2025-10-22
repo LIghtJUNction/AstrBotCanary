@@ -4,6 +4,6 @@ from .paths import AstrbotPaths
 
 __all__ = [
     "AstrbotConfigEntry",
-    "AstrbotPaths",
     "AstrbotDatabase",
+    "AstrbotPaths",
 ]

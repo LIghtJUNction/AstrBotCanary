@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from logging import getLogger
 from pathlib import Path
-from typing import Generic
+from typing import ClassVar, override
 
 import toml
-from astrbot_canary_api.interface import T
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
 
 
-class AstrbotConfigEntry(BaseModel, Generic[T]):
+class AstrbotConfigEntry[T: BaseModel](BaseModel):
+    # type parameter T is used for value/default
     name: str
     group: str
     value: T
@@ -21,20 +21,20 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
     description: str
     cfg_file: Path | None = Field(default=None, exclude=True)
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
     @classmethod
     def bind(
-        cls,
+        cls: type[AstrbotConfigEntry[T]],
         group: str,
         name: str,
         default: T,
         description: str,
         cfg_dir: Path,
     ) -> AstrbotConfigEntry[T]:
-        """工厂方法：优先从文件加载，否则新建并保存。自动根据default类型推断模型类型。"""
+        """工厂方法:优先从文件加载,否则新建并保存.自动根据default类型推断模型类型."""
         cfg_file: Path = (cfg_dir / f"{group}.toml").resolve()
         # 自动推断模型类型
         model_type = type(default)
@@ -43,17 +43,29 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
                 data = toml.load(f)
             # 仅当value/default为dict时才反序列化
             if "value" in data and isinstance(data["value"], dict):
-                data["value"] = model_type.model_validate(data["value"])
+                if issubclass(model_type, BaseModel):
+                    data["value"] = model_type.model_validate(data["value"])
+                else:
+                    data["value"] = data["value"]
             if "default" in data and isinstance(data["default"], dict):
-                data["default"] = model_type.model_validate(data["default"])
+                if issubclass(model_type, BaseModel):
+                    data["default"] = model_type.model_validate(data["default"])
+                else:
+                    data["default"] = data["default"]
             entry = cls.model_validate(data)
             entry.cfg_file = cfg_file
             return entry
+        if isinstance(default, BaseModel):
+            value = default.model_copy(deep=True)
+            default_copy = value
+        else:
+            value = default
+            default_copy = value
         entry = cls(
             name=name,
             group=group,
-            value=default.model_copy(deep=True),
-            default=default.model_copy(deep=True),
+            value=value,
+            default=default_copy,
             description=description,
         )
         entry.cfg_file = cfg_file
@@ -61,9 +73,9 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
         return entry
 
     def save(self) -> None:
-        """保存配置到 toml 文件（只用BaseModel标准序列化，Path等类型转为字符串）"""
+        """保存配置到 toml 文件(只用BaseModel标准序列化,Path等类型转为字符串)."""
         if not self.cfg_file:
-            logger.error("配置文件路径未设置，无法保存配置")
+            logger.error("配置文件路径未设置,无法保存配置")
             return
         self.cfg_file.parent.mkdir(parents=True, exist_ok=True)
         data = self.model_dump(mode="json")
@@ -71,7 +83,7 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
             toml.dump(data, f)
 
     def load(self) -> None:
-        """从本地文件加载配置（覆盖当前值，只用BaseModel标准反序列化）"""
+        """从本地文件加载配置(覆盖当前值,只用BaseModel标准反序列化)."""
         if self.cfg_file and self.cfg_file.exists():
             with self.cfg_file.open("r", encoding="utf-8") as f:
                 data = toml.load(f)
@@ -80,16 +92,22 @@ class AstrbotConfigEntry(BaseModel, Generic[T]):
             self.default = loaded.default
             self.description = loaded.description
         else:
-            logger.warning(f"配置文件 {self.cfg_file} 不存在，无法加载配置")
+            logger.warning("配置文件 %s 不存在,无法加载配置", self.cfg_file)
 
     def reset(self) -> None:
-        """重置为默认值并保存"""
-        self.value = self.default.model_copy(deep=True)
+        """重置为默认值并保存."""
+        if isinstance(self.default, BaseModel):
+            self.value = self.default.model_copy(deep=True)
+        else:
+            self.value = self.default
         self.save()
 
+    @override
     def __repr__(self) -> str:
+        """REPR."""
         return f"<@{self.group}.{self.name}={self.value}?{self.default}>"
 
+    @override
     def __str__(self) -> str:
         return (
             f"AstrbotConfigEntry\n"

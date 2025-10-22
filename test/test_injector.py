@@ -8,7 +8,10 @@ import sys
 sys.path.insert(
     0,
     os.path.join(
-        os.path.dirname(__file__), "astrbot_modules", "astrbot_canary_api", "src"
+        os.path.dirname(__file__),
+        "astrbot_modules",
+        "astrbot_canary_api",
+        "src",
     ),
 )
 

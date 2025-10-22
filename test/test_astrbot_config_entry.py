@@ -190,7 +190,7 @@ def test_save_invalid_type(tmp_path: Path):
         description="d",
         cfg_file=tmp_path / "f.toml",
     )
-    entry.value = "not_a_model"  # 故意测试非法类型 #type: ignore
+    entry.value = "not_a_model"  # 故意测试非法类型
     with warnings.catch_warnings(record=True) as w:
         entry.save()
         assert any(
@@ -210,7 +210,7 @@ def test_reset_invalid_default():
         description="d",
         cfg_file=None,
     )
-    entry.default = "not_a_model"  # 故意测试非法类型 #type: ignore
+    entry.default = "not_a_model"  # 故意测试非法类型
     with pytest.raises(Exception):
         entry.reset()
 

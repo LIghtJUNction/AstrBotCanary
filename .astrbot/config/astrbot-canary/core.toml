@@ -4,7 +4,7 @@ description = "核心模块配置项modules: 已发现的全部模块boot: 启�
 
 [value]
 modules = [ "canary_core", "canary_loader", "canary_web", "canary_tui",]
-boot = [ "canary_core", "canary_loader", "canary_web",]
+boot = [ "canary_web",]
 log_what = "astrbot"
 log_maxsize = 500
 

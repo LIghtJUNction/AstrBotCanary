@@ -1,35 +1,33 @@
-from contextlib import asynccontextmanager
-from importlib.metadata import PackageMetadata
+from __future__ import annotations
 
-# import uvicorn
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, override
 
 import uvicorn
 from astrbot_canary_api import (
     AstrbotModuleType,
     IAstrbotConfigEntry,
+    IAstrbotDatabase,
     IAstrbotPaths,
     moduleimpl,
 )
 from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
-from astrbot_canary_api.interface import IAstrbotDatabase
-from astrbot_canary_web.api import api_router
-from astrbot_canary_web.frontend import AstrbotCanaryFrontend
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_radar import Radar
 from pydantic import BaseModel
-from taskiq import (
-    AsyncBroker,
-    AsyncTaskiqDecoratedTask,
-    AsyncTaskiqTask,
-    TaskiqResult,
-)
+from taskiq import AsyncBroker
 
-# from astrbot_canary_web.api import api_router
+from astrbot_canary_web.api import api_router
+from astrbot_canary_web.frontend import AstrbotCanaryFrontend
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+    from importlib.metadata import PackageMetadata
 
 logger: Logger = getLogger("astrbot.module.web")
 
@@ -44,22 +42,52 @@ class AstrbotCanaryWebConfig(BaseModel):
 
 @AstrbotModule("astrbot_canary_web", "canary_web", AstrbotModuleType.WEB)
 class AstrbotCanaryWeb:
-    info: PackageMetadata
-    ConfigEntry: type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]]
-    paths: IAstrbotPaths
-    database: IAstrbotDatabase
-    cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig]
-    app: FastAPI
-    broker: AsyncBroker
+    Paths: type[IAstrbotPaths] | None = None
+    ConfigEntry: type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]] | None = None
+    Database: type[IAstrbotDatabase] | None = None
+
+    @override
+    def __init__(
+        self,
+        paths: IAstrbotPaths | None = None,
+        cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig] | None = None,
+        database: IAstrbotDatabase | None = None,
+        app: FastAPI | None = None,
+        broker: AsyncBroker | None = None,
+        pypi_name: str = "astrbot_canary_web",
+        name: str = "canary_web",
+        module_type: AstrbotModuleType = AstrbotModuleType.WEB,
+        info: PackageMetadata | None = None,
+    ) -> None:
+        self.paths: IAstrbotPaths | None = paths
+        self.cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig] | None = cfg_web
+        self.database: IAstrbotDatabase | None = database
+        self.app: FastAPI | None = app
+        self.broker: AsyncBroker | None = broker
+        self.pypi_name: str = pypi_name
+        self.name: str = name
+        self.module_type: AstrbotModuleType = module_type
+        self.info: PackageMetadata | None = info
 
     @classmethod
     @moduleimpl(trylast=True)
     def Awake(
         cls,
     ) -> None:
-        logger.info(f"{cls.info.get('name')} is awakening.")
+        logger.info(
+            "%s is awakening.",
+            cls.info.get("name")
+            if cls.info and hasattr(cls.info, "get")
+            else "unknown",
+        )
 
         # # 绑定 Web 模块的配置项
+        if cls.paths is None:
+            msg = "paths未注入"
+            raise RuntimeError(msg)
+        if cls.ConfigEntry is None:
+            msg = "ConfigEntry未注入"
+            raise RuntimeError(msg)
         cls.cfg_web = cls.ConfigEntry.bind(
             group="basic",
             name="common",
@@ -75,40 +103,34 @@ class AstrbotCanaryWeb:
         )
 
         logger.info(
-            f"Web Config initialized: {Path(cls.cfg_web.value.webroot).absolute()}, {cls.cfg_web.value.host}:{cls.cfg_web.value.port}",
+            "Web Config initialized: %s, %s:%s",
+            Path(cls.cfg_web.value.webroot).absolute(),
+            cls.cfg_web.value.host,
+            cls.cfg_web.value.port,
         )
         AstrbotInjector.set("JWT_EXP_DAYS", cls.cfg_web.value.jwt_exp_days)
         AstrbotInjector.set("CANARY_WEB_DB", cls.database)
 
         if not AstrbotCanaryFrontend.ensure(Path(cls.cfg_web.value.webroot).absolute()):
-            raise FileNotFoundError("Failed to ensure frontend files in webroot.")
+            msg = "Failed to ensure frontend files in webroot."
+            raise FileNotFoundError(msg)
         logger.info(
-            f"Frontend files are ready in {Path(cls.cfg_web.value.webroot).absolute()}",
+            "Frontend files are ready in %s",
+            Path(cls.cfg_web.value.webroot).absolute(),
         )
 
         @asynccontextmanager
-        async def lifespan(app: FastAPI):
-            """以下为测试代码-TODO: 删除"""
-            logger.info("启动broker ...")
-            await cls.broker.startup()
-            logger.info("启动backend服务 ...")
-            await cls.broker.result_backend.startup()
-            echo_task_handler: AsyncTaskiqDecoratedTask[..., str] | None = (
-                cls.broker.find_task("astrbot://echo")
-            )
-            if echo_task_handler is None:
-                raise ValueError("无法找到任务 astrbot://echo !!! 请检查核心模块!!!")
-            task: AsyncTaskiqTask[str] = await echo_task_handler.kiq(
-                "Hello from Astrbot Canary Web!",
-            )
-            result: TaskiqResult[str] = await task.wait_result()
-            logger.info(f"测试任务 astrbot://echo 返回结果：{result.return_value}")
-
+        async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+            """以下为测试代码-TODO: 删除."""
+            logger.info("启动broker ...,%s", app)
+            if cls.broker is not None:
+                await cls.broker.startup()
             yield
             logger.info("关闭broker ...")
-            await cls.broker.shutdown()
-            logger.info("关闭backend服务 ...")
-            await cls.broker.result_backend.shutdown()
+            if cls.broker is not None:
+                await cls.broker.shutdown()
+                logger.info("关闭backend服务 ...")
+                await cls.broker.result_backend.shutdown()
 
         # 初始化 FastAPI 应用并挂载子路由
 
@@ -120,14 +142,18 @@ class AstrbotCanaryWeb:
             lifespan=lifespan,
         )
 
+        if cls.database is None:
+            msg = "database未注入"
+            raise RuntimeError(msg)
         engine = cls.database.engine
         if engine is None:
-            raise ValueError("Database engine is not initialized!")
+            msg = "Database engine is not initialized!"
+            raise ValueError(msg)
         radar = Radar(app=cls.app, db_engine=engine)
         radar.create_tables()
         logger.info("Radar monitoring initialized.")
 
-        # 嵌套挂载子路由（先注册 API 路由，保证 API 优先匹配）
+        # 嵌套挂载子路由(先注册 API 路由,保证 API 优先匹配)
         cls.app.include_router(api_router)
 
         cls.app.mount(
@@ -139,26 +165,45 @@ class AstrbotCanaryWeb:
             name="frontend",
         )
 
-        cls.broker = AstrbotInjector.get("broker")
+        broker_obj = AstrbotInjector.get("broker")
+        if broker_obj is not None:
+            if isinstance(broker_obj, AsyncBroker):
+                cls.broker = broker_obj
+            else:
+                cls.broker = None
+        else:
+            cls.broker = None
 
     @classmethod
     @moduleimpl
     def Start(cls) -> None:
         # 使用 Uvicorn 启动 FastAPI 应用
         logger.info(
-            f"访问监控面板：http://{cls.cfg_web.value.host}:{cls.cfg_web.value.port}/__radar/",
+            "访问监控面板:http://%s:%s/__radar/",
+            cls.cfg_web.value.host if cls.cfg_web else "127.0.0.1",
+            cls.cfg_web.value.port if cls.cfg_web else 6185,
         )
         logger.info(
-            f"访问DOCS：http://{cls.cfg_web.value.host}:{cls.cfg_web.value.port}/docs",
+            "访问DOCS:http://%s:%s/docs",
+            cls.cfg_web.value.host if cls.cfg_web else "127.0.0.1",
+            cls.cfg_web.value.port if cls.cfg_web else 6185,
         )
+        if cls.app is None:
+            msg = "FastAPI app未初始化"
+            raise RuntimeError(msg)
         uvicorn.run(
-            cls.app,
-            host=cls.cfg_web.value.host,
-            port=cls.cfg_web.value.port,
-            log_level=cls.cfg_web.value.log_level,
+            app=cls.app,
+            host=cls.cfg_web.value.host if cls.cfg_web else "127.0.0.1",
+            port=cls.cfg_web.value.port if cls.cfg_web else 6185,
+            log_level=cls.cfg_web.value.log_level if cls.cfg_web else "info",
         )
 
     @classmethod
     @moduleimpl
     def OnDestroy(cls) -> None:
-        logger.info(f"{cls.info.get('name')} is being destroyed.")
+        logger.info(
+            "%s is being destroyed.",
+            cls.info.get("name")
+            if cls.info and hasattr(cls.info, "get")
+            else "unknown",
+        )

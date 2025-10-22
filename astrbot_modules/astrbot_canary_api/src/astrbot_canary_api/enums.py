@@ -1,6 +1,6 @@
 from enum import Enum, IntFlag
 
-__all__ = ["AstrbotModuleType", "AstrbotBrokerType", "AstrbotResultBackendType"]
+__all__ = ["AstrbotBrokerType", "AstrbotModuleType", "AstrbotResultBackendType"]
 
 
 class AstrbotModuleType(IntFlag):
