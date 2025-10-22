@@ -29,16 +29,6 @@ repos:
           - python
           - pyi
 
-  - repo: local
-    hooks:
-      - id: mypy-allow-fail-cmd
-        name: mypy (allow failure - cmd)
-        language: python
-        entry: cmd /c "python -m mypy --config-file=pyproject.toml --exclude=.*\.pyi$ %* || exit /b 0"
-        pass_filenames: true
-        files: \.py$
-        stages: [commit]
-
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.9.1
     hooks:
