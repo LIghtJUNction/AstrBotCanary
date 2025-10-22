@@ -258,6 +258,7 @@ class IAstrbotDatabase(Protocol):
 
     def transaction(self) -> TransactionContext:
         """上下文管理器:自动提交/回滚事务
+        短生命周期
         用法:
         @db.transaction()
         def do_something(session): ...
@@ -272,9 +273,6 @@ class IAstrbotDatabase(Protocol):
         """
         ...
 
-    def session_scope(self) -> TransactionContext:
-        """显式的同步 session 上下文管理器(短生命周期 session).."""
-        ...
 
     async def __aenter__(self) -> Self:
         """异步上下文管理器入口(如果实现).."""
