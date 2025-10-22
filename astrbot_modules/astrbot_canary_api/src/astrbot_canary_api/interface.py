@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
-    Any,
     Protocol,
     Self,
     TypeVar,
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
         AbstractAsyncContextManager,
         AbstractContextManager,
     )
-    from importlib.metadata import PackageMetadata
     from logging import LogRecord
     from pathlib import Path
     from types import TracebackType
@@ -34,7 +32,6 @@ if TYPE_CHECKING:
     from taskiq import AsyncBroker, AsyncResultBackend
 
     # Removed commented-out code per ruff ERA001
-    from astrbot_canary_api.enums import AstrbotModuleType
 
 
 type BROKER_TYPE = AsyncBroker
