@@ -31,9 +31,13 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
     from taskiq import AsyncBroker, AsyncResultBackend
 
+    TransactionContext = AbstractContextManager["Session"]
+    AsyncTransactionContext = AbstractAsyncContextManager["AsyncSession"]
 
 type BROKER_TYPE = AsyncBroker
 type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
+
+
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
     "BROKER_TYPE",
@@ -156,11 +160,9 @@ class IAstrbotPaths(Protocol):
 
 # endregion
 # region Config
-T = TypeVar("T", bound=BaseModel)
-
 
 @runtime_checkable
-class IAstrbotConfigEntry[T](Protocol):
+class IAstrbotConfigEntry[T: BaseModel](Protocol):
     """单个配置项的协议(作为 IAstrbotConfig 的内部类)."""
 
     name: str
@@ -199,9 +201,6 @@ class IAstrbotConfigEntry[T](Protocol):
 
 # region database
 
-if TYPE_CHECKING:
-    TransactionContext = AbstractContextManager["Session"]
-    AsyncTransactionContext = AbstractAsyncContextManager["AsyncSession"]
 
 
 @runtime_checkable
