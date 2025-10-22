@@ -92,7 +92,7 @@ class AstrbotDatabase:
         base.metadata.create_all(bind=self.engine)
 
     @contextmanager
-    def session_scope(self) -> Generator[Session]:
+    def transaction(self) -> Generator[Session]:
         """提供独立的 session 上下文:自动 commit/rollback 并确保 close.."""
         if self.SessionLocal is None:
             msg = "Database not connected. Call connect() first."
@@ -143,12 +143,6 @@ class AstrbotDatabase:
             self.async_engine = None
         if self.AsyncSessionLocal is not None:
             self.AsyncSessionLocal = None
-
-    @contextmanager
-    def transaction(self) -> Generator[Session]:
-        """兼容旧 API 的事务上下文,委托给 session_scope.."""
-        with self.session_scope() as session:
-            yield session
 
     @asynccontextmanager
     async def atransaction(self) -> AsyncGenerator[AsyncSession]:
