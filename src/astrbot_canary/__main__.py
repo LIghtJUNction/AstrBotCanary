@@ -82,9 +82,6 @@ class AstrbotRootModule:
         logger.info("AstrbotCanary 正在启动,加载模块...")
         cls.mm.add_hookspecs(AstrbotModuleSpec)
 
-        if cls.ConfigEntry is None or cls.paths is None:
-            msg = "ConfigEntry或paths未注入"
-            raise RuntimeError(msg)
         cls.cfg_root = cls.ConfigEntry.bind(
             group="core",
             name="boot",
@@ -131,10 +128,9 @@ class AstrbotRootModule:
         cls._setup_logging(handler, cls.cfg_root.value.log_what)
 
         # Awake 阶段注入 AstrbotDatabase 类
-
         AstrbotInjector.set("AstrbotDatabase", AstrbotDatabase)
 
-        boot: list[IAstrbotModule] = []
+        boot: list[type[IAstrbotModule]] = []
         # 自动选择默认值 True, 避免阻塞
         boot = cls._boot_from_config(cls.cfg_root.value.boot)
 
@@ -159,8 +155,8 @@ class AstrbotRootModule:
                 _logger.addHandler(handler)
 
     @classmethod
-    def _boot_from_config(cls, boot_names: list[str]) -> list[IAstrbotModule]:
-        boot: list[IAstrbotModule] = []
+    def _boot_from_config(cls, boot_names: list[str]) -> list[type[IAstrbotModule]]:
+        boot: list[type[IAstrbotModule]] = []
         for i in boot_names:
             ep = AstrbotCanaryHelper.getSingleEntryPoint(
                 ASTRBOT_MODULES_HOOK_NAME,
@@ -169,13 +165,14 @@ class AstrbotRootModule:
             if ep is None:
                 continue
             module = ep.load()
-            if isinstance(module, IAstrbotModule):
+            # ep.load() should return a class (module implementation). 进行安全检查:
+            if isinstance(module, type) and issubclass(module, IAstrbotModule):
                 boot.append(module)
         return boot
 
     @classmethod
-    def _boot_from_entrypoints(cls) -> list[IAstrbotModule]:
-        boot: list[IAstrbotModule | None] = []
+    def _boot_from_entrypoints(cls) -> list[type[IAstrbotModule]]:
+        boot: list[type[IAstrbotModule] | None] = []
         module_eps: EntryPoints = AstrbotCanaryHelper.getAllEntryPoints(
             group=ASTRBOT_MODULES_HOOK_NAME,
         )
@@ -206,9 +203,9 @@ class AstrbotRootModule:
     @classmethod
     def _select_single_module(
         cls,
-        modules: list[IAstrbotModule],
+        modules: list[type[IAstrbotModule]],
         prompt_msg: str,
-    ) -> IAstrbotModule | None:
+    ) -> type[IAstrbotModule] | None:
         if not modules:
             return None
         if len(modules) == 1:
@@ -233,7 +230,7 @@ class AstrbotRootModule:
     @classmethod
     def OnDestroy(cls) -> None:
         cls.mm.hook.OnDestroy()
-        if cls.cfg_root is not None:
+        if getattr(cls, "cfg_root", None) is not None:
             cls.cfg_root.save()
 
     @classmethod
@@ -241,34 +238,38 @@ class AstrbotRootModule:
         cls,
         eps: EntryPoints,
     ) -> tuple[
-        list[IAstrbotModule],
-        list[IAstrbotModule],
-        list[IAstrbotModule],
-        list[IAstrbotModule],
-        list[IAstrbotModule],
+        list[type[IAstrbotModule]],
+        list[type[IAstrbotModule]],
+        list[type[IAstrbotModule]],
+        list[type[IAstrbotModule]],
+        list[type[IAstrbotModule]],
     ]:
         """分组模块."""
-        unknown_module: list[IAstrbotModule] = []
-        core_module: list[IAstrbotModule] = []
-        loader_module: list[IAstrbotModule] = []
-        web_module: list[IAstrbotModule] = []
-        tui_module: list[IAstrbotModule] = []
+        unknown_module: list[type[IAstrbotModule]] = []
+        core_module: list[type[IAstrbotModule]] = []
+        loader_module: list[type[IAstrbotModule]] = []
+        web_module: list[type[IAstrbotModule]] = []
+        tui_module: list[type[IAstrbotModule]] = []
 
         for ep in eps:
             module = ep.load()
-            if not isinstance(module, IAstrbotModule):
-                continue
-            match module.module_type:
-                case AstrbotModuleType.CORE:
-                    core_module.append(module)
-                case AstrbotModuleType.LOADER:
-                    loader_module.append(module)
-                case AstrbotModuleType.WEB:
-                    web_module.append(module)
-                case AstrbotModuleType.TUI:
-                    tui_module.append(module)
-                case _:
-                    unknown_module.append(module)
+            # ep.load() can return different things depending on the entrypoint.
+            # We expect a class that implements IAstrbotModule (subclass or registered).
+            if isinstance(module, type) and issubclass(module, IAstrbotModule):
+                match module.module_type:
+                    case AstrbotModuleType.CORE:
+                        core_module.append(module)
+                    case AstrbotModuleType.LOADER:
+                        loader_module.append(module)
+                    case AstrbotModuleType.WEB:
+                        web_module.append(module)
+                    case AstrbotModuleType.TUI:
+                        tui_module.append(module)
+                    case _:
+                        unknown_module.append(module)
+            else:
+                # treat unexpected values as unknown modules
+                unknown_module.append(module)
         return unknown_module, core_module, loader_module, web_module, tui_module
 
     # region Destroy

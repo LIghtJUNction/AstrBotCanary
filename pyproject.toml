@@ -150,7 +150,8 @@ exclude = [
     "*scripts*",
     "*examples*",
     "*.pyi",
-    "*.ipynb"
+    "*.ipynb",
+    "*__about__.py"
 ]
 ignore = ["N", "D"]
 

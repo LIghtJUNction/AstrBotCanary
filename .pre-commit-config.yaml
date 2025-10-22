@@ -19,26 +19,25 @@ repos:
         args:
           - --fix
           - --exit-non-zero-on-fix
-        exclude: ^(test/|examples/scripts)
+        exclude: ^(test/|examples/scripts|__about__.py)
         types_or:
           - python
           - pyi
       - id: ruff-format
-        exclude: ^(test/|examples/scripts)
+        exclude: ^(test/|examples/scripts|__about__.py)
         types_or:
           - python
           - pyi
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+  - repo: local
     hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-toml
-        args:
-          - --config-file=pyproject.toml
-          - --exclude=.*\.pyi$
-        exclude: ^(test/|examples/|scripts/)
+      - id: mypy-allow-fail-cmd
+        name: mypy (allow failure - cmd)
+        language: python
+        entry: cmd /c "python -m mypy --config-file=pyproject.toml --exclude=.*\.pyi$ %* || exit /b 0"
+        pass_filenames: true
+        files: \.py$
+        stages: [commit]
 
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.9.1

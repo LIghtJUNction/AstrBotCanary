@@ -20,7 +20,6 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_radar import Radar
 from pydantic import BaseModel
-from taskiq import AsyncBroker
 
 from astrbot_canary_web.api import api_router
 from astrbot_canary_web.frontend import AstrbotCanaryFrontend
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from importlib.metadata import PackageMetadata
 
+    from taskiq import AsyncBroker
 logger: Logger = getLogger("astrbot.module.web")
 
 
@@ -81,13 +81,6 @@ class AstrbotCanaryWeb:
             else "unknown",
         )
 
-        # # 绑定 Web 模块的配置项
-        if cls.paths is None:
-            msg = "paths未注入"
-            raise RuntimeError(msg)
-        if cls.ConfigEntry is None:
-            msg = "ConfigEntry未注入"
-            raise RuntimeError(msg)
         cls.cfg_web = cls.ConfigEntry.bind(
             group="basic",
             name="common",
@@ -142,9 +135,6 @@ class AstrbotCanaryWeb:
             lifespan=lifespan,
         )
 
-        if cls.database is None:
-            msg = "database未注入"
-            raise RuntimeError(msg)
         engine = cls.database.engine
         if engine is None:
             msg = "Database engine is not initialized!"
@@ -165,14 +155,7 @@ class AstrbotCanaryWeb:
             name="frontend",
         )
 
-        broker_obj = AstrbotInjector.get("broker")
-        if broker_obj is not None:
-            if isinstance(broker_obj, AsyncBroker):
-                cls.broker = broker_obj
-            else:
-                cls.broker = None
-        else:
-            cls.broker = None
+        cls.broker = AstrbotInjector.get("broker")
 
     @classmethod
     @moduleimpl
@@ -201,9 +184,4 @@ class AstrbotCanaryWeb:
     @classmethod
     @moduleimpl
     def OnDestroy(cls) -> None:
-        logger.info(
-            "%s is being destroyed.",
-            cls.info.get("name")
-            if cls.info and hasattr(cls.info, "get")
-            else "unknown",
-        )
+        logger.info("%s is being destroyed.", cls.info.get("name"))

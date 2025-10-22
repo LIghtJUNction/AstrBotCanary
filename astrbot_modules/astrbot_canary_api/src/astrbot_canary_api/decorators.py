@@ -123,12 +123,12 @@ class AstrbotInjector:
         return inject_dependencies(self.func, args, kwargs)
 
     @classmethod
-    def set(cls, name: str, value: Any) -> None:
+    def set(cls, name: str, value: type) -> None:
         """设置全局依赖项."""
         cls.global_dependencies[name] = value
 
     @classmethod
-    def get(cls, name: str) -> Any:
+    def get(cls, name: str) -> type:
         """获取全局依赖项."""
         return cls.global_dependencies.get(name)
 
@@ -145,11 +145,11 @@ class AstrbotInjector:
         return cls.local_injector[injector_name]
 
     # 局部依赖注入器
-    def set_local(self, name: str, value: Any) -> None:
+    def set_local(self, name: str, value: object) -> None:
         """设置局部依赖项."""
         self.local_dependencies[name] = value
 
-    def get_local(self, name: str) -> Any:
+    def get_local(self, name: str) -> object:
         """获取局部依赖项."""
         return self.local_dependencies.get(name)
 
@@ -276,7 +276,7 @@ class AstrbotModuleMeta(type):
             Database_impl = AstrbotInjector.get("AstrbotDatabase")
             if isinstance(Database_impl, type):
                 AstrbotModuleMeta._database_impl = Database_impl
-                impl = type(Database_impl)
+                impl = Database_impl
             else:
                 msg = (
                     "AstrbotDatabase 未注入或类型不正确,请在启动时设置 "
@@ -408,15 +408,15 @@ class AstrbotModule:
         module_type: AstrbotModuleType,
         info: PackageMetadata | None = None,
     ) -> None:
-        self.pypi_name = pypi_name
-        self.name = name
-        self.module_type = module_type
-        self.info = info
+        self.pypi_name: str = pypi_name
+        self.name: str = name
+        self.module_type: AstrbotModuleType = module_type
+        self.info: PackageMetadata | None = info
 
     def __call__(
         self,
         cls: type,
-    ) -> T:
+    ) -> AstrbotModuleMeta:
         DecoratedClass = AstrbotModuleMeta(
             cls.__name__,
             (),
