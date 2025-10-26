@@ -23,7 +23,7 @@
 - 测试通过后开始下一项开发
 
 - astrnet：
-- 介绍，基于graphql的fastapi的通信网络
+- 介绍，基于graphql，fastapi风格的通信网络
 
 - astrbot_web模块：
 
