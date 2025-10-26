@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Protocol, runtime_checkable
 
-from astrbot_canary_api.decorators import AstrbotInjector
+from astrbot_injector import AstrbotInjector
 from astrbot_canary_api.interface import IAstrbotLogHandler
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse

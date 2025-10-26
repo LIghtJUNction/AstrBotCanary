@@ -6,7 +6,7 @@ import pytest
 from astrbot_canary.core.paths import AstrbotPaths
 
 
-def test_astrbot_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_astrbot_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # 设置环境变量，确保 astrbot_root 在临时目录下
     monkeypatch.setenv("ASTRBOT_ROOT", str(tmp_path / ".astrbot_test"))
     pypi_name = "testmod"

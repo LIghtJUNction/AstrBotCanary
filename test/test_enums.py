@@ -1,7 +1,7 @@
 from astrbot_canary_api.enums import AstrbotModuleType
 
 
-def test_is_ui():
+def test_is_ui() -> None:
     # WEB 和 TUI 都应为 UI
     assert AstrbotModuleType.WEB.is_ui is True
     assert AstrbotModuleType.TUI.is_ui is True

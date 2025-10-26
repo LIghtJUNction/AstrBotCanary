@@ -10,11 +10,9 @@ import uvicorn
 from astrbot_canary_api import (
     AstrbotModuleType,
     IAstrbotConfigEntry,
-    IAstrbotDatabase,
     IAstrbotPaths,
     moduleimpl,
 )
-from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,6 +21,7 @@ from pydantic import BaseModel
 
 from astrbot_canary_web.api import api_router
 from astrbot_canary_web.frontend import AstrbotCanaryFrontend
+from astrbot_injector import AstrbotInjector
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -40,18 +39,16 @@ class AstrbotCanaryWebConfig(BaseModel):
     jwt_exp_days: int = 7
 
 
-@AstrbotModule("astrbot_canary_web", "canary_web", AstrbotModuleType.WEB)
+@AstrbotInjector.inject
 class AstrbotCanaryWeb:
     Paths: type[IAstrbotPaths] | None = None
     ConfigEntry: type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]] | None = None
-    Database: type[IAstrbotDatabase] | None = None
 
     @override
     def __init__(
         self,
         paths: IAstrbotPaths | None = None,
         cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig] | None = None,
-        database: IAstrbotDatabase | None = None,
         app: FastAPI | None = None,
         broker: AsyncBroker | None = None,
         pypi_name: str = "astrbot_canary_web",
@@ -61,7 +58,6 @@ class AstrbotCanaryWeb:
     ) -> None:
         self.paths: IAstrbotPaths | None = paths
         self.cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig] | None = cfg_web
-        self.database: IAstrbotDatabase | None = database
         self.app: FastAPI | None = app
         self.broker: AsyncBroker | None = broker
         self.pypi_name: str = pypi_name
@@ -102,7 +98,6 @@ class AstrbotCanaryWeb:
             cls.cfg_web.value.port,
         )
         AstrbotInjector.set("JWT_EXP_DAYS", cls.cfg_web.value.jwt_exp_days)
-        AstrbotInjector.set("CANARY_WEB_DB", cls.database)
 
         if not AstrbotCanaryFrontend.ensure(Path(cls.cfg_web.value.webroot).absolute()):
             msg = "Failed to ensure frontend files in webroot."
@@ -135,10 +130,6 @@ class AstrbotCanaryWeb:
             lifespan=lifespan,
         )
 
-        engine = cls.database.engine
-        if engine is None:
-            msg = "Database engine is not initialized!"
-            raise ValueError(msg)
         radar = Radar(app=cls.app, db_engine=engine)
         radar.create_tables()
         logger.info("Radar monitoring initialized.")

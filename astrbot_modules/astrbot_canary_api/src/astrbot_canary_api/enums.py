@@ -17,6 +17,14 @@ class AstrbotModuleType(IntFlag):
         return bool(self & self.UI_MASK)
 
 
+class AstrbotCoreImpl(IntFlag):
+    CONFIG_ENTRY = 1 << 0
+    PATHS = 1 << 1
+    DATABASE = 1 << 2
+    BROKER = 1 << 3
+    LOG_HANDLER = 1 << 4
+
+
 class AstrbotBrokerType(Enum):
     INMEMORY = "inmemory"
     ZEROMQ = "zeromq"
@@ -37,7 +45,3 @@ class AstrbotResultBackendType(Enum):
     POSTGRESQL = "postgresql"
     S3 = "s3"
     YDB = "ydb"
-
-
-if __name__ == "__main__":
-    ...

@@ -8,13 +8,12 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from astrbot_canary_api.decorators import AstrbotInjector
-from astrbot_canary_api.interface import IAstrbotDatabase
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, TypeAdapter
 from sqlalchemy import select
 
 from astrbot_canary_web.models import Base, Response, User
+from astrbot_injector import AstrbotInjector
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio.session import AsyncSession

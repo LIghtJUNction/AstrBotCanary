@@ -4,8 +4,10 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Protocol,
+<<<<<<< Updated upstream
     Self,
-    TypeVar,
+=======
+>>>>>>> Stashed changes
     runtime_checkable,
 )
 
@@ -14,35 +16,15 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable
-    from contextlib import (
-        AbstractAsyncContextManager,
-        AbstractContextManager,
-    )
     from logging import LogRecord
     from pathlib import Path
-    from types import TracebackType
 
-    from sqlalchemy import Engine
-    from sqlalchemy.ext.asyncio import (
-        AsyncEngine,
-        AsyncSession,
-        async_sessionmaker,
-    )
-    from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-    from taskiq import AsyncBroker, AsyncResultBackend
-
-    TransactionContext = AbstractContextManager["Session"]
-    AsyncTransactionContext = AbstractAsyncContextManager["AsyncSession"]
-
-type BROKER_TYPE = AsyncBroker
-type RESULT_BACKEND_TYPE = AsyncResultBackend[BaseModel]
+    from astrbot_canary_api.enums import AstrbotModuleType
+    from astrbot_canary_api.models import LogHistoryResponseData
 
 
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
-    "BROKER_TYPE",
-    "RESULT_BACKEND_TYPE",
-    "IAstrbotDatabase",
     "IAstrbotPaths",
     "moduleimpl",
     "modulespec",
@@ -73,6 +55,10 @@ class IAstrbotModule(Protocol):
     本协议仅供检查/规范
     以及类型提示使用.
     """
+
+    pypi_name: str
+    name: str
+    module_type: AstrbotModuleType
 
     @classmethod
     def Awake(cls) -> None:
@@ -161,6 +147,7 @@ class IAstrbotPaths(Protocol):
 # endregion
 # region Config
 
+
 @runtime_checkable
 class IAstrbotConfigEntry[T: BaseModel](Protocol):
     """单个配置项的协议(作为 IAstrbotConfig 的内部类)."""
@@ -198,125 +185,6 @@ class IAstrbotConfigEntry[T: BaseModel](Protocol):
 
 
 # endregion
-
-# region database
-
-
-
-@runtime_checkable
-class IAstrbotDatabase(Protocol):
-    """Interface for Astrbot database management, optimized for SQLAlchemy ORM."""
-
-    db_path: Path
-    """ 数据库文件路径 """
-    database_url: str
-    """ 数据库连接URL """
-    engine: Engine | None  # sqlalchemy.engine.Engine
-    """ SQLAlchemy引擎实例 """
-    # session: 不再在接口上保持单一 Session 实例,使用 SessionLocal factory
-    SessionLocal: sessionmaker[Session] | None
-    async_engine: AsyncEngine | None
-    AsyncSessionLocal: async_sessionmaker[AsyncSession] | None
-    base: type[DeclarativeBase]  # declarative_base()
-    """ SQLAlchemy declarative_base 对象,包含所有模型的基类 """
-
-    @classmethod
-    def connect(cls, db_path: Path) -> IAstrbotDatabase:
-        """连接数据库,返回数据库实例."""
-        ...
-
-    @classmethod
-    def init_base(cls, db_path: Path, base: type[DeclarativeBase]) -> IAstrbotDatabase:
-        """初始化数据库表结构
-        db_path: Path - 数据库文件路径
-        base: SQLAlchemy DeclarativeBase 基类
-            其子类将初始化
-            自动映射为数据库表.
-
-        """
-        ...
-
-    def bind_base(self: IAstrbotDatabase, base: type[DeclarativeBase]) -> None:
-        """实例化后绑定Base(DeclarativeBase),用于动态绑定模型基类.."""
-        ...
-
-    def execute(
-        self,
-        query: str,
-        params: dict[str, object] | tuple[object, ...] | None = None,
-    ) -> object:
-        """执行原生SQL或ORM查询."""
-        ...
-
-    def close(self) -> None:
-        """关闭数据库连接和会话."""
-        ...
-
-    async def aclose(self) -> None:
-        """异步释放异步引擎/会话资源(若有).."""
-        ...
-
-    def transaction(self) -> TransactionContext:
-        """上下文管理器:自动提交/回滚事务
-        短生命周期
-        用法:
-        @db.transaction()
-        def do_something(session): ...
-        或 with db.transaction() as session: ...
-        """
-        ...
-
-    def atransaction(self) -> AsyncTransactionContext:
-        """异步上下文管理器:自动提交/回滚事务
-        用法:
-        async with db.atransaction() as session: ...
-        """
-        ...
-
-
-    async def __aenter__(self) -> Self:
-        """异步上下文管理器入口(如果实现).."""
-        ...
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        """异步上下文管理器出口(如果实现).."""
-        ...
-
-    def __enter__(self) -> Self:
-        """同步上下文管理器入口(如果实现).."""
-        ...
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        """同步上下文管理器出口(如果实现).."""
-        ...
-
-
-# endregion
-class LogHistoryItem(BaseModel):
-    level: str
-    time: str
-    data: str
-
-
-class LogSSEItem(BaseModel):
-    type: str
-    level: str
-    time: str
-    data: str
-
-
-class LogHistoryResponseData(BaseModel):
-    logs: list[LogHistoryItem]
 
 
 # region 日志处理器

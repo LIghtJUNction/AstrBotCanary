@@ -5,7 +5,7 @@ from logging import Handler, LogRecord
 from typing import override
 
 import orjson
-from astrbot_canary_api.interface import (
+from astrbot_canary_api import (
     LogHistoryItem,
     LogHistoryResponseData,
     LogSSEItem,

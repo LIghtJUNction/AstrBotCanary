@@ -43,24 +43,17 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
                 data = toml.load(f)
             # 仅当value/default为dict时才反序列化
             if "value" in data and isinstance(data["value"], dict):
-                if issubclass(model_type, BaseModel):
-                    data["value"] = model_type.model_validate(data["value"])
-                else:
-                    data["value"] = data["value"]
+                data["value"] = model_type.model_validate(data["value"])
             if "default" in data and isinstance(data["default"], dict):
-                if issubclass(model_type, BaseModel):
-                    data["default"] = model_type.model_validate(data["default"])
-                else:
-                    data["default"] = data["default"]
+                data["default"] = model_type.model_validate(data["default"])
+
             entry = cls.model_validate(data)
             entry.cfg_file = cfg_file
             return entry
-        if isinstance(default, BaseModel):
-            value = default.model_copy(deep=True)
-            default_copy = value
-        else:
-            value = default
-            default_copy = value
+
+        value = default.model_copy(deep=True)
+        default_copy = default.model_copy(deep=True)
+
         entry = cls(
             name=name,
             group=group,
@@ -80,7 +73,7 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
         self.cfg_file.parent.mkdir(parents=True, exist_ok=True)
         data = self.model_dump(mode="json")
         with self.cfg_file.open("w", encoding="utf-8") as f:
-            toml.dump(data, f)
+            _ = toml.dump(data, f)
 
     def load(self) -> None:
         """从本地文件加载配置(覆盖当前值,只用BaseModel标准反序列化)."""
@@ -96,10 +89,7 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
 
     def reset(self) -> None:
         """重置为默认值并保存."""
-        if isinstance(self.default, BaseModel):
-            self.value = self.default.model_copy(deep=True)
-        else:
-            self.value = self.default
+        self.value = self.default.model_copy(deep=True)
         self.save()
 
     @override

@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/LIghtJUNction/AstrBotCanary/branch/main/graph/badge.svg)](https://codecov.io/gh/LIghtJUNction/AstrBotCanary)
 
-注意：本项目为实验性分支，不是官方 AstrBot 版本。若需要稳定与兼容性更好的版本，请使用官方仓库：https://github.com/AstrBotDevs/AstrBot
+注意：本项目为实验性分支，不是官方 AstrBot 版本。若需要稳定与兼容性更好的版本，请使用官方仓库：[Astrbot](https://github.com/AstrBotDevs/AstrBot)
 本项目旨在采用最新的 Python 特性与第三方库进行试验性开发，供社区探索新特性与实现方案之用。
 
 ______________________________________________________________________
@@ -47,6 +47,11 @@ OnDestroy: 终止
 
 - astrbot_plugins：官方提供支持的插件目录，插件依赖于astrbot_api（~~原设计依赖于加载器api，后因设计复杂度放弃~~）
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
 ## 目录
 
 - [关于](#%E5%85%B3%E4%BA%8E)
@@ -219,6 +224,8 @@ ______________________________________________________________________
 
 # 开发指南
 
+- hatch run lint
+
 - uv sync --dev
 - 请使用pre-commit
 - pre-commit install
@@ -231,9 +238,6 @@ ______________________________________________________________________
 ## 贡献与联系
 
 欢迎贡献代码、Issue、PR 与讨论。
-请在提交前阅读仓库中的贡献指南（若有）与 `CODE_OF_CONDUCT`。
-
-项目主页 / 参考： https://github.com/AstrBotDevs/AstrBot
 
 Canary仓库维护者：LIghtJUNction
 

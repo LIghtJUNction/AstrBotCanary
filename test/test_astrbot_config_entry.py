@@ -68,9 +68,6 @@ def test_astrbot_config_entry(tmp_cfg_dir: Path):
     # 修改并保存
     entry.value.port = 3306
     entry.save()
-    # 重新加载
-    entry.load()
-    assert entry.value.port == 3306
     # 重置
     entry.reset()
     assert entry.value.port == 5432

@@ -12,19 +12,16 @@ from __future__ import annotations
 
 from atexit import register
 from logging import INFO, basicConfig, getLogger
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import rich.traceback
 from astrbot_canary_api import (
     ASTRBOT_MODULES_HOOK_NAME,
     AstrbotModuleType,
-    AstrbotResultBackendType,
-    IAstrbotDatabase,
     IAstrbotModule,
     IAstrbotPaths,
 )
-from astrbot_canary_api.decorators import AstrbotInjector, AstrbotModule
-from astrbot_canary_api.enums import AstrbotBrokerType
+from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
 from astrbot_canary_api.interface import (
     AstrbotModuleSpec,
     IAstrbotConfigEntry,
@@ -32,23 +29,25 @@ from astrbot_canary_api.interface import (
 from astrbot_canary_helper import AstrbotCanaryHelper
 from click import Choice, prompt
 from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 PluginManager...
+from pydantic import BaseModel
 from rich.logging import RichHandler
 
 from astrbot_canary.core.config import AstrbotConfigEntry
-from astrbot_canary.core.db import AstrbotDatabase
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
 from astrbot_canary.core.paths import AstrbotPaths
 from astrbot_canary.core.tasks import AstrbotTasks
+from astrbot_injector import AstrbotInjector
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
 
-# region 注入实现
-AstrbotInjector.set("AstrbotPaths", AstrbotPaths)
-AstrbotInjector.set("AstrbotConfigEntry", AstrbotConfigEntry)
-AstrbotInjector.set("AstrbotDatabase", AstrbotDatabase)
+    from taskiq import AsyncBroker
 
+
+# region 注入实现
+AstrbotInjector.set("Paths", AstrbotPaths)
+AstrbotInjector.set("ConfigEntry", AstrbotConfigEntry)
 
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
@@ -64,12 +63,21 @@ basicConfig(
 logger = getLogger("astrbot")
 
 
-@AstrbotModule("astrbot-canary", "canary_root", AstrbotModuleType.CORE)
-class AstrbotRootModule:
+@AstrbotInjector.inject
+class AstrbotRootModule[T: BaseModel]:
     mm: ModuleManager = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
-    ConfigEntry: type[IAstrbotConfigEntry[Any]] = AstrbotConfigEntry
-    Paths: type[IAstrbotPaths] = AstrbotPaths
-    Database: type[IAstrbotDatabase] = AstrbotDatabase
+    pypi_name: str = "astrbot_canary"
+    name: str = "canary_root"
+    module_type: AstrbotModuleType = AstrbotModuleType.CORE
+
+    ConfigEntry: type[IAstrbotConfigEntry[T]]
+    Paths: type[IAstrbotPaths]
+
+    # Dynamically set in Awake
+    cfg_root: IAstrbotConfigEntry[AstrbotRootConfig]
+    paths: IAstrbotPaths
+    cfg_tasks: IAstrbotConfigEntry[AstrbotTasksConfig]
+    broker: AsyncBroker
 
     """Astrbot根模块
     请勿参考本模块进行开发
@@ -81,8 +89,9 @@ class AstrbotRootModule:
         """AstrbotCanary 主入口函数,负责加载模块并调用其生命周期方法."""
         logger.info("AstrbotCanary 正在启动,加载模块...")
         cls.mm.add_hookspecs(AstrbotModuleSpec)
+        cls.paths = cls.Paths.getPaths(cls.pypi_name)
 
-        cls.cfg_root = cls.ConfigEntry.bind(
+        cls.cfg_root = cls.ConfigEntry[AstrbotRootConfig].bind(
             group="core",
             name="boot",
             default=AstrbotRootConfig(
@@ -107,7 +116,7 @@ class AstrbotRootModule:
             cfg_dir=cls.paths.config,
         )
 
-        cls.cfg_tasks = cls.ConfigEntry.bind(
+        cls.cfg_tasks = cls.ConfigEntry[AstrbotTasksConfig].bind(
             group="core",
             name="tasks",
             default=AstrbotTasksConfig(
@@ -127,9 +136,6 @@ class AstrbotRootModule:
         AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
         cls._setup_logging(handler, cls.cfg_root.value.log_what)
 
-        # Awake 阶段注入 AstrbotDatabase 类
-        AstrbotInjector.set("AstrbotDatabase", AstrbotDatabase)
-
         boot: list[type[IAstrbotModule]] = []
         # 自动选择默认值 True, 避免阻塞
         boot = cls._boot_from_config(cls.cfg_root.value.boot)
@@ -139,8 +145,19 @@ class AstrbotRootModule:
 
         _boot = [i.name for i in boot]
         cls.cfg_root.value.boot = _boot
+
+        # region Start
+
+    @classmethod
+    def Start(cls) -> None:
         cls.mm.hook.Awake()
-        """ 根模块仅负责唤醒,不负责启动,核心模块负责启动 """
+        cls.mm.hook.Start()
+
+    @classmethod
+    def OnDestroy(cls) -> None:
+        cls.mm.hook.OnDestroy()
+
+        cls.cfg_root.save()
 
     @classmethod
     def _setup_logging(cls, handler: AsyncAstrbotLogHandler, log_what: str) -> None:
@@ -166,7 +183,9 @@ class AstrbotRootModule:
                 continue
             module = ep.load()
             # ep.load() should return a class (module implementation). 进行安全检查:
-            if isinstance(module, type) and issubclass(module, IAstrbotModule):
+            if module is None:
+                continue
+            if isinstance(module, type):
                 boot.append(module)
         return boot
 
@@ -222,17 +241,6 @@ class AstrbotRootModule:
                 return m
         return None
 
-    # region Start
-    @classmethod
-    def Start(cls) -> None:
-        cls.mm.hook.Start()
-
-    @classmethod
-    def OnDestroy(cls) -> None:
-        cls.mm.hook.OnDestroy()
-        if getattr(cls, "cfg_root", None) is not None:
-            cls.cfg_root.save()
-
     @classmethod
     def group_modules(
         cls,
@@ -255,7 +263,7 @@ class AstrbotRootModule:
             module = ep.load()
             # ep.load() can return different things depending on the entrypoint.
             # We expect a class that implements IAstrbotModule (subclass or registered).
-            if isinstance(module, type) and issubclass(module, IAstrbotModule):
+            if isinstance(module, type):
                 match module.module_type:
                     case AstrbotModuleType.CORE:
                         core_module.append(module)

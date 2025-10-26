@@ -3,6 +3,7 @@ from pathlib import Path
 
 from astrbot_canary_api import IAstrbotPaths
 from dotenv import load_dotenv
+from packaging.utils import canonicalize_name
 
 
 class AstrbotPaths:
@@ -19,8 +20,9 @@ class AstrbotPaths:
     @classmethod
     def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
         """返回Paths实例,用于访问模块的各类目录."""
-        instance: IAstrbotPaths = cls(pypi_name)
-        instance.pypi_name = pypi_name
+        normalized_name = canonicalize_name(pypi_name)
+        instance: IAstrbotPaths = cls(normalized_name)
+        instance.pypi_name = normalized_name
         return instance
 
     @property
