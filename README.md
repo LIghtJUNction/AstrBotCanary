@@ -235,7 +235,7 @@ ______________________________________________________________________
   - 安装 Microsoft Store 的 Python 管理器（BETA 版）：https://apps.microsoft.com/detail/9nq7512cxl7t?hl=zh-CN&gl=CN
   - 使用该管理器安装：`py install 3.13.8`
   - 查看可用版本：`uv python list`
-  - 同步项目版本（若使用 uv 管理）：`uv sync`
+  - 同步项目版本（对于开发者）：`uv sync --dev`
 
 - Windows 以外平台需要自己编译 Rust / PyO3 扩展，建议安装 Rust toolchain（rustup）并按照扩展 README 中的构建说明操作。
 
