@@ -1,0 +1,19 @@
+name = "example_config"
+group = "A"
+description = "An example configuration entry for demonstration purposes."
+
+[value]
+name = "new_name66"
+value = 42
+
+[default]
+name = "default_name"
+value = 42
+
+[value.sub_config]
+detail = "default_detail"
+enabled = true
+
+[default.sub_config]
+detail = "default_detail"
+enabled = true
