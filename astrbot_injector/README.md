@@ -1,4 +1,4 @@
-<<<<<<< Updated upstream
+
 # 基于taskiq-dependencies 的定制版
 - 修改如下：
 - 针对3.13+进行修改
