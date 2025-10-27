@@ -1,2 +1,5 @@
-def hello() -> str:
-    return "Hello from astrbot-config!"
+from .config import AstrbotConfigEntry
+
+__all__ = [
+    "AstrbotConfigEntry",
+]

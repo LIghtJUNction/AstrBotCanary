@@ -107,6 +107,7 @@ members = [
     "astrbot_modules/astrbot_canary_helper",
     "astrbot_injector",
     "astrbot_config",
+    "astrbot_paths",
 ]
 
 [tool.uv.sources]

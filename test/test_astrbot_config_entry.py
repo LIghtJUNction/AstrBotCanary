@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, Field
 
-from astrbot_canary.core.config import AstrbotConfigEntry
+from astrbot_config.src.astrbot_config.config import AstrbotConfigEntry
 
 
 class SubConfig(BaseModel):

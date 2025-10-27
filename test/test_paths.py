@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from astrbot_canary.core.paths import AstrbotPaths
+from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
 
 
 def test_astrbot_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

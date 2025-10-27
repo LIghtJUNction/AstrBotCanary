@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 """
 Taskiq dependencies package.
 
@@ -13,8 +12,3 @@ from .graph import DependencyGraph
 from .utils import ParamInfo
 
 __all__ = ["DependencyGraph", "Depends", "ParamInfo"]
-=======
-from .injector import AstrbotInjector, Dep
-
-__all__ = ["AstrbotInjector", "Dep"]
->>>>>>> Stashed changes
