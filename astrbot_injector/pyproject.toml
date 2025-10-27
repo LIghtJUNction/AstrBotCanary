@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.13.8"
 dependencies = [
-    "fastapi>=0.120.0",
     "wrapt>=2.0",
 ]
 

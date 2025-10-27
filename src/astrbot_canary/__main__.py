@@ -32,12 +32,12 @@ from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 Pl
 from pydantic import BaseModel
 from rich.logging import RichHandler
 
-from astrbot_config.src.astrbot_config.config import AstrbotConfigEntry
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
-from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
 from astrbot_canary.core.tasks import AstrbotTasks
+from astrbot_config.src.astrbot_config.config import AstrbotConfigEntry
 from astrbot_injector import AstrbotInjector
+from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints

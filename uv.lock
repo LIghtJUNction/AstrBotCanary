@@ -13,6 +13,7 @@ members = [
     "astrbot-config",
     "astrbot-injector",
     "astrbot-paths",
+    "astrbot-sdk",
 ]
 
 [[package]]
@@ -156,6 +157,7 @@ dependencies = [
     { name = "astrbot-canary-api" },
     { name = "astrbot-canary-helper" },
     { name = "astrbot-injector" },
+    { name = "astrbot-paths" },
     { name = "asyncio" },
     { name = "click" },
     { name = "dotenv" },
@@ -230,6 +232,7 @@ requires-dist = [
     { name = "astrbot-canary-web", marker = "extra == 'all'", editable = "astrbot_modules/astrbot_canary_web" },
     { name = "astrbot-canary-web", marker = "extra == 'web'", editable = "astrbot_modules/astrbot_canary_web" },
     { name = "astrbot-injector", editable = "astrbot_injector" },
+    { name = "astrbot-paths", editable = "astrbot_paths" },
     { name = "asyncio", specifier = ">=4.0.0" },
     { name = "click", specifier = ">=8.3.0" },
     { name = "dotenv", specifier = ">=0.9.9" },
@@ -367,21 +370,27 @@ requires-dist = [
 name = "astrbot-config"
 version = "0.1.0"
 source = { editable = "astrbot_config" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "toml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.12.3" },
+    { name = "toml", specifier = ">=0.10.2" },
+]
 
 [[package]]
 name = "astrbot-injector"
 version = "0.1.3"
 source = { editable = "astrbot_injector" }
 dependencies = [
-    { name = "fastapi" },
     { name = "wrapt" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.120.0" },
-    { name = "wrapt", specifier = ">=2.0" },
-]
+requires-dist = [{ name = "wrapt", specifier = ">=2.0" }]
 
 [[package]]
 name = "astrbot-paths"
@@ -393,6 +402,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "dotenv", specifier = ">=0.9.9" }]
+
+[[package]]
+name = "astrbot-sdk"
+version = "0.1.0"
+source = { editable = "astrbot_sdk" }
 
 [[package]]
 name = "asyncio"

@@ -1,5 +1,5 @@
 [project]
-name = "astrbot-config"
+name = "astrbot-sdk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,10 +7,7 @@ authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 requires-python = ">=3.13.8"
-dependencies = [
-    "pydantic>=2.12.3",
-    "toml>=0.10.2",
-]
+dependencies = []
 
 [build-system]
 requires = ["hatchling"]

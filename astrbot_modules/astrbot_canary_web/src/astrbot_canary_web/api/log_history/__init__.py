@@ -1,10 +1,10 @@
 from typing import Protocol, runtime_checkable
 
-from astrbot_injector import AstrbotInjector
 from astrbot_canary_api import IAstrbotLogHandler, LogHistoryResponseData
 from fastapi import APIRouter
 
 from astrbot_canary_web.models import Response
+from astrbot_injector import AstrbotInjector
 
 __all__ = ["log_history_router"]
 
