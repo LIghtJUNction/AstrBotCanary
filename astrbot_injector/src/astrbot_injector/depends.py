@@ -10,10 +10,8 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 class Depends:
     """ 依赖描述器（支持嵌套/依赖图）
@@ -44,7 +42,7 @@ class Depends:
         deps = getattr(owner, "__depends__", None)
         if deps is None:
             deps = {}
-            setattr(owner, "__depends__", deps)
+            owner.__depends__ = deps
         deps[name] = self
 
     def __set__(self, instance: object, value: object) -> None:

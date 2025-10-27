@@ -26,7 +26,8 @@ from astrbot_canary_api.interface import (
     AstrbotModuleSpec,
     IAstrbotConfigEntry,
 )
-from astrbot_canary_helper import AstrbotCanaryHelper
+
+# from astrbot_canary_helper import AstrbotCanaryHelper
 from click import Choice, prompt
 from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 PluginManager...
 from pydantic import BaseModel
@@ -35,9 +36,9 @@ from rich.logging import RichHandler
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
 from astrbot_canary.core.tasks import AstrbotTasks
-from astrbot_config.src.astrbot_config.config import AstrbotConfigEntry
-from astrbot_injector import AstrbotInjector
-from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
+
+# from astrbot_injector import AstrbotInjector
+# from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
@@ -46,8 +47,8 @@ if TYPE_CHECKING:
 
 
 # region 注入实现
-AstrbotInjector.set("Paths", AstrbotPaths)
-AstrbotInjector.set("ConfigEntry", AstrbotConfigEntry)
+# AstrbotInjector.set("Paths", AstrbotPaths)
+# AstrbotInjector.set("ConfigEntry", AstrbotConfigEntry)
 
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
@@ -110,7 +111,7 @@ class AstrbotRootModule[T: BaseModel]:
                 "  或者:"
                 "  astrbot.module.core(抓取指定模块日志)"
                 "  astrbot.plugin.xxx(抓取指定插件日志)"
-                "  none表示:我不需要用到这个功能!"
+                "  none:不需要用到这个功能!"
                 "log_maxsize: 日志缓存最大数量--这里是给web模块特供的handler使用的"
             ),
             cfg_dir=cls.paths.config,
@@ -130,10 +131,10 @@ class AstrbotRootModule[T: BaseModel]:
         AstrbotTasks.init(cls.cfg_tasks)
 
         cls.broker = AstrbotTasks.broker
-        AstrbotInjector.set("broker", cls.broker)
+        # AstrbotInjector.set("broker", cls.broker)
 
         handler = AsyncAstrbotLogHandler(maxsize=cls.cfg_root.value.log_maxsize)
-        AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
+        # AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
         cls._setup_logging(handler, cls.cfg_root.value.log_what)
 
         boot: list[type[IAstrbotModule]] = []

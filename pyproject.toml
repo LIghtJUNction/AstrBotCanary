@@ -49,6 +49,13 @@ dev = [
     "astrbot-canary-loader",
     "astrbot-canary-tui",
     "astrbot-canary-web",
+    # 子项目
+    "astrbot-canary-helper",
+    "astrbot-canary-api",
+    "astrbot-config",
+    "astrbot-injector",
+    "astrbot-paths",
+
     # 测试相关
     "pytest-asyncio",
     "pytest-mock",
@@ -102,7 +109,6 @@ packages = [
 members = [
     "astrbot_modules/astrbot_canary_web",
     "astrbot_modules/astrbot_canary_loader",
-    "astrbot_modules/astrbot_canary_loader_api",
     "astrbot_modules/astrbot_canary_api",
     "astrbot_modules/astrbot_canary_tui",
     "astrbot_modules/astrbot_canary_helper",
@@ -117,10 +123,11 @@ astrbot-canary-api = { workspace = true }
 astrbot-canary-web = { workspace = true }
 astrbot-canary-tui = { workspace = true }
 astrbot-canary-loader = { workspace = true }
-astrbot-canary-loader-api = { workspace = true }
 astrbot-canary-helper = { workspace = true }
 astrbot-injector = { workspace = true }
 astrbot-paths = { workspace = true }
+astrbot-config = { workspace = true }
+astrbot-sdk = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -137,7 +144,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
 exclude = ["test/", "examples/", '.*\.pyi$', "__about__.py"]
-mypy_path = ["astrbot_modules/","astrbot_plugins", "src/"]
+mypy_path = ["astrbot_modules/","astrbot_plugins", "src/", "astrbot_injector/", "astrbot_paths/", "astrbot_config/", "astrbot_sdk/"]
 ignore_missing_imports = true
 disallow_untyped_calls = true
 disallow_incomplete_defs = true

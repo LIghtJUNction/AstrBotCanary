@@ -1,7 +1,7 @@
 [project]
 name = "astrbot-config"
 version = "0.1.0"
-description = "Add your description here"
+description = "astrbot configuration "
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
