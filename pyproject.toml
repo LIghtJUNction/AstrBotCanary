@@ -38,20 +38,10 @@ dependencies = [
     "types-click>=7.1.8",
     "types-pluggy>=1.2.0.20240106",
     "sqlalchemy[mypy]>=2.0.0",
-<<<<<<< Updated upstream
     "pydantic>=2.12.0",
     "types-orjson>=3.6.2",
     "hatch-vcs>=0.5.0",
     "astrbot-injector",
-=======
-
-    "types-orjson>=3.6.2",
-    "hatch-vcs>=0.5.0",
-    "wrapt>=1.17.3",
-    "astrbot-injector",
-    "jupyterlab>=4.4.10",
-    "sqlmodel>=0.0.27",
->>>>>>> Stashed changes
 ]
 [dependency-groups]
 dev = [
@@ -71,14 +61,10 @@ dev = [
     "docstring-checker",
     "mypy>=1.18.2",
     "types-pyjwt>=1.7.1",
-<<<<<<< Updated upstream
     "types-requests>=2.32.4.20250913",
     # "commitizen>=4.9.1",
     # 这个工具要求wrapt版本低于2.0，考虑到这并不是必须，仅仅是一个工具，故注释掉
 
-=======
-    "commitizen>=4.9.1",
->>>>>>> Stashed changes
     "tox>=4.31.0",
     "mdformat>=1.0.0",
     "viztracer>=1.0.4",
@@ -120,6 +106,7 @@ members = [
     "astrbot_modules/astrbot_canary_tui",
     "astrbot_modules/astrbot_canary_helper",
     "astrbot_injector",
+    "astrbot_config",
 ]
 
 [tool.uv.sources]
