@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, Field
 
-from astrbot_config.src.astrbot_config.config import AstrbotConfigEntry
+from astrbot_config.config import AstrbotConfigEntry
 
 
 class SubConfig(BaseModel):
@@ -36,13 +36,13 @@ class NestedConfig(BaseModel):
 
 
 @pytest.fixture
-def tmp_cfg_dir(tmp_path: Path):
+def tmp_cfg_dir(tmp_path: Path) -> Path:
     cfg_dir = tmp_path / "test_cfg"
     cfg_dir.mkdir(parents=True, exist_ok=True)
     return cfg_dir
 
 
-def test_astrbot_config_entry(tmp_cfg_dir: Path):
+def test_astrbot_config_entry(tmp_cfg_dir: Path) -> None:
     nested_default = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -79,7 +79,7 @@ def test_astrbot_config_entry(tmp_cfg_dir: Path):
     print("pytest: AstrbotConfigEntry 测试通过")
 
 
-def test_repr_str():
+def test_repr_str() -> None:
     dummy = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -103,7 +103,7 @@ def test_repr_str():
     assert isinstance(str(entry), str)
 
 
-def test_save_no_cfg_file():
+def test_save_no_cfg_file() -> None:
     dummy = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -126,7 +126,7 @@ def test_save_no_cfg_file():
     entry.save()  # 不应抛异常
 
 
-def test_load_file_not_exist(tmp_path: Path):
+def test_load_file_not_exist(tmp_path: Path) -> None:
     dummy = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -149,7 +149,7 @@ def test_load_file_not_exist(tmp_path: Path):
     entry.load()  # 不应抛异常
 
 
-def test_load_invalid_data(tmp_path: Path):
+def test_load_invalid_data(tmp_path: Path) -> None:
     dummy = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -175,7 +175,7 @@ def test_load_invalid_data(tmp_path: Path):
         entry.load()
 
 
-def test_save_invalid_type(tmp_path: Path):
+def test_save_invalid_type(tmp_path: Path) -> None:
     class Dummy(BaseModel):
         x: int = 1
 
@@ -195,7 +195,7 @@ def test_save_invalid_type(tmp_path: Path):
         )
 
 
-def test_reset_invalid_default():
+def test_reset_invalid_default() -> None:
     class Dummy(BaseModel):
         x: int = 1
 
@@ -212,7 +212,7 @@ def test_reset_invalid_default():
         entry.reset()
 
 
-def test_save_no_cfg_file_logs_error(caplog: pytest.LogCaptureFixture):
+def test_save_no_cfg_file_logs_error(caplog: pytest.LogCaptureFixture) -> None:
     dummy = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,
@@ -237,7 +237,7 @@ def test_save_no_cfg_file_logs_error(caplog: pytest.LogCaptureFixture):
         assert any("配置文件路径未设置" in m for m in caplog.messages)
 
 
-def test_bind_file_exists(tmp_path: Path):
+def test_bind_file_exists(tmp_path: Path) -> None:
     # 构造一个已存在的 toml 文件，包含 value/default 字段为 dict
     from toml import dump
 
