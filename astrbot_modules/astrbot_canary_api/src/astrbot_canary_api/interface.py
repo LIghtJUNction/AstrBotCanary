@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
+    ClassVar,
     Protocol,
     runtime_checkable,
 )
@@ -114,7 +115,7 @@ class AstrbotModuleSpec:
 class IAstrbotPaths(Protocol):
     """Interface for Astrbot path management."""
 
-    astrbot_root: Path
+    astrbot_root: ClassVar[Path]
     pypi_name: str
 
     def __init__(self, pypi_name: str) -> None: ...
@@ -122,6 +123,11 @@ class IAstrbotPaths(Protocol):
     @classmethod
     def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
         """返回模块路径根实例,用于访问模块的各类目录."""
+        ...
+
+    @property
+    def root(self) -> Path:
+        """返回模块根目录"""
         ...
 
     @property
@@ -139,6 +145,9 @@ class IAstrbotPaths(Protocol):
         """返回模块日志目录."""
         ...
 
+    def reload(self) -> None:
+        """刷新astrbot_root"""
+        ...
 
 # endregion
 # region Config

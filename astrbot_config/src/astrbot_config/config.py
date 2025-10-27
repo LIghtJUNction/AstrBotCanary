@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager, contextmanager
 from logging import getLogger
 from pathlib import Path
-from typing import ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 
+import keyring
 import toml
+from astrbot_canary_api.exceptions import (
+    SecretError,
+)
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
+
 
 logger = getLogger("astrbot.module.core.config")
 
@@ -35,7 +45,7 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
         cfg_dir: Path,
     ) -> AstrbotConfigEntry[T]:
         """工厂方法:优先从文件加载,否则新建并保存.自动根据default类型推断模型类型."""
-        cfg_file: Path = (cfg_dir / f"{group}.toml").resolve()
+        cfg_file: Path = (cfg_dir / f"{group}@{name}.toml").resolve()
         # 自动推断模型类型
         model_type = type(default)
         if cfg_file.exists():
@@ -105,3 +115,69 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
             f"Description: {self.description}\n"
             f"Default: {self.default}"
         )
+
+# 密钥模型
+
+class AstrbotSecretKey(BaseModel):
+    """
+    AstrbotSecretKey 描述器,用于安全存储和访问密钥.
+
+    使用 keyring 库将密钥存储在系统安全存储中.
+
+    示例用法:
+        class Config(BaseModel):
+            secret : AstrbotSecretKey = AstrbotSecretKey("llm-key")
+    """
+    key_name : str
+    service: str = "astrbot"
+    key_id : str = "none"
+    _secret: str | None = None
+
+    @property
+    def secret(self) -> str | None:
+        logger.warning("访问 secret 属性将返回 key_id 而非密钥本身,请使用上下文管理器.")
+        return self.key_id
+
+    @secret.setter
+    def secret(self, value: str | None) -> None:
+        if self.key_id == "none":
+            self.key_id = f"@{self.service}:{self.key_name}"
+        if value:
+            keyring.set_password(self.service, self.key_id, value)
+        self._secret = value
+
+    @secret.deleter
+    def secret(self) -> None:
+        if self.key_id:
+            keyring.delete_password(self.service, self.key_id)
+        self._secret = None
+        self.key_id = "none"
+
+    def __str__(self) -> str:
+        return (f"<AstrbotSecretKey-{self.key_name}@{self.service}:"
+                f"{self.key_name}={self.key_id}>")
+
+    @asynccontextmanager
+    async def actx(self) -> AsyncGenerator[str]:
+        """异步上下文管理器获取密钥."""
+        try:
+            if self.key_id == "none":
+                raise SecretError
+            if self._secret is None:
+                self._secret = keyring.get_password(self.service, self.key_id) or ""
+            yield self._secret
+        finally:
+            self._secret = None
+
+    @contextmanager
+    def ctx(self) -> Generator[str]:
+        """同步上下文管理器获取密钥."""
+        try:
+            if self.key_id == "none":
+                raise SecretError
+            if self._secret is None:
+                self._secret = keyring.get_password(self.service, self.key_id) or ""
+            yield self._secret
+        finally:
+            self._secret = None
+

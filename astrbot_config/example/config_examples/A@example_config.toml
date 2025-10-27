@@ -3,7 +3,7 @@ group = "A"
 description = "An example configuration entry for demonstration purposes."
 
 [value]
-name = "new_name66"
+name = "new_name36"
 value = 42
 
 [default]

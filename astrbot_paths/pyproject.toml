@@ -1,16 +1,20 @@
 [project]
 name = "astrbot-paths"
 version = "0.1.0"
-description = "Add your description here"
+description = "提供各类路径,确保整个系统路径规范"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 requires-python = ">=3.13.8"
 dependencies = [
+    "astrbot-canary-api",
     "dotenv>=0.9.9",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+astrbot-canary-api = { workspace = true }
