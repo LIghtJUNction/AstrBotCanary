@@ -17,6 +17,15 @@
 
 - 开发子项目中，主项目先暂时不动
 
+- 最终决定使用dishka开发依赖注入库，为了方便未来完善依赖注入系统，将配置管理/路径管理类协议改为ABC抽象基类。
+
+- 目前正在实现dishka集成至astrnet（目前并未实现仅为概念，大致思路是仿照dishka集成至fastapi/taskiq的方式，集成到astrnet）
+
+- astrnet大致设计方案，定位是fastapi like风格的分布式通信网络。底层是taskiq，broker消息代理计划基于pg数据库实现（taskiq的拓展库）。
+
+
+
+
 ## 下一步行动
 
 - 改完基于taskiq-dependencies库的astrbot_injector依赖注入库
