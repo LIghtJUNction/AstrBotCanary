@@ -41,8 +41,11 @@ dependencies = [
     "pydantic>=2.12.0",
     "types-orjson>=3.6.2",
     "hatch-vcs>=0.5.0",
+    "astrbot-config",
+    "astrbot-sdk",
     "astrbot-injector",
     "astrbot-paths",
+    "astrnet",
 ]
 [dependency-groups]
 dev = [
@@ -52,9 +55,6 @@ dev = [
     # 子项目
     "astrbot-canary-helper",
     "astrbot-canary-api",
-    "astrbot-config",
-    "astrbot-injector",
-    "astrbot-paths",
     # 测试相关
     "pytest-asyncio",
     "pytest-mock",
@@ -118,6 +118,7 @@ members = [
     "astrbot_config",
     "astrbot_paths",
     "astrbot_sdk",
+    "astrnet",
 ]
 
 [tool.uv.sources]
@@ -130,6 +131,7 @@ astrbot-injector = { workspace = true }
 astrbot-paths = { workspace = true }
 astrbot-config = { workspace = true }
 astrbot-sdk = { workspace = true }
+astrnet = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

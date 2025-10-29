@@ -5,6 +5,7 @@
         "aiosqlite",
         "anyio",
         "Astrbot",
+        "astrnet",
         "asyncio",
         "atransaction",
         "commitizen",
