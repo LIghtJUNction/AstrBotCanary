@@ -1,6 +1,6 @@
 #region AstrbotSecret
 class SecretError(Exception):
-    """Raised when a secret key is not found in the backend.
+    """密钥相关异常.
 
     可选参数:
       - key_id: 相关密钥标识
@@ -9,7 +9,7 @@ class SecretError(Exception):
     """
     def __init__(
         self,
-        message: str = "Secret key not found",
+        message: str = "Secret key Error",
         *,
         key_id: str | None = None,
         backend: str | None = None,
@@ -34,3 +34,82 @@ class SecretError(Exception):
 
 
 #region AstrbotInjector
+
+class ProviderNotSetError(Exception):
+    """提供者未设置异常.
+
+    可选参数:
+      - provider_name: 未设置的提供者名称
+    """
+    def __init__(
+        self,
+        message: str = "Provider not set",
+        *,
+        provider_name: str | None = None,
+    ) -> None:
+        self.provider_name = provider_name
+
+        if provider_name:
+            message = f"{message}: {provider_name}"
+
+        super().__init__(message)
+
+
+class AstrbotContainerNotFoundError(Exception):
+    """容器未找到异常.
+
+    可选参数:
+      - container_name: 未找到的容器名称
+    """
+    def __init__(
+        self,
+        message: str = "Container not found",
+        *,
+        container_name: str | None = None,
+    ) -> None:
+        self.container_name = container_name
+
+        if container_name:
+            message = f"{message}: {container_name}"
+
+        super().__init__(message)
+
+
+class AstrbotInvalidPathError(Exception):
+    """无效路径异常.
+
+    可选参数:
+      - path: 无效的路径
+    """
+    def __init__(
+        self,
+        message: str = "Invalid path",
+        *,
+        path: str | None = None,
+    ) -> None:
+        self.path = path
+
+        if path:
+            message = f"{message}: {path}"
+
+        super().__init__(message)
+
+
+class AstrbotInvalidProviderPathError(Exception):
+    """无效的 provider 路径异常.
+
+    可选参数:
+      - path: 无效的路径
+    """
+    def __init__(
+        self,
+        message: str = "Invalid provider path",
+        *,
+        path: str | None = None,
+    ) -> None:
+        self.path = path
+
+        if path:
+            message = f"{message}: {path}"
+
+        super().__init__(message)

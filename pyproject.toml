@@ -24,7 +24,7 @@ dependencies = [
     "toml>=0.10.2",
     "tqdm>=4.67.1",
     "astrbot-canary-api",
-    "astrbot-canary-helper", # 无特殊功能，简单封装，仅用于简化代码
+    "astrbot-canary-helper",
     "anyio>=4.11.0",
     "trio>=0.31.0",
     "taskiq>=0.11.18",
@@ -71,11 +71,14 @@ dev = [
     "types-requests>=2.32.4.20250913",
     # "commitizen>=4.9.1",
     # 这个工具要求wrapt版本低于2.0，考虑到这并不是必须，仅仅是一个工具，故注释掉
-    "tox>=4.31.0",
     "mdformat>=1.0.0",
     "viztracer>=1.0.4",
     "ipykernel>=7.1.0",
+
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.metadata.hooks.vcs.urls]
 Funding = "https://github.com/AstrBotDevs/"
@@ -201,3 +204,4 @@ version-file = "./src/astrbot_canary/__about__.py"
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+

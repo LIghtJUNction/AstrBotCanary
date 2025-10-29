@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from logging import getLogger
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 import keyring
 import toml
+from astrbot_canary_api import IAstrbotConfigEntry
 from astrbot_canary_api.exceptions import (
     SecretError,
 )
@@ -15,14 +15,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
-
+    from pathlib import Path
 
 logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
 
 
-class AstrbotConfigEntry[T: BaseModel](BaseModel):
+class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T]):
     # type parameter T is used for value/default
     name: str
     group: str
@@ -37,7 +37,7 @@ class AstrbotConfigEntry[T: BaseModel](BaseModel):
 
     @classmethod
     def bind(
-        cls: type[AstrbotConfigEntry[T]],
+        cls,
         group: str,
         name: str,
         default: T,

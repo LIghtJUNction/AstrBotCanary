@@ -4,15 +4,17 @@ from os import getenv
 from pathlib import Path
 from typing import ClassVar
 
+from astrbot_canary_api import IAstrbotPaths
 from dotenv import load_dotenv
 from packaging.utils import NormalizedName, canonicalize_name
 
 
-class AstrbotPaths:
+class AstrbotPaths(IAstrbotPaths):
     """Class to manage and provide paths used by Astrbot Canary."""
 
     load_dotenv()
-    astrbot_root: ClassVar[Path] = Path(getenv("ASTRBOT_ROOT", Path.home() / ".astrbot"))
+    astrbot_root: ClassVar[Path] = Path(
+        getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")).absolute()
 
     def __init__(self, pypi_name: str) -> None:
         self.pypi_name: str = pypi_name
@@ -67,5 +69,6 @@ class AstrbotPaths:
     def reload(self) -> None:
         """重新加载环境变量."""
         load_dotenv()
-        self.__class__.astrbot_root = Path(getenv("ASTRBOT_ROOT", Path.home() / ".astrbot"))
+        self.__class__.astrbot_root = Path(
+            getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")).absolute()
 

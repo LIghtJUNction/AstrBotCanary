@@ -41,3 +41,9 @@ repos:
     rev: v3.21.0
     hooks:
       - id: pyupgrade
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv 版本。
+    rev: 0.9.5
+    hooks:
+      - id: uv-lock

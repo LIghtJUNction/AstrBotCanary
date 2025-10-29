@@ -3,18 +3,15 @@ from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
-    ClassVar,
     Protocol,
     runtime_checkable,
 )
 
 from pluggy import HookimplMarker, HookspecMarker
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable
     from logging import LogRecord
-    from pathlib import Path
 
     from astrbot_canary_api.enums import AstrbotModuleType
     from astrbot_canary_api.models import LogHistoryResponseData
@@ -22,7 +19,6 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
-    "IAstrbotPaths",
     "moduleimpl",
     "modulespec",
 ]
@@ -108,89 +104,6 @@ class AstrbotModuleSpec:
 
 
 # endregion
-
-
-# region Paths
-@runtime_checkable
-class IAstrbotPaths(Protocol):
-    """Interface for Astrbot path management."""
-
-    astrbot_root: ClassVar[Path]
-    pypi_name: str
-
-    def __init__(self, pypi_name: str) -> None: ...
-
-    @classmethod
-    def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
-        """返回模块路径根实例,用于访问模块的各类目录."""
-        ...
-
-    @property
-    def root(self) -> Path:
-        """返回模块根目录"""
-        ...
-
-    @property
-    def config(self) -> Path:
-        """返回模块配置目录."""
-        ...
-
-    @property
-    def data(self) -> Path:
-        """返回模块数据目录."""
-        ...
-
-    @property
-    def log(self) -> Path:
-        """返回模块日志目录."""
-        ...
-
-    def reload(self) -> None:
-        """刷新astrbot_root"""
-        ...
-
-# endregion
-# region Config
-
-
-@runtime_checkable
-class IAstrbotConfigEntry[T: BaseModel](Protocol):
-    """单个配置项的协议(作为 IAstrbotConfig 的内部类)."""
-
-    name: str
-    group: str
-    value: T
-    default: T
-    description: str
-    cfg_file: Path | None
-
-    @classmethod
-    def bind(
-        cls: type[IAstrbotConfigEntry[T]],
-        group: str,
-        name: str,
-        default: T,
-        description: str,
-        cfg_dir: Path,
-    ) -> IAstrbotConfigEntry[T]:
-        """按 group 保存到 {cfg_dir}/{group}.toml,并返回绑定好的条目实例.."""
-        ...
-
-    def load(self) -> None:
-        """从所在组文件加载本项数据(不影响同组其它项).."""
-        ...
-
-    def save(self) -> None:
-        """将本项合并到所在组文件并保存(不覆盖同组其它项).."""
-        ...
-
-    def reset(self) -> None:
-        """重置为默认值并保存.."""
-        ...
-
-
-# endregion
-
 
 # region 日志处理器
 class IAstrbotLogHandler(Protocol):

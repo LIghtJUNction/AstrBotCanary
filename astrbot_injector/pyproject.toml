@@ -8,10 +8,16 @@ authors = [
 ]
 requires-python = ">=3.13.8"
 dependencies = [
+    "astrbot-canary-api",
+    "dishka>=1.7.2",
+    "strawberry-graphql>=0.284.1",
     "wrapt>=2.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+astrbot-canary-api = { workspace = true }
 
