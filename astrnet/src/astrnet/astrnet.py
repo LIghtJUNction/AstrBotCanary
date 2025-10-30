@@ -3,7 +3,6 @@ class AstrNet:
 
     def __init__(self) -> None:
         """ 初始化AstrNet应用. """
-        ...
 
 
 

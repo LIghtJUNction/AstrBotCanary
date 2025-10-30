@@ -2,7 +2,7 @@
 Astrbot协议
 """
 
-from .astrnet_app import AstrnetApp
+from .astrnet import AstrnetApp
 
 # 创建Astrnet应用实例
 app = AstrnetApp()

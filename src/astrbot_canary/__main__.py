@@ -24,7 +24,6 @@ from astrbot_canary_api import (
 from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
 from astrbot_canary_api.interface import (
     AstrbotModuleSpec,
-    IAstrbotConfigEntry,
 )
 
 # from astrbot_canary_helper import AstrbotCanaryHelper
@@ -289,6 +288,8 @@ class AstrbotRootModule[T: BaseModel]:
         AstrbotRootModule.OnDestroy()
 
     # region Destroy
+
+
 
 
 if __name__ == "__main__":
