@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager, AbstractContextManager
     from pathlib import Path
-
 
 class IAstrbotConfigEntry[T: BaseModel](ABC):
     """配置条目的抽象基类."""
@@ -49,18 +49,23 @@ class IAstrbotPaths(ABC):
     """路径管理的抽象基类."""
 
     @abstractmethod
-    def __init__(self, pypi_name: str) -> None:
+    def __init__(self, name: str) -> None:
         """初始化路径管理器."""
 
     @classmethod
     @abstractmethod
-    def getPaths(cls, pypi_name: str) -> IAstrbotPaths:
+    def getPaths(cls, name: str) -> IAstrbotPaths:
         """返回Paths实例,用于访问模块的各类目录."""
 
     @property
     @abstractmethod
     def root(self) -> Path:
-        """获取模块根目录."""
+        """获取根目录."""
+
+    @property
+    @abstractmethod
+    def home(self) -> Path:
+        """获取模块/插件主目录."""
 
     @property
     @abstractmethod
@@ -80,4 +85,12 @@ class IAstrbotPaths(ABC):
     @abstractmethod
     def reload(self) -> None:
         """重新加载环境变量."""
+
+    @abstractmethod
+    def chdir(self, cwd: str = "home") -> AbstractContextManager[Path]:
+        """临时切换到指定目录, 子进程将继承此 CWD。"""
+
+    @abstractmethod
+    async def achdir(self, cwd: str = "home") -> AbstractAsyncContextManager[Path]:
+        """异步临时切换到指定目录, 子进程将继承此 CWD。"""
 
