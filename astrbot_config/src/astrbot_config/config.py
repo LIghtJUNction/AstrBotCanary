@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from logging import getLogger
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 import keyring
@@ -15,14 +16,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
-    from pathlib import Path
+
 
 logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
 
-
-class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T]):
+class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T],BaseModel):
     # type parameter T is used for value/default
     name: str
     group: str
@@ -45,7 +45,7 @@ class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T]):
         cfg_dir: Path,
     ) -> AstrbotConfigEntry[T]:
         """工厂方法:优先从文件加载,否则新建并保存.自动根据default类型推断模型类型."""
-        cfg_file: Path = (cfg_dir / f"{group}@{name}.toml").resolve()
+        cfg_file: Path = (cfg_dir / f"{group}" / f"{name}.toml").resolve()
         # 自动推断模型类型
         model_type = type(default)
         if cfg_file.exists():

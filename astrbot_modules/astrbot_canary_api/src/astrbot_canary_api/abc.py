@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class IAstrbotConfigEntry[T: BaseModel](ABC, BaseModel):
+class IAstrbotConfigEntry[T: BaseModel](ABC):
     """配置条目的抽象基类."""
 
     @classmethod

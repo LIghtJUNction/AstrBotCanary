@@ -1,7 +1,7 @@
 [project]
 name = "astrnet"
 version = "0.1.0"
-description = "基于fastapi/strawberry-graphql的通信网络"
+description = "基于fastapi的通信网络"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }

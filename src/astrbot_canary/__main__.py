@@ -18,6 +18,7 @@ import rich.traceback
 from astrbot_canary_api import (
     ASTRBOT_MODULES_HOOK_NAME,
     AstrbotModuleType,
+    IAstrbotConfigEntry,
     IAstrbotModule,
     IAstrbotPaths,
 )
@@ -25,8 +26,6 @@ from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
 from astrbot_canary_api.interface import (
     AstrbotModuleSpec,
 )
-
-# from astrbot_canary_helper import AstrbotCanaryHelper
 from click import Choice, prompt
 from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 PluginManager...
 from pydantic import BaseModel
@@ -49,6 +48,23 @@ if TYPE_CHECKING:
 # AstrbotInjector.set("Paths", AstrbotPaths)
 # AstrbotInjector.set("ConfigEntry", AstrbotConfigEntry)
 
+class AstrbotDatabaseConfig(BaseModel):
+    """Astrbot数据库配置项"""
+    dsn: str = ""
+    """连接字符串或 URL(用于 RabbitMQ、Redis、PostgreSQL 等)"""
+    host : str = "localhost"
+    """主机地址<用于 PostgreSQL、Redis 等>"""
+    port : int = 5432
+    """主机地址<用于 PostgreSQL、Redis 等>"""
+    user : str = "astrbot"
+    """用户名<用于 PostgreSQL、Redis 等>"""
+    password : str = "astrbot"
+    """密码或秘密密钥<用于 PostgreSQL、SQS 等>"""
+    database: str = "astrbot_db"
+    """数据库名或路径<用于 PostgreSQL、Redis )>"""
+    timeout: int = 5
+    """连接超时(用于 Redis、PostgreSQL 等)"""
+
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
 _ = rich.traceback.install()
@@ -62,15 +78,14 @@ basicConfig(
 
 logger = getLogger("astrbot")
 
-
-@AstrbotInjector.inject
-class AstrbotRootModule[T: BaseModel]:
+# @AstrbotInjector.inject
+class AstrbotRootModule:
     mm: ModuleManager = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
     pypi_name: str = "astrbot_canary"
     name: str = "canary_root"
     module_type: AstrbotModuleType = AstrbotModuleType.CORE
 
-    ConfigEntry: type[IAstrbotConfigEntry[T]]
+    ConfigEntry: type[IAstrbotConfigEntry]
     Paths: type[IAstrbotPaths]
 
     # Dynamically set in Awake

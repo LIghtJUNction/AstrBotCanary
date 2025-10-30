@@ -1,3 +1,3 @@
 # dishka-astrnet
 
-为astrnet集成dishka
+- 为astrnet集成dishka

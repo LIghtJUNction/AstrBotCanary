@@ -1,6 +1,6 @@
 [project]
 name = "astrbot-config"
-version = "0.1.2"
+version = "0.1.3"
 description = "astrbot configuration "
 readme = "README.md"
 authors = [
