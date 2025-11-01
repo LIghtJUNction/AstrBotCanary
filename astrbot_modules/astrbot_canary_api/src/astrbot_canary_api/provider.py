@@ -1,4 +1,19 @@
-"""Provider registry for dependency injection across AstrBot modules."""
+"""Container registry for dependency injection across AstrBot modules.
+
+This module provides a centralized registry for Dishka containers
+organized by components. Each component represents an isolated
+dependency graph, preventing implicit cross-component dependencies
+while allowing explicit component-based dependency resolution.
+
+Architecture:
+    - Components isolate providers (e.g., "core", "web", "tui")
+    - AsyncContainer supports both sync and async providers
+    - Container instances are registered by component name
+    - Multiple containers can coexist for different components
+
+References:
+    - Dishka Components: https://dishka.readthedocs.io/en/stable/advanced/components
+"""
 
 from __future__ import annotations
 
@@ -7,97 +22,209 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from dishka import AsyncContainer, Container
 
-__all__ = ["DepProviderRegistry"]
+__all__ = ["ContainerRegistry"]
 
 
-class DepProviderRegistry:
-    """Central registry for module providers and dishka containers."""
+class ContainerRegistry:
+    """Central registry for Dishka containers organized by components.
 
-    _providers: ClassVar[dict[str, object]] = {}
-    _container: ClassVar[Container | None] = None
-    _async_container: ClassVar[AsyncContainer | None] = None
+    Dishka uses components to isolate dependency graphs. Each component has its own
+    providers and dependencies that don't interfere with other components. This registry
+    manages containers for different components across the application.
+
+    Container Types:
+        - AsyncContainer: Supports both sync and async providers (recommended)
+        - Container: Sync-only container (legacy support)
+
+    Component Design:
+        Components represent logical modules (e.g., "core", "web").
+        Use `container.get(Type, component="name")` for components.
+
+    Example:
+        >>> # Register async container for "core" component
+        >>> ContainerRegistry.register_async("core", async_container)
+        >>>
+        >>> # Get container for "core" component
+        >>> container = ContainerRegistry.get_async("core")
+        >>>
+        >>> # Check if component exists
+        >>> if ContainerRegistry.has("core"):
+        ...     container = ContainerRegistry.get_async("core")
+
+    Thread Safety:
+        Use `lock_factory=threading.Lock` or `asyncio.Lock` when creating containers
+        for concurrent environments.
+    """
+
+    _sync_containers: ClassVar[dict[str, Container]] = {}
+    _async_containers: ClassVar[dict[str, AsyncContainer]] = {}
 
     @classmethod
-    def register(cls, name: str, provider: object) -> None:
-        """Register a provider by name.
+    def register_sync(cls, component: str, container: Container) -> None:
+        """Register a synchronous Dishka container for a component.
 
         Args:
-            name: Provider name identifier
-            provider: The provider instance or class
+            component: Component name (e.g., "core", "web", "loader")
+            container: Dishka Container instance created with make_container()
+
+        Note:
+            Sync containers only support synchronous providers.
+            Consider using AsyncContainer for broader compatibility.
+
+        Example:
+            >>> from dishka import make_container
+            >>> container = make_container(MyProvider())
+            >>> ContainerRegistry.register_sync("core", container)
         """
-        cls._providers[name] = provider
+        cls._sync_containers[component] = container
 
     @classmethod
-    def get(cls, name: str) -> object:
-        """Get a provider by name.
+    def register_async(cls, component: str, container: AsyncContainer) -> None:
+        """Register an asynchronous Dishka container for a component.
 
         Args:
-            name: Provider name identifier
+            component: Component name (e.g., "core", "web", "loader")
+            container: AsyncContainer from make_async_container()
+
+        Note:
+            AsyncContainer supports BOTH sync and async providers.
+            This is the recommended approach for most use cases.
+
+        Example:
+            >>> from dishka import make_async_container
+            >>> container = make_async_container(MyProvider(), FastapiProvider())
+            >>> ContainerRegistry.register_async("core", container)
+        """
+        cls._async_containers[component] = container
+
+    @classmethod
+    def get_sync(cls, component: str) -> Container:
+        """Get synchronous container for a component.
+
+        Args:
+            component: Component name
 
         Returns:
-            The registered provider
+            Dishka Container instance for the specified component
 
         Raises:
-            KeyError: If provider not found
+            KeyError: If component not registered
+
+        Example:
+            >>> container = ContainerRegistry.get_sync("core")
+            >>> service = container.get(MyService)
         """
-        return cls._providers[name]
+        if component not in cls._sync_containers:
+            msg = (
+                f"Sync container for component '{component}' not found. "
+                f"Available components: {list(cls._sync_containers.keys())}"
+            )
+            raise KeyError(msg)
+        return cls._sync_containers[component]
 
     @classmethod
-    def has(cls, name: str) -> bool:
-        """Check if a provider is registered.
+    def get_async(cls, component: str) -> AsyncContainer:
+        """Get asynchronous container for a component.
 
         Args:
-            name: Provider name identifier
+            component: Component name
 
         Returns:
-            True if provider exists
-        """
-        return name in cls._providers
-
-    @classmethod
-    def set_container(cls, container: Container) -> None:
-        """Set the dishka sync container.
-
-        Args:
-            container: Dishka Container instance
-        """
-        cls._container = container
-
-    @classmethod
-    def set_async_container(cls, container: AsyncContainer) -> None:
-        """Set the dishka async container.
-
-        Args:
-            container: Dishka AsyncContainer instance
-        """
-        cls._async_container = container
-
-    @classmethod
-    def get_container(cls) -> Container:
-        """Get the dishka sync container.
-
-        Returns:
-            Dishka Container instance
+            Dishka AsyncContainer instance for the specified component
 
         Raises:
-            RuntimeError: If container not set
+            KeyError: If component not registered
+
+        Example:
+            >>> container = ContainerRegistry.get_async("core")
+            >>> service = await container.get(MyService)
         """
-        if cls._container is None:
-            msg = "Dishka container not set. Call set_container first."
-            raise RuntimeError(msg)
-        return cls._container
+        if component not in cls._async_containers:
+            msg = (
+                f"Async container for component '{component}' not found. "
+                f"Available components: {list(cls._async_containers.keys())}"
+            )
+            raise KeyError(msg)
+        return cls._async_containers[component]
 
     @classmethod
-    def get_async_container(cls) -> AsyncContainer:
-        """Get the dishka async container.
+    def has(cls, component: str) -> bool:
+        """Check if a component has any registered container.
+
+        Args:
+            component: Component name
 
         Returns:
-            Dishka AsyncContainer instance
+            True if component has sync or async container
 
-        Raises:
-            RuntimeError: If async container not set
+        Example:
+            >>> if ContainerRegistry.has("web"):
+            ...     container = ContainerRegistry.get_async("web")
         """
-        if cls._async_container is None:
-            msg = "Dishka async container not set. Call set_async_container first."
-            raise RuntimeError(msg)
-        return cls._async_container
+        return component in cls._sync_containers or component in cls._async_containers
+
+    @classmethod
+    def has_sync(cls, component: str) -> bool:
+        """Check if a component has a synchronous container.
+
+        Args:
+            component: Component name
+
+        Returns:
+            True if component has sync container
+
+        Example:
+            >>> if ContainerRegistry.has_sync("core"):
+            ...     container = ContainerRegistry.get_sync("core")
+        """
+        return component in cls._sync_containers
+
+    @classmethod
+    def has_async(cls, component: str) -> bool:
+        """Check if a component has an asynchronous container.
+
+        Args:
+            component: Component name
+
+        Returns:
+            True if component has async container
+
+        Example:
+            >>> if ContainerRegistry.has_async("web"):
+            ...     container = ContainerRegistry.get_async("web")
+        """
+        return component in cls._async_containers
+
+    @classmethod
+    def list_components(cls) -> list[str]:
+        """List all registered component names.
+
+        Returns:
+            List of component names with registered containers
+
+        Example:
+            >>> components = ContainerRegistry.list_components()
+            >>> print(f"Available components: {components}")
+        """
+        return sorted(
+            set(cls._sync_containers.keys())
+            | set(cls._async_containers.keys()),
+        )
+
+    @classmethod
+    def clear(cls) -> None:
+        """Clear all registered containers.
+
+        Warning:
+            This does NOT call close() on containers. Ensure proper cleanup
+            before calling this method to avoid resource leaks.
+
+        Example:
+            >>> # Proper cleanup
+            >>> for component in ContainerRegistry.list_components():
+            ...     if ContainerRegistry.has_async(component):
+            ...         await ContainerRegistry.get_async(component).close()
+            >>> ContainerRegistry.clear()
+        """
+        cls._sync_containers.clear()
+        cls._async_containers.clear()

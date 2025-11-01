@@ -9,13 +9,15 @@ from typing import TYPE_CHECKING, Literal
 import uvicorn
 from astrbot_canary_api import (
     AstrbotModuleType,
-    DepProviderRegistry,
+    ContainerRegistry,
     IAstrbotConfigEntry,
+    IAstrbotLogHandler,
     IAstrbotModule,
     IAstrbotPaths,
     moduleimpl,
 )
-from dishka.integrations.fastapi import setup_dishka
+from dishka import make_async_container
+from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +26,7 @@ from pydantic import BaseModel
 from taskiq import AsyncBroker
 
 from astrbot_canary_web.api import api_router
+from astrbot_canary_web.api.provider import WebAPIProvider
 from astrbot_canary_web.frontend import AstrbotCanaryFrontend
 
 if TYPE_CHECKING:
@@ -81,14 +84,15 @@ class AstrbotCanaryWeb(IAstrbotModule):
             cls.name,
         )
 
-        # Get dependencies from core provider directly (since AsyncContainer.get is async)
-        core_provider = DepProviderRegistry.get("core")
-        paths_instance: IAstrbotPaths = core_provider._paths
-        cls.ConfigEntry = core_provider._config_entry
+        # Get dependencies from sync container (proper way for sync context)
+        core_container = ContainerRegistry.get_sync("core")
+        paths_instance: IAstrbotPaths = core_container.get(IAstrbotPaths)
 
-        # broker 可能为 None，如果无法获取则设为 None
+        cls.ConfigEntry = core_container.get(dependency_type=type(IAstrbotConfigEntry))
+        # Get broker (may be None if not available)
         try:
-            cls.broker = core_provider._broker
+            from taskiq import AsyncBroker
+            cls.broker = core_container.get(AsyncBroker)
         except Exception:
             cls.broker = None
 
@@ -112,26 +116,24 @@ class AstrbotCanaryWeb(IAstrbotModule):
             cls.cfg_web.value.host,
             cls.cfg_web.value.port,
         )
-        # 从 DepProviderRegistry 获取 core provider 来配置 jwt_exp_days
-        try:
-            core_provider = DepProviderRegistry.get("core")
-            if hasattr(core_provider, "jwt_exp_days"):
-                core_provider.jwt_exp_days = cls.cfg_web.value.jwt_exp_days
-        except KeyError:
-            logger.warning("Core provider not found in DepProviderRegistry")
 
-        # 创建并注册 WebAPIProvider 到 DepProviderRegistry
-        from astrbot_canary_web.api.provider import WebAPIProvider
+        # Create WebAPIProvider and build web component container
+
+        # Create and configure web API provider
         api_provider = WebAPIProvider()
-        # 从 core provider 获取 log_handler 并设置到 api_provider
+
+        # Get log handler from core container and configure API provider
         try:
-            core_provider = DepProviderRegistry.get("core")
-            if hasattr(core_provider, "log_handler"):
-                api_provider.set_log_handler(core_provider.log_handler)
-            api_provider.set_jwt_exp_days(cls.cfg_web.value.jwt_exp_days)
-        except KeyError:
-            logger.warning("Core provider not found, log handler not set")
-        DepProviderRegistry.register("web_api", api_provider)
+            log_handler = core_container.get(IAstrbotLogHandler)
+            api_provider.set_log_handler(log_handler)
+        except Exception:
+            logger.warning("Could not get log handler from core container")
+
+        api_provider.set_jwt_exp_days(cls.cfg_web.value.jwt_exp_days)
+
+        # Create independent async container for web component
+        web_container = make_async_container(api_provider, FastapiProvider())
+        ContainerRegistry.register_async("web", web_container)
 
         if not AstrbotCanaryFrontend.ensure(Path(cls.cfg_web.value.webroot).absolute()):
             msg = "Failed to ensure frontend files in webroot."
@@ -165,7 +167,7 @@ class AstrbotCanaryWeb(IAstrbotModule):
         )
 
         # Register dishka async container to FastAPI app
-        async_container = DepProviderRegistry.get_async_container()
+        async_container = ContainerRegistry.get_async("core")
         setup_dishka(container=async_container, app=cls.app)
         # Note: Radar initialization requires a database engine
         # For now, skip Radar initialization if engine is not available
@@ -191,15 +193,7 @@ class AstrbotCanaryWeb(IAstrbotModule):
             name="frontend",
         )
 
-        # 从 DepProviderRegistry 获取 broker
-        try:
-            core_provider = DepProviderRegistry.get("core")
-            if hasattr(core_provider, "broker"):
-                cls.broker = core_provider.broker
-        except KeyError:
-            logger.warning(
-                "Core provider not found in DepProviderRegistry, broker not set",
-            )
+        # broker already fetched from core provider above, no need to repeat
 
     @classmethod
     @moduleimpl

@@ -18,7 +18,7 @@ import rich.traceback
 from astrbot_canary_api import (
     ASTRBOT_MODULES_HOOK_NAME,
     AstrbotModuleType,
-    DepProviderRegistry,
+    ContainerRegistry,
     IAstrbotConfigEntry,
     IAstrbotModule,
     IAstrbotPaths,
@@ -137,7 +137,7 @@ class AstrbotRootModule(IAstrbotModule):
         )
 
         # 将 cfg_root 作为 tasks 配置传递
-        AstrbotTasks.init(cls.cfg_root)  # type: ignore[arg-type]
+        AstrbotTasks.init(cls.cfg_root)
 
         cls.broker = AstrbotTasks.broker
 
@@ -151,16 +151,20 @@ class AstrbotRootModule(IAstrbotModule):
             jwt_exp_days=7,
             broker=cls.broker,
             log_handler=handler,
-            paths=cls.paths,  # type: ignore[arg-type]
-            config_entry=cls.ConfigEntry,  # type: ignore[arg-type]
+            paths=cls.paths,
+            config_entry=cls.ConfigEntry,
         )
 
-        # Create async dishka container for FastAPI integration
+        # Create both sync and async containers for core component
+        # - Sync container: for sync module lifecycle methods (Awake, Start, etc.)
+        # - Async container: for FastAPI async routes with @inject decorator
+        from dishka import make_container
+        sync_container = make_container(_core_provider)
         async_container = make_async_container(_core_provider)
 
-        # Register async container to DepProviderRegistry
-        DepProviderRegistry.set_async_container(async_container)
-        DepProviderRegistry.register("core", _core_provider)
+        # Register both containers to ContainerRegistry by component
+        ContainerRegistry.register_sync("core", sync_container)
+        ContainerRegistry.register_async("core", async_container)
 
         boot: list[type[IAstrbotModule]] = []
         # 自动选择默认值 True, 避免阻塞
