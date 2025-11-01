@@ -4,17 +4,18 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
 import uvicorn
 from astrbot_canary_api import (
     AstrbotModuleType,
+    DepProviderRegistry,
     IAstrbotConfigEntry,
     IAstrbotModule,
     IAstrbotPaths,
-    ProviderRegistry,
     moduleimpl,
 )
+from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -80,18 +81,14 @@ class AstrbotCanaryWeb(IAstrbotModule):
             cls.name,
         )
 
-        # 从 dishka 容器获取依赖
-        container = ProviderRegistry.get_container()
-        paths_instance: IAstrbotPaths = container.get(IAstrbotPaths)
-        cls.ConfigEntry = cast(
-            type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]],
-            container.get(type(IAstrbotConfigEntry))
-        )
-        
+        # Get dependencies from core provider directly (since AsyncContainer.get is async)
+        core_provider = DepProviderRegistry.get("core")
+        paths_instance: IAstrbotPaths = core_provider._paths
+        cls.ConfigEntry = core_provider._config_entry
 
         # broker 可能为 None，如果无法获取则设为 None
         try:
-            cls.broker = container.get(AsyncBroker)
+            cls.broker = core_provider._broker
         except Exception:
             cls.broker = None
 
@@ -115,26 +112,26 @@ class AstrbotCanaryWeb(IAstrbotModule):
             cls.cfg_web.value.host,
             cls.cfg_web.value.port,
         )
-        # 从 ProviderRegistry 获取 core provider 来配置 jwt_exp_days
+        # 从 DepProviderRegistry 获取 core provider 来配置 jwt_exp_days
         try:
-            core_provider = ProviderRegistry.get("core")
+            core_provider = DepProviderRegistry.get("core")
             if hasattr(core_provider, "jwt_exp_days"):
                 core_provider.jwt_exp_days = cls.cfg_web.value.jwt_exp_days
         except KeyError:
-            logger.warning("Core provider not found in ProviderRegistry")
+            logger.warning("Core provider not found in DepProviderRegistry")
 
-        # 创建并注册 WebAPIProvider 到 ProviderRegistry
+        # 创建并注册 WebAPIProvider 到 DepProviderRegistry
         from astrbot_canary_web.api.provider import WebAPIProvider
         api_provider = WebAPIProvider()
         # 从 core provider 获取 log_handler 并设置到 api_provider
         try:
-            core_provider = ProviderRegistry.get("core")
+            core_provider = DepProviderRegistry.get("core")
             if hasattr(core_provider, "log_handler"):
                 api_provider.set_log_handler(core_provider.log_handler)
             api_provider.set_jwt_exp_days(cls.cfg_web.value.jwt_exp_days)
         except KeyError:
             logger.warning("Core provider not found, log handler not set")
-        ProviderRegistry.register("web_api", api_provider)
+        DepProviderRegistry.register("web_api", api_provider)
 
         if not AstrbotCanaryFrontend.ensure(Path(cls.cfg_web.value.webroot).absolute()):
             msg = "Failed to ensure frontend files in webroot."
@@ -167,6 +164,9 @@ class AstrbotCanaryWeb(IAstrbotModule):
             lifespan=lifespan,
         )
 
+        # Register dishka async container to FastAPI app
+        async_container = DepProviderRegistry.get_async_container()
+        setup_dishka(container=async_container, app=cls.app)
         # Note: Radar initialization requires a database engine
         # For now, skip Radar initialization if engine is not available
         try:
@@ -191,14 +191,14 @@ class AstrbotCanaryWeb(IAstrbotModule):
             name="frontend",
         )
 
-        # 从 ProviderRegistry 获取 broker
+        # 从 DepProviderRegistry 获取 broker
         try:
-            core_provider = ProviderRegistry.get("core")
+            core_provider = DepProviderRegistry.get("core")
             if hasattr(core_provider, "broker"):
                 cls.broker = core_provider.broker
         except KeyError:
             logger.warning(
-                "Core provider not found in ProviderRegistry, broker not set",
+                "Core provider not found in DepProviderRegistry, broker not set",
             )
 
     @classmethod

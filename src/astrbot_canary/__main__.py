@@ -18,10 +18,10 @@ import rich.traceback
 from astrbot_canary_api import (
     ASTRBOT_MODULES_HOOK_NAME,
     AstrbotModuleType,
+    DepProviderRegistry,
     IAstrbotConfigEntry,
     IAstrbotModule,
     IAstrbotPaths,
-    ProviderRegistry,
 )
 from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
 from astrbot_canary_api.interface import (
@@ -29,7 +29,7 @@ from astrbot_canary_api.interface import (
 )
 from astrbot_canary_helper import AstrbotCanaryHelper
 from click import Choice, prompt
-from dishka import make_container
+from dishka import make_async_container
 from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 PluginManager...
 from pydantic import BaseModel
 from rich.logging import RichHandler
@@ -155,12 +155,12 @@ class AstrbotRootModule(IAstrbotModule):
             config_entry=cls.ConfigEntry,  # type: ignore[arg-type]
         )
 
-        # 创建 dishka 容器
-        container = make_container(_core_provider)
+        # Create async dishka container for FastAPI integration
+        async_container = make_async_container(_core_provider)
 
-        # 注册容器到 ProviderRegistry
-        ProviderRegistry.set_container(container)
-        ProviderRegistry.register("core", _core_provider)
+        # Register async container to DepProviderRegistry
+        DepProviderRegistry.set_async_container(async_container)
+        DepProviderRegistry.register("core", _core_provider)
 
         boot: list[type[IAstrbotModule]] = []
         # 自动选择默认值 True, 避免阻塞
@@ -285,24 +285,22 @@ class AstrbotRootModule(IAstrbotModule):
         tui_module: list[type[IAstrbotModule]] = []
 
         for ep in eps:
-            module = ep.load()
+            module: type[IAstrbotModule] = ep.load()
             # ep.load() can return different things depending on the entrypoint.
             # We expect a class that implements IAstrbotModule (subclass or registered).
-            if isinstance(module, type):
-                match module.module_type:
-                    case AstrbotModuleType.CORE:
-                        core_module.append(module)
-                    case AstrbotModuleType.LOADER:
-                        loader_module.append(module)
-                    case AstrbotModuleType.WEB:
-                        web_module.append(module)
-                    case AstrbotModuleType.TUI:
-                        tui_module.append(module)
-                    case _:
-                        unknown_module.append(module)
-            else:
-                # treat unexpected values as unknown modules
-                unknown_module.append(module)
+
+            match module.module_type:
+                case AstrbotModuleType.CORE:
+                    core_module.append(module)
+                case AstrbotModuleType.LOADER:
+                    loader_module.append(module)
+                case AstrbotModuleType.WEB:
+                    web_module.append(module)
+                case AstrbotModuleType.TUI:
+                    tui_module.append(module)
+                case _:
+                    unknown_module.append(module)
+
         return unknown_module, core_module, loader_module, web_module, tui_module
 
     # region Destroy

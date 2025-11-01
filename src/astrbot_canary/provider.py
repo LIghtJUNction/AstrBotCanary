@@ -47,8 +47,11 @@ class AstrbotCoreProvider(Provider):
         return self._broker
 
     @provide(scope=Scope.APP, provides=IAstrbotLogHandler)
-    def get_log_handler(self) -> IAstrbotLogHandler | None:
+    def get_log_handler(self) -> IAstrbotLogHandler:
         """Provide AsyncAstrbotLogHandler as IAstrbotLogHandler."""
+        if self._log_handler is None:
+            msg = "Log handler not initialized"
+            raise RuntimeError(msg)
         return self._log_handler
 
     @provide(scope=Scope.APP, provides=IAstrbotPaths)

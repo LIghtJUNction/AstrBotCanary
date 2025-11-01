@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from dishka import AsyncContainer, Container
 
-__all__ = ["ProviderRegistry"]
+__all__ = ["DepProviderRegistry"]
 
 
-class ProviderRegistry:
+class DepProviderRegistry:
     """Central registry for module providers and dishka containers."""
 
     _providers: ClassVar[dict[str, object]] = {}

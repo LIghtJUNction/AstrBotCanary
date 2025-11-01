@@ -14,7 +14,7 @@ from .interface import (
     modulespec,
 )
 from .models import LogHistoryItem, LogHistoryResponseData, LogSSEItem
-from .provider import ProviderRegistry
+from .provider import DepProviderRegistry
 
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
@@ -22,6 +22,7 @@ __all__ = [
     "AstrbotInvalidPathError",
     "AstrbotInvalidProviderPathError",
     "AstrbotModuleType",
+    "DepProviderRegistry",
     "IAstrbotConfigEntry",
     "IAstrbotLogHandler",
     "IAstrbotModule",
@@ -30,7 +31,6 @@ __all__ = [
     "LogHistoryResponseData",
     "LogSSEItem",
     "ProviderNotSetError",
-    "ProviderRegistry",
     "SecretError",
     "moduleimpl",
     "modulespec",
