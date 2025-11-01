@@ -16,6 +16,13 @@ T = TypeVar("T", bound=BaseModel)
 
 class IAstrbotConfigEntry(ABC, Generic[T]):
     """配置条目的抽象基类."""
+    group: str
+    name: str
+
+    value: T
+    default: T
+
+    description: str
 
     @classmethod
     @abstractmethod

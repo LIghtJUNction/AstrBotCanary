@@ -48,6 +48,8 @@ class AstrbotCanaryWeb(IAstrbotModule):
     module_type: AstrbotModuleType = AstrbotModuleType.WEB
     info: PackageMetadata | None = None
 
+    cfg_web: IAstrbotConfigEntry[AstrbotCanaryWebConfig] | None = None
+
     def __init__(
         self,
         paths: IAstrbotPaths | None = None,

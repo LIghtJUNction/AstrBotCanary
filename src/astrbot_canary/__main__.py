@@ -5,7 +5,7 @@ status: dev
 authors: [LIghtJUNction]
 owners: [LIghtJUNction]
 created: 2025-10-09
-updated: 2025-10-21
+updated: 2025-11.1
 """
 
 from __future__ import annotations
@@ -95,6 +95,8 @@ class AstrbotRootModule(IAstrbotModule):
     # Dynamically set in Awake
     paths: IAstrbotPaths
     broker: AsyncBroker
+
+    cfg_root : IAstrbotConfigEntry[AstrbotRootConfig]
 
     """Astrbot根模块
     请勿参考本模块进行开发
