@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
 
 import keyring
 import toml
@@ -22,7 +22,9 @@ logger = getLogger("astrbot.module.core.config")
 
 __all__ = ["AstrbotConfigEntry"]
 
-class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T],BaseModel):
+T = TypeVar("T", bound=BaseModel)
+
+class AstrbotConfigEntry(IAstrbotConfigEntry[T], BaseModel, Generic[T]):
     # type parameter T is used for value/default
     name: str
     group: str
@@ -102,12 +104,10 @@ class AstrbotConfigEntry[T: BaseModel](IAstrbotConfigEntry[T],BaseModel):
         self.value = self.default.model_copy(deep=True)
         self.save()
 
-    @override
     def __repr__(self) -> str:
         """REPR."""
         return f"<@{self.group}.{self.name}={self.value}?{self.default}>"
 
-    @override
     def __str__(self) -> str:
         return (
             f"AstrbotConfigEntry\n"

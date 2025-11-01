@@ -1,27 +1,33 @@
+from __future__ import annotations
+
 from importlib.metadata import PackageMetadata
 from logging import Logger, getLogger
 
-from astrbot_canary_api import AstrbotModuleType
-from astrbot_canary_api.decorators import AstrbotModule
+from astrbot_canary_api import (
+    AstrbotModuleType,
+    IAstrbotModule,
+)
 
 logger: Logger = getLogger("astrbot.module.tui")
 
 
-@AstrbotModule("astrbot_canary_tui", "canary_tui", AstrbotModuleType.TUI)
-class AstrbotCanaryTui:
+class AstrbotCanaryTui(IAstrbotModule):
+    pypi_name: str = "astrbot_canary_tui"
+    name: str = "canary_tui"
+    module_type: AstrbotModuleType = AstrbotModuleType.TUI
     info: PackageMetadata | None = None
 
     @classmethod
     def Awake(cls) -> None:
-        logger.info("%s is awakening.", cls.info.get("Name") if cls.info else "unknown")
+        logger.info("%s is awakening.", cls.name)
 
     @classmethod
     def Start(cls) -> None:
-        logger.info("%s has started.", cls.info.get("Name") if cls.info else "unknown")
+        logger.info("%s has started.", cls.name)
 
     @classmethod
     def OnDestroy(cls) -> None:
         logger.info(
             "%s is being destroyed.",
-            cls.info.get("Name") if cls.info else "unknown",
+            cls.name,
         )

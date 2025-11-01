@@ -1,18 +1,19 @@
 [project]
 name = "astrbot-canary-web"
-version = "0.1.0"
 description = "astrbot canary web module"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
-requires-python = ">=3.13.8"
+dynamic = ["version"]
+requires-python = ">=3.10"
 dependencies = [
     "anyio>=4.11.0",
     "astrbot-canary-api",
     "email-validator>=2.3.0",
     "fastapi>=0.119.0",
     "fastapi-radar>=0.2.0",
+    "fastapi-users[sqlmodel]>=13.0.0",
     "orjson>=3.11.3",
     "pydantic>=2.12.0",
     "pyjwt>=2.10.1",
@@ -24,8 +25,14 @@ dependencies = [
     "uvicorn>=0.37.0",
 ]
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]

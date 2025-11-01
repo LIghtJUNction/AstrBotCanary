@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
+    from importlib.metadata import PackageMetadata
     from pathlib import Path
 
-class IAstrbotConfigEntry[T: BaseModel](ABC):
+    from astrbot_canary_api.enums import AstrbotModuleType
+
+T = TypeVar("T", bound=BaseModel)
+
+class IAstrbotConfigEntry(ABC, Generic[T]):
     """配置条目的抽象基类."""
 
     @classmethod
@@ -93,4 +98,30 @@ class IAstrbotPaths(ABC):
     @abstractmethod
     async def achdir(self, cwd: str = "home") -> AbstractAsyncContextManager[Path]:
         """异步临时切换到指定目录, 子进程将继承此 CWD。"""
+
+
+class IAstrbotModule(ABC):
+    """Astrbot 模块接口抽象基类
+    所有模块必须继承此类并实现所有抽象方法和属性。
+    """
+
+    pypi_name: str
+    name: str
+    module_type: AstrbotModuleType
+    info: PackageMetadata | None
+
+    @classmethod
+    @abstractmethod
+    def Awake(cls) -> None:
+        """模块自身初始化时调用."""
+
+    @classmethod
+    @abstractmethod
+    def Start(cls) -> None:
+        """模块启动时调用."""
+
+    @classmethod
+    @abstractmethod
+    def OnDestroy(cls) -> None:
+        """模块卸载时调用."""
 

@@ -13,11 +13,10 @@ from logging import getLogger
 from astrbot_canary_api import (
     AstrbotModuleType,
     IAstrbotConfigEntry,
-    IAstrbotDatabase,
+    IAstrbotModule,
     IAstrbotPaths,
     moduleimpl,
 )
-from astrbot_canary_api.decorators import AstrbotModule
 from pydantic import BaseModel
 
 """
@@ -31,14 +30,14 @@ class AstrbotCoreConfig(BaseModel):
     """核心模块配置项."""
 
 
-@AstrbotModule("astrbot_canary", "canary_core", AstrbotModuleType.CORE)
-class AstrbotCoreModule:
+class AstrbotCoreModule(IAstrbotModule):
     info: PackageMetadata | None = None
     pypi_name: str = ""
+    name: str = "core"
+    module_type: AstrbotModuleType = AstrbotModuleType.CORE
     ConfigEntry: type[IAstrbotConfigEntry[AstrbotCoreConfig]] | None = None
 
     paths: IAstrbotPaths | None = None
-    database: IAstrbotDatabase | None = None
 
     # region 基本生命周期
     @classmethod
@@ -46,19 +45,13 @@ class AstrbotCoreModule:
     def Awake(
         cls: type["AstrbotCoreModule"],
     ) -> None:
-        if cls.info is None:
-            msg = "info未能成功注入"
-            raise RuntimeError(msg)
-        logger.info("%s is awakening", cls.info.get("name"))
+        logger.info("%s is awakening", cls.name)
 
     # 开始自检 -- 尝试从入口点发现loader模块和frontend模块
     @classmethod
     @moduleimpl
     def Start(cls) -> None:
-        if cls.info is None:
-            msg = "info未能成功注入"
-            raise RuntimeError(msg)
-        logger.info("%s start.", cls.info.get("name"))
+        logger.info("%s start.", cls.name)
 
     @classmethod
     @moduleimpl

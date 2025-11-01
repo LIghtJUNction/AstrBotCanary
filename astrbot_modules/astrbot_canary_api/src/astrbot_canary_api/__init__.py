@@ -1,4 +1,4 @@
-from .abc import IAstrbotConfigEntry, IAstrbotPaths
+from .abc import IAstrbotConfigEntry, IAstrbotModule, IAstrbotPaths
 from .enums import AstrbotModuleType
 from .exceptions import (
     AstrbotContainerNotFoundError,
@@ -10,11 +10,11 @@ from .exceptions import (
 from .interface import (
     ASTRBOT_MODULES_HOOK_NAME,
     IAstrbotLogHandler,
-    IAstrbotModule,
     moduleimpl,
     modulespec,
 )
 from .models import LogHistoryItem, LogHistoryResponseData, LogSSEItem
+from .provider import ProviderRegistry
 
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
@@ -30,8 +30,10 @@ __all__ = [
     "LogHistoryResponseData",
     "LogSSEItem",
     "ProviderNotSetError",
+    "ProviderRegistry",
     "SecretError",
     "moduleimpl",
     "modulespec",
 
 ]
+

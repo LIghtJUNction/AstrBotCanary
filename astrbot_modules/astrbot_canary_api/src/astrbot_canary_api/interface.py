@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Protocol,
-    runtime_checkable,
 )
 
 from pluggy import HookimplMarker, HookspecMarker
@@ -13,7 +12,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterable
     from logging import LogRecord
 
-    from astrbot_canary_api.enums import AstrbotModuleType
     from astrbot_canary_api.models import LogHistoryResponseData
 
 
@@ -39,34 +37,6 @@ moduleimpl = HookimplMarker(ASTRBOT_MODULES_HOOK_NAME)
 # 此协议用于type hint
 # 模块实现应该按照ModuleSpec写
 
-
-@runtime_checkable
-class IAstrbotModule(Protocol):
-    """Astrbot 模块接口协议
-    请使用@AstrbotModule注入必要的元数据
-    以及注入一些实用的类/实例
-    本协议仅供检查/规范
-    以及类型提示使用.
-    """
-
-    pypi_name: str
-    name: str
-    module_type: AstrbotModuleType
-
-    @classmethod
-    def Awake(cls) -> None:
-        """模块自身初始化时调用."""
-        ...
-
-    @classmethod
-    def Start(cls) -> None:
-        """模块启动时调用."""
-        ...
-
-    @classmethod
-    def OnDestroy(cls) -> None:
-        """模块卸载时调用."""
-        ...
 
 
 class AstrbotModuleSpec:

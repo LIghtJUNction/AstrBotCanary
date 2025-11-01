@@ -1,0 +1,111 @@
+2025-11-01 15:39:25 INFO     AstrbotCanary 正在启动,加载模块... __main__.py:105
+┌───────────────────── Traceback (most recent call last) ─────────────────────┐
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\src\astrbot_canary\__main__.p │
+│ y:311 in <module>                                                           │
+│                                                                             │
+│   308                                                                       │
+│   309                                                                       │
+│   310 if __name__ == "__main__":                                            │
+│ > 311 │   AstrbotRootModule.Awake()                                         │
+│   312 │   AstrbotRootModule.Start()                                         │
+│   313                                                                       │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\src\astrbot_canary\__main__.p │
+│ y:156 in Awake                                                              │
+│                                                                             │
+│   153 │   │                                                                 │
+│   154 │   │   boot: list[type[IAstrbotModule]] = []                         │
+│   155 │   │   # 自动选择默认值 True, 避免阻塞                               │
+│ > 156 │   │   boot = cls._boot_from_config(cls.cfg_root.value.boot)         │
+│   157 │   │                                                                 │
+│   158 │   │   for astrbot_module in boot:                                   │
+│   159 │   │   │   cls.mm.register(astrbot_module)                           │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\src\astrbot_canary\__main__.p │
+│ y:199 in _boot_from_config                                                  │
+│                                                                             │
+│   196 │   │   │   )                                                         │
+│   197 │   │   │   if ep is None:                                            │
+│   198 │   │   │   │   continue                                              │
+│ > 199 │   │   │   module = ep.load()                                        │
+│   200 │   │   │   # ep.load() should return a class (module implementation) │
+│   201 │   │   │   if module is None:                                        │
+│   202 │   │   │   │   continue                                              │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\.venv\lib\site-packages\impor │
+│ tlib_metadata\__init__.py:221 in load                                       │
+│                                                                             │
+│    218 │   │   is indicated by the value, return that module. Otherwise,    │
+│    219 │   │   return the named object.                                     │
+│    220 │   │   """                                                          │
+│ >  221 │   │   module = import_module(self.module)                          │
+│    222 │   │   attrs = filter(None, (self.attr or '').split('.'))           │
+│    223 │   │   return functools.reduce(getattr, attrs, module)              │
+│    224                                                                      │
+│                                                                             │
+│ C:\Users\light\AppData\Roaming\uv\python\cpython-3.10.17-windows-x86_64-non │
+│ e\lib\importlib\__init__.py:126 in import_module                            │
+│                                                                             │
+│   123 │   │   │   if character != '.':                                      │
+│   124 │   │   │   │   break                                                 │
+│   125 │   │   │   level += 1                                                │
+│ > 126 │   return _bootstrap._gcd_import(name[level:], package, level)       │
+│   127                                                                       │
+│   128                                                                       │
+│   129 _RELOADING = {}                                                       │
+│ in _gcd_import:1050                                                         │
+│ in _find_and_load:1027                                                      │
+│ in _find_and_load_unlocked:1006                                             │
+│ in _load_unlocked:688                                                       │
+│ in exec_module:883                                                          │
+│ in _call_with_frames_removed:241                                            │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\astrbot_modules\astrbot_canar │
+│ y_web\src\astrbot_canary_web\__init__.py:1 in <module>                      │
+│                                                                             │
+│ > 1 from .module import AstrbotCanaryWeb                                    │
+│   2                                                                         │
+│   3 __all__ = ["AstrbotCanaryWeb"]                                          │
+│   4                                                                         │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\astrbot_modules\astrbot_canar │
+│ y_web\src\astrbot_canary_web\module.py:22 in <module>                       │
+│                                                                             │
+│    19 from fastapi_radar import Radar                                       │
+│    20 from pydantic import BaseModel                                        │
+│    21                                                                       │
+│ >  22 from astrbot_canary_web.api import api_router                         │
+│    23 from astrbot_canary_web.frontend import AstrbotCanaryFrontend         │
+│    24 from astrbot_injector import AstrbotInjector                          │
+│    25                                                                       │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\astrbot_modules\astrbot_canar │
+│ y_web\src\astrbot_canary_web\api\__init__.py:3 in <module>                  │
+│                                                                             │
+│    1 from fastapi import APIRouter                                          │
+│    2                                                                        │
+│ >  3 from .auth import auth_router                                          │
+│    4 from .chat import chat_router                                          │
+│    5 from .config import config_router                                      │
+│    6 from .conversation import conversation_router                          │
+│                                                                             │
+│ C:\Users\light\Documents\GitHub\AstrBotCanary\astrbot_modules\astrbot_canar │
+│ y_web\src\astrbot_canary_web\api\auth\__init__.py:15 in <module>            │
+│                                                                             │
+│    12 from pydantic import BaseModel, TypeAdapter                           │
+│    13 from sqlalchemy import select                                         │
+│    14                                                                       │
+│ >  15 from astrbot_canary_web.models import Base, Response, User            │
+│    16 from astrbot_injector import AstrbotInjector                          │
+│    17                                                                       │
+│    18 if TYPE_CHECKING:                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  C:\Users\light\Documents\GitHub\AstrBotCanary\astrbot_modules\astrbot_cana │
+│ ry_web\src\astrbot_canary_web\models.py:252                                 │
+│ class Response[DataT](BaseModel):                                           │
+│               ▲                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+SyntaxError: invalid syntax
+2025-11-01 15:39:26 INFO     AstrbotCanary                      __main__.py:302
+                             正在退出,执行清理操作...                          

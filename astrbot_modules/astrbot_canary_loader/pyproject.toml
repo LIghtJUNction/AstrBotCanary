@@ -1,18 +1,24 @@
 [project]
 name = "astrbot-canary-loader"
-version = "0.1.0"
 description = "astrbot canary模块加载器"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
-requires-python = ">=3.13.8"
+dynamic = ["version"]
+requires-python = ">=3.10"
 dependencies = [
     "astrbot-canary-api",
 ]
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]

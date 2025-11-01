@@ -1,236 +1,50 @@
 from __future__ import annotations
 
-import hashlib
-import secrets
-from datetime import UTC, datetime, timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Literal,
-    Self,
-    TypeVar,
-    overload,
-)
+from collections.abc import AsyncIterable
+from typing import Any, Generic, Literal, TypeVar, overload
 
 from fastapi.responses import StreamingResponse
-from jwt import decode, encode
 from pydantic import BaseModel
-from sqlalchemy import String, select
+from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterable
 
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-
-# PyJWT
-class Base(DeclarativeBase): ...
-
-
+# SQLAlchemy Base
+class Base(DeclarativeBase):
+    pass
 # region User 模型
 class User(Base):
-    """SQLAlchemy ORM 用户模型..
+    """使用 fastapi-users 的用户模型。
 
-    存储用户的用户名,带盐密码哈希,随机盐值和用于签发/验证 JWT 的每用户对称密钥.
-    所有密码学操作(加盐哈希,验证,JWT 签发/验证)均封装为实例/类方法.
+    fastapi-users 处理所有密码哈希、验证和 JWT 令牌签发/验证。
     """
 
     __tablename__ = "users"
 
-    username: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        nullable=False,
-        unique=True,
-        index=True,
-    )
-    password: Mapped[str] = mapped_column(String, nullable=False)  # 存储哈希(hex)
-    salt: Mapped[str] = mapped_column(String, nullable=False)  # 存储随机盐(hex)
-    jwt_secret: Mapped[str] = mapped_column(String, nullable=False)
-
-    # PBKDF2 参数
-    _HASH_ITERATIONS: ClassVar[int] = 100_000
-    _HASH_NAME: ClassVar[str] = "sha256"
+    # fastapi-users 要求的字段
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    username: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    is_superuser: Mapped[bool] = mapped_column(default=False)
+    is_verified: Mapped[bool] = mapped_column(default=False)
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
-        return f"<User {self.username!r} >"
+        return f"<User {self.username!r}>"
 
     def to_dict(self) -> dict[str, Any]:
-        """返回用户的简要序列化表示..
+        """返回用户的简要序列化表示.
 
-        注意:在生产 API 中不要暴露 password,salt 或 jwt_secret.
+        注意: 在生产 API 中不要暴露 hashed_password.
         """
-        return {"username": self.username}
-
-    # region 公共接口
-    async def verify_password_async(self: User, password: str) -> bool:
-        salt_bytes = bytes.fromhex(self.salt)
-        hash_bytes = hashlib.pbkdf2_hmac(
-            self._HASH_NAME,
-            password.encode(),
-            salt_bytes,
-            self._HASH_ITERATIONS,
-        )
-        return self.password == hash_bytes.hex()
-
-    async def issue_token_async(self: User, exp_days: int = 7) -> str:
-        return self.generate_jwt(self.username, exp=exp_days)
-
-    @classmethod
-    async def create_and_issue_token(
-        cls,
-        session: AsyncSession,
-        username: str,
-        password: str,
-        exp_days: int,
-    ) -> tuple[User, str]:
-        user = await cls._create(session, username=username, password=password)
-        token = user.generate_jwt(username=username, exp=exp_days)
-        return user, token
-
-    @classmethod
-    async def find_by_token_async(
-        cls,
-        session: AsyncSession,
-        token: str,
-        expected_iss: str | None = None,
-    ) -> tuple[User, dict[str, Any]]:
-        last_exc: Exception | None = None
-        try:
-            unverified = decode(token, options={"verify_signature": False})
-        except ValueError:
-            unverified = None
-        if isinstance(unverified, dict):
-            aud = unverified.get("aud")
-            if isinstance(aud, str) and aud:
-                candidate = await session.get(cls, aud)
-                if candidate:
-                    try:
-                        payload = candidate.verify_jwt(
-                            token,
-                            expected_iss=expected_iss,
-                            expected_aud=aud,
-                        )
-                    except (ValueError, TypeError) as e:
-                        last_exc = e
-                    else:
-                        return candidate, payload
-        result = await session.execute(select(cls))
-        users = result.scalars().all()
-        for user in users:
-            try:
-                payload = user.verify_jwt(token, expected_iss=expected_iss)
-            except (ValueError, TypeError) as e:
-                last_exc = e
-            else:
-                return user, payload
-        msg = "no user matches token"
-        raise LookupError(msg) from last_exc
-
-    async def update_password_async(
-        self,
-        session: AsyncSession,
-        new_password: str,
-    ) -> None:
-        self._set_password(new_password)
-        session.add(self)
-        await session.flush()
-
-    async def update_username_async(
-        self,
-        session: AsyncSession,
-        new_username: str,
-    ) -> None:
-        exists = await session.get(User, new_username)
-        if exists:
-            msg = "username already taken"
-            raise ValueError(msg)
-        self.username = new_username
-        session.add(self)
-        await session.flush()
-
-    # endregion
-
-    # region 内部方法
-    @classmethod
-    async def _create(
-        cls,
-        session: AsyncSession,
-        username: str,
-        password: str,
-    ) -> User:
-        user = cls(
-            username=username,
-            salt=secrets.token_hex(16),
-            jwt_secret=secrets.token_hex(32),
-        )
-        user._set_password(password)
-        session.add(user)
-        await session.flush()
-        return user
-
-    def _set_password(self, password: str) -> None:
-        salt_bytes = bytes.fromhex(self.salt)
-        hash_bytes = hashlib.pbkdf2_hmac(
-            self._HASH_NAME,
-            password.encode(),
-            salt_bytes,
-            self._HASH_ITERATIONS,
-        )
-        self.password = hash_bytes.hex()
-
-    def generate_jwt(self, username: str, exp: int = 7) -> str:
-        now = datetime.now(UTC)
-        payload = {
-            "iss": "AstrBotCanary",  # 签发者
-            "sub": username,  # 主题(用户唯一标识)
-            "aud": username,  # 接收方
-            "exp": int((now + timedelta(days=exp)).timestamp()),  # 过期时间
-            "nbf": int(now.timestamp()),  # 生效时间
-            "iat": int(now.timestamp()),  # 签发时间
-            "jti": secrets.token_hex(8),  # JWT唯一ID
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "is_active": self.is_active,
+            "is_verified": self.is_verified,
         }
-        return encode(payload, self.jwt_secret, algorithm="HS256").decode("utf-8")
-
-    def verify_jwt(
-        self,
-        token: str,
-        expected_iss: str | None = None,
-        expected_aud: str | None = None,
-        expected_sub: str | None = None,
-    ) -> dict[str, Any]:
-        payload = decode(
-            token,
-            self.jwt_secret,
-            algorithms=["HS256"],
-            audience=self.username,
-        )
-        now = int(datetime.now(UTC).timestamp())
-        if expected_iss and payload.get("iss") != expected_iss:
-            msg = "issuer mismatch"
-            raise ValueError(msg)
-        if expected_aud and payload.get("aud") != expected_aud:
-            msg = "audience mismatch"
-            raise ValueError(msg)
-        if expected_sub and payload.get("sub") != expected_sub:
-            msg = "subject mismatch"
-            raise ValueError(msg)
-        if "nbf" in payload and payload["nbf"] > now:
-            msg = "token not yet valid"
-            raise ValueError(msg)
-        if "iat" in payload and payload["iat"] > now:
-            msg = "token issued in future"
-            raise ValueError(msg)
-        if "exp" in payload and payload["exp"] < now:
-            msg = "token expired"
-            raise ValueError(msg)
-        if "jti" not in payload:
-            msg = "missing JWT ID"
-            raise ValueError(msg)
-        return payload
-        # endregion
 
 
 # endregion
@@ -249,7 +63,7 @@ class User(Base):
 DataT = TypeVar("DataT")
 
 
-class Response[DataT](BaseModel):
+class Response(BaseModel, Generic[DataT]):
     status: Literal["ok", "error"] = "ok"
     message: str | None = None
     data: DataT | None = None
@@ -290,7 +104,7 @@ class Response[DataT](BaseModel):
         return cls(status="ok", message=message, data=data)
 
     @classmethod
-    def error(cls, message: str | None = "error") -> Self:
+    def error(cls, message: str | None = "error") -> Response[DataT]:
         return cls(status="error", message=message, data=None)
 
     @staticmethod

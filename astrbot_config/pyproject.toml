@@ -1,12 +1,12 @@
 [project]
 name = "astrbot-config"
-version = "0.1.4"
 description = "astrbot configuration "
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
-requires-python = ">=3.13.8"
+dynamic = ["version"]
+requires-python = ">=3.10"
 dependencies = [
     "astrbot-canary-api",
     "keyring>=25.6.0",
@@ -14,7 +14,13 @@ dependencies = [
     "toml>=0.10.2",
 ]
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 

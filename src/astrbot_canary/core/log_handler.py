@@ -1,8 +1,7 @@
 from asyncio import Queue, Task, get_running_loop
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from logging import Handler, LogRecord
-from typing import override
 
 import orjson
 from astrbot_canary_api import (
@@ -20,13 +19,12 @@ class AsyncAstrbotLogHandler(Handler):
         self.queue: Queue[LogHistoryItem] = Queue(maxsize=maxsize)
         self._tasks: list[Task[None]] = []
 
-    @override
     def emit(self, record: LogRecord) -> None:
         """发送."""
         msg = record.getMessage()
         log_item = LogHistoryItem(
             level=record.levelname,
-            time=datetime.now(UTC).isoformat(),
+            time=datetime.now(timezone.utc).isoformat(),
             data=msg,
         )
         try:

@@ -1,0 +1,19 @@
+name = "api_key"
+group = "A"
+description = ""
+
+[value]
+base_url = "xxx"
+
+[default]
+base_url = "xxx"
+
+[value.api_key]
+key_name = "gpt5-api-key"
+service = "astrbot"
+key_id = "@astrbot:gpt5-api-key"
+
+[default.api_key]
+key_name = "gpt5-api-key"
+service = "astrbot"
+key_id = "none"

@@ -1,17 +1,20 @@
 [project]
 name = "astrbot-paths"
-version = "0.1.3"
 description = "提供各类路径,确保整个系统路径规范"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
-requires-python = ">=3.13.8"
-dependencies = [
-    "astrbot-canary-api",
-    "dotenv>=0.9.9",
-]
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"

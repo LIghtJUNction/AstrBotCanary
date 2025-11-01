@@ -21,12 +21,15 @@ from astrbot_canary_api import (
     IAstrbotConfigEntry,
     IAstrbotModule,
     IAstrbotPaths,
+    ProviderRegistry,
 )
 from astrbot_canary_api.enums import AstrbotBrokerType, AstrbotResultBackendType
 from astrbot_canary_api.interface import (
     AstrbotModuleSpec,
 )
+from astrbot_canary_helper import AstrbotCanaryHelper
 from click import Choice, prompt
+from dishka import make_container
 from pluggy import PluginManager as ModuleManager  # 为了区分加载器的 PluginManager...
 from pydantic import BaseModel
 from rich.logging import RichHandler
@@ -34,19 +37,19 @@ from rich.logging import RichHandler
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
 from astrbot_canary.core.tasks import AstrbotTasks
-
-# from astrbot_injector import AstrbotInjector
-# from astrbot_paths.src.astrbot_paths.paths import AstrbotPaths
+from astrbot_canary.provider import AstrobotCoreProvider
+from astrbot_config import AstrbotConfigEntry  # 具体实现
+from astrbot_paths import AstrbotPaths  # 具体实现
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
 
     from taskiq import AsyncBroker
 
+# 注册具体实现到 API 层
+ProviderRegistry.register("config_entry_impl", AstrbotConfigEntry)
+ProviderRegistry.register("paths_impl", AstrbotPaths)
 
-# region 注入实现
-# AstrbotInjector.set("Paths", AstrbotPaths)
-# AstrbotInjector.set("ConfigEntry", AstrbotConfigEntry)
 
 class AstrbotDatabaseConfig(BaseModel):
     """Astrbot数据库配置项"""
@@ -65,6 +68,7 @@ class AstrbotDatabaseConfig(BaseModel):
     timeout: int = 5
     """连接超时(用于 Redis、PostgreSQL 等)"""
 
+
 # 安装错误堆栈追踪器
 # enable rich tracebacks and pretty console logging
 _ = rich.traceback.install()
@@ -79,19 +83,17 @@ basicConfig(
 logger = getLogger("astrbot")
 
 # @AstrbotInjector.inject
-class AstrbotRootModule:
+class AstrbotRootModule(IAstrbotModule):
     mm: ModuleManager = ModuleManager(ASTRBOT_MODULES_HOOK_NAME)
     pypi_name: str = "astrbot_canary"
     name: str = "canary_root"
     module_type: AstrbotModuleType = AstrbotModuleType.CORE
 
-    ConfigEntry: type[IAstrbotConfigEntry]
-    Paths: type[IAstrbotPaths]
+    ConfigEntry: type[IAstrbotConfigEntry] = AstrbotConfigEntry
+    Paths: type[IAstrbotPaths] = AstrbotPaths
 
     # Dynamically set in Awake
-    cfg_root: IAstrbotConfigEntry[AstrbotRootConfig]
     paths: IAstrbotPaths
-    cfg_tasks: IAstrbotConfigEntry[AstrbotTasksConfig]
     broker: AsyncBroker
 
     """Astrbot根模块
@@ -131,7 +133,7 @@ class AstrbotRootModule:
             cfg_dir=cls.paths.config,
         )
 
-        cls.cfg_tasks = cls.ConfigEntry[AstrbotTasksConfig].bind(
+        cls.cfg_tasks = cls.ConfigEntry.bind(
             group="core",
             name="tasks",
             default=AstrbotTasksConfig(
@@ -145,11 +147,27 @@ class AstrbotRootModule:
         AstrbotTasks.init(cls.cfg_tasks)
 
         cls.broker = AstrbotTasks.broker
-        # AstrbotInjector.set("broker", cls.broker)
 
         handler = AsyncAstrbotLogHandler(maxsize=cls.cfg_root.value.log_maxsize)
-        # AstrbotInjector.set("AsyncAstrbotLogHandler", handler)
         cls._setup_logging(handler, cls.cfg_root.value.log_what)
+
+        # 创建 dishka core provider 并构建容器
+
+
+        _core_provider = AstrobotCoreProvider(
+            jwt_exp_days=7,
+            broker=cls.broker,
+            log_handler=handler,
+            paths=cls.paths,
+            config_entry=cls.ConfigEntry,
+        )
+
+        # 创建 dishka 容器
+        container = make_container(_core_provider)
+
+        # 注册容器到 ProviderRegistry
+        ProviderRegistry.set_container(container)
+        ProviderRegistry.register("core", _core_provider)
 
         boot: list[type[IAstrbotModule]] = []
         # 自动选择默认值 True, 避免阻塞
@@ -181,7 +199,6 @@ class AstrbotRootModule:
                 logger.addHandler(handler)
             case "none":
                 del handler
-                AstrbotInjector.remove("AsyncAstrbotLogHandler")
             case _:
                 _logger = getLogger(log_what)
                 _logger.addHandler(handler)
@@ -303,9 +320,6 @@ class AstrbotRootModule:
         AstrbotRootModule.OnDestroy()
 
     # region Destroy
-
-
-
 
 if __name__ == "__main__":
     AstrbotRootModule.Awake()

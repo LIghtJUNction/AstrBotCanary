@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+from importlib.metadata import PackageMetadata
 from logging import Logger, getLogger
 
-from astrbot_canary_api import AstrbotModuleType, moduleimpl
-from astrbot_canary_api.decorators import AstrbotModule
+from astrbot_canary_api import (
+    AstrbotModuleType,
+    IAstrbotModule,
+    moduleimpl,
+)
 
 logger: Logger = getLogger("astrbot.module.loader")
 
 
-@AstrbotModule("astrbot-canary-loader", "canary_loader", AstrbotModuleType.LOADER)
-class AstrbotLoader:
-    info: None = None
+class AstrbotLoader(IAstrbotModule):
+    pypi_name: str = "astrbot_canary_loader"
+    name: str = "canary_loader"
+    module_type: AstrbotModuleType = AstrbotModuleType.LOADER
+    info: PackageMetadata | None = None
 
     def __call__(self: AstrbotLoader) -> AstrbotLoader:
         return self
