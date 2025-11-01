@@ -16,9 +16,6 @@ from .interface import (
 from .models import LogHistoryItem, LogHistoryResponseData, LogSSEItem
 from .provider import ContainerRegistry
 
-# Backward compatibility alias
-DepProviderRegistry = ContainerRegistry
-
 __all__ = [
     "ASTRBOT_MODULES_HOOK_NAME",
     "AstrbotContainerNotFoundError",
@@ -26,7 +23,6 @@ __all__ = [
     "AstrbotInvalidProviderPathError",
     "AstrbotModuleType",
     "ContainerRegistry",
-    "DepProviderRegistry",  # Deprecated: use ContainerRegistry
     "IAstrbotConfigEntry",
     "IAstrbotLogHandler",
     "IAstrbotModule",
