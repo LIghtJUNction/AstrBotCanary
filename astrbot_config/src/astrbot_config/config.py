@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 import keyring
 import toml
@@ -24,7 +24,7 @@ __all__ = ["AstrbotConfigEntry"]
 
 T = TypeVar("T", bound=BaseModel)
 
-class AstrbotConfigEntry(IAstrbotConfigEntry[T], BaseModel, Generic[T]):
+class AstrbotConfigEntry(IAstrbotConfigEntry[T], BaseModel):
     # type parameter T is used for value/default
     name: str
     group: str

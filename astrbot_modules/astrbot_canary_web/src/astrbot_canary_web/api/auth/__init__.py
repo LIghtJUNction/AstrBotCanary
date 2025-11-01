@@ -70,9 +70,9 @@ async def login(request: Request) -> Response[LoginResponse]:
     # For now, return a placeholder response
     logger.warning(
         "Login endpoint is using placeholder implementation. "
-        "Integrate with fastapi-users for production use."
+        "Integrate with fastapi-users for production use.",
     )
-    
+
     # Placeholder: Accept any credentials and return success
     # In production, this should use fastapi-users authentication manager
     logger.info("User logged in (placeholder): %s", username)

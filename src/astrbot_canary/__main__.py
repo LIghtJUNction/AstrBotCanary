@@ -35,9 +35,9 @@ from pydantic import BaseModel
 from rich.logging import RichHandler
 
 from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
-from astrbot_canary.core.models import AstrbotRootConfig, AstrbotTasksConfig
+from astrbot_canary.core.models import AstrbotRootConfig
 from astrbot_canary.core.tasks import AstrbotTasks
-from astrbot_canary.provider import AstrobotCoreProvider
+from astrbot_canary.provider import AstrbotCoreProvider
 from astrbot_config import AstrbotConfigEntry  # 具体实现
 from astrbot_paths import AstrbotPaths  # 具体实现
 
@@ -45,10 +45,6 @@ if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
 
     from taskiq import AsyncBroker
-
-# 注册具体实现到 API 层
-ProviderRegistry.register("config_entry_impl", AstrbotConfigEntry)
-ProviderRegistry.register("paths_impl", AstrbotPaths)
 
 
 class AstrbotDatabaseConfig(BaseModel):
@@ -89,14 +85,15 @@ class AstrbotRootModule(IAstrbotModule):
     name: str = "canary_root"
     module_type: AstrbotModuleType = AstrbotModuleType.CORE
 
-    ConfigEntry: type[IAstrbotConfigEntry] = AstrbotConfigEntry
+    ConfigEntry: type[IAstrbotConfigEntry[AstrbotRootConfig]] \
+        = AstrbotConfigEntry
     Paths: type[IAstrbotPaths] = AstrbotPaths
 
     # Dynamically set in Awake
     paths: IAstrbotPaths
     broker: AsyncBroker
 
-    cfg_root : IAstrbotConfigEntry[AstrbotRootConfig]
+    cfg_root: IAstrbotConfigEntry[AstrbotRootConfig]
 
     """Astrbot根模块
     请勿参考本模块进行开发
@@ -110,7 +107,7 @@ class AstrbotRootModule(IAstrbotModule):
         cls.mm.add_hookspecs(AstrbotModuleSpec)
         cls.paths = cls.Paths.getPaths(cls.pypi_name)
 
-        cls.cfg_root = cls.ConfigEntry[AstrbotRootConfig].bind(
+        cls.cfg_root = cls.ConfigEntry.bind(
             group="core",
             name="boot",
             default=AstrbotRootConfig(
@@ -118,35 +115,29 @@ class AstrbotRootModule(IAstrbotModule):
                 boot=["canary_core", "canary_loader", "canary_web"],
                 log_what="astrbot",
                 log_maxsize=500,
-            ),
-            description=(
-                "核心模块配置项"
-                "modules: 已发现的全部模块"
-                "boot: 启动模块列表"
-                "log_what: 抓取谁的日志?(这会显示在webui的控制台中)"
-                "  可选:astrbot(默认,抓取全部),astrbot.module(抓取所有模块日志)"
-                "  astrbot.plugin(抓取插件日志)"
-                "  或者:"
-                "  astrbot.module.core(抓取指定模块日志)"
-                "  astrbot.plugin.xxx(抓取指定插件日志)"
-                "  none:不需要用到这个功能!"
-                "log_maxsize: 日志缓存最大数量--这里是给web模块特供的handler使用的"
-            ),
-            cfg_dir=cls.paths.config,
-        )
-
-        cls.cfg_tasks = cls.ConfigEntry.bind(
-            group="core",
-            name="tasks",
-            default=AstrbotTasksConfig(
                 broker_type=AstrbotBrokerType.INMEMORY.value,
                 backend_type=AstrbotResultBackendType.INMEMORY.value,
             ),
-            description="任务队列配置项",
+            description=(
+                "核心模块配置项\n"
+                "modules: 已发现的全部模块\n"
+                "boot: 启动模块列表\n"
+                "log_what: 抓取谁的日志?(这会显示在webui的控制台中)\n"
+                "  可选:astrbot(默认,抓取全部),astrbot.module(抓取所有模块日志)\n"
+                "  astrbot.plugin(抓取插件日志)\n"
+                "  或者:\n"
+                "  astrbot.module.core(抓取指定模块日志)\n"
+                "  astrbot.plugin.xxx(抓取指定插件日志)\n"
+                "  none:不需要用到这个功能!\n"
+                "log_maxsize: 日志缓存最大数量--这里是给web模块特供的handler使用的\n"
+                "broker_type: 任务队列 broker 类型\n"
+                "backend_type: 任务队列 backend 类型"
+            ),
             cfg_dir=cls.paths.config,
         )
 
-        AstrbotTasks.init(cls.cfg_tasks)
+        # 将 cfg_root 作为 tasks 配置传递
+        AstrbotTasks.init(cls.cfg_root)  # type: ignore[arg-type]
 
         cls.broker = AstrbotTasks.broker
 
@@ -156,12 +147,12 @@ class AstrbotRootModule(IAstrbotModule):
         # 创建 dishka core provider 并构建容器
 
 
-        _core_provider = AstrobotCoreProvider(
+        _core_provider = AstrbotCoreProvider(
             jwt_exp_days=7,
             broker=cls.broker,
             log_handler=handler,
-            paths=cls.paths,
-            config_entry=cls.ConfigEntry,
+            paths=cls.paths,  # type: ignore[arg-type]
+            config_entry=cls.ConfigEntry,  # type: ignore[arg-type]
         )
 
         # 创建 dishka 容器

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from astrbot_canary_api.enums import AstrbotModuleType
 
-T = TypeVar("T", bound=BaseModel)
+T = TypeVar("T",bound=BaseModel)
 
 class IAstrbotConfigEntry(ABC, Generic[T]):
     """配置条目的抽象基类."""
@@ -34,7 +34,9 @@ class IAstrbotConfigEntry(ABC, Generic[T]):
         description: str,
         cfg_dir: Path,
     ) -> IAstrbotConfigEntry[T]:
-        """工厂方法:优先从文件加载,否则新建并保存.自动根据default类型推断模型类型."""
+        """工厂方法:优先从文件加载,否则新建并保存.自动根据default类型推断模型类型.
+        请使用BaseModel!
+        """
 
     @abstractmethod
     def save(self) -> None:

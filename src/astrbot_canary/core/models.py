@@ -15,6 +15,10 @@ class AstrbotRootConfig(BaseModel):
     """ 抓谁的日志? """
     log_maxsize: int = 500
     """ 日志缓存最大数量--这里是给web模块特供的handler使用的 """
+    broker_type: str = AstrbotBrokerType.INMEMORY.value
+    """ 任务队列 broker 类型 """
+    backend_type: str = AstrbotResultBackendType.INMEMORY.value
+    """ 任务队列 backend 类型 """
 
 
 class AstrbotTasksConfig(BaseModel):

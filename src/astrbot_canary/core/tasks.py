@@ -1,7 +1,13 @@
-from astrbot_canary_api import IAstrbotConfigEntry
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from taskiq import AsyncBroker, InMemoryBroker
 
-from astrbot_canary.core.models import AstrbotTasksConfig
+if TYPE_CHECKING:
+    from astrbot_canary_api import IAstrbotConfigEntry
+
+    from astrbot_canary.core.models import AstrbotTasksConfig
 
 
 # Astrbot 任务管理器
@@ -13,7 +19,8 @@ class AstrbotTasks:
     broker: AsyncBroker = InMemoryBroker()
 
     @classmethod
-    def init(cls, cfg_tasks: IAstrbotConfigEntry[AstrbotTasksConfig]) -> None:
+    def init(cls, cfg_tasks: IAstrbotConfigEntry[Any]) -> None:
+        """初始化任务系统, 接受任何包含 broker_type 和 backend_type 属性的配置."""
         broker_map = {
             "inmemory": cls.init_inmemory_broker,
             "zeromq": cls.init_zeromq_broker,

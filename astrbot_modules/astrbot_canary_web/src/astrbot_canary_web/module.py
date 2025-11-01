@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import uvicorn
 from astrbot_canary_api import (
@@ -83,7 +83,12 @@ class AstrbotCanaryWeb(IAstrbotModule):
         # 从 dishka 容器获取依赖
         container = ProviderRegistry.get_container()
         paths_instance: IAstrbotPaths = container.get(IAstrbotPaths)
-        cls.ConfigEntry = container.get(type[IAstrbotConfigEntry])
+        cls.ConfigEntry = cast(
+            type[IAstrbotConfigEntry[AstrbotCanaryWebConfig]],
+            container.get(type(IAstrbotConfigEntry))
+        )
+        
+
         # broker 可能为 None，如果无法获取则设为 None
         try:
             cls.broker = container.get(AsyncBroker)
