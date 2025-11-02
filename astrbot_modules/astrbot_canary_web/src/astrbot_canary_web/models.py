@@ -126,5 +126,3 @@ class Response(BaseModel, Generic[DataT]):
             default_headers.update(headers)
         return StreamingResponse(stream, headers=default_headers)
 
-
-# region 日志消息模型
