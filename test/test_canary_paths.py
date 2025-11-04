@@ -2,9 +2,9 @@ import shutil
 from pathlib import Path
 
 import pytest
-from astrbot_paths import AstrbotPaths
+from astrbot_canary_paths import AstrbotPaths
 
-def test_astrbot_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_astrbot_canary_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # 设置环境变量，确保 astrbot_root 在临时目录下
     monkeypatch.setenv("ASTRBOT_ROOT", str(tmp_path / ".astrbot_test"))
     pypi_name = "testmod"

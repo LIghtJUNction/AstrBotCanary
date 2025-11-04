@@ -1,12 +1,12 @@
 [project]
-name = "astrbot-paths"
-description = "提供各类路径,确保整个系统路径规范"
+name = "astrbot-canary-sdk"
+description = "astrbot canary sdk"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = []
 
 [tool.hatch.version]

@@ -38,13 +38,12 @@ from astrbot_canary.core.log_handler import AsyncAstrbotLogHandler
 from astrbot_canary.core.models import AstrbotRootConfig
 from astrbot_canary.core.tasks import AstrbotTasks
 from astrbot_canary.provider import AstrbotCoreProvider
-from astrbot_config import AstrbotConfigEntry  # 具体实现
-from astrbot_paths import AstrbotPaths  # 具体实现
+from astrbot_canary_config import AstrbotConfigEntry  # 具体实现
+from astrbot_canary_paths import AstrbotPaths  # 具体实现
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
 
-    from taskiq import AsyncBroker
 
 
 class AstrbotDatabaseConfig(BaseModel):

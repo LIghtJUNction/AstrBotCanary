@@ -9,7 +9,7 @@
 
 ```python
 # 将从环境变量/.env文件读取Astrbot根目录（数据目录/data目录） 
-from astrbot_paths import AstrbotPaths
+from astrbot_canary_paths import AstrbotPaths
 paths = AstrbotPaths.getPaths("plugin_a") # 初始化
 print(paths.config) # 输出 plugin_a 配置文件路径
 ```
@@ -24,7 +24,7 @@ print(paths.config) # 输出 plugin_a 配置文件路径
 from pathlib import Path
 from random import randint
 from pydantic import BaseModel
-from astrbot_config import AstrbotConfigEntry
+from astrbot_canary_config import AstrbotConfigEntry
 
 class SubConfigExample(BaseModel):
 detail: str

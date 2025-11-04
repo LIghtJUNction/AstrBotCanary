@@ -26,7 +26,7 @@ uv add astrbot-config
 ```python
 from pathlib import Path
 from pydantic import BaseModel
-from astrbot_config import AstrbotConfigEntry
+from astrbot_canary_config import AstrbotConfigEntry
 
 # 定义配置类
 class MyConfig(BaseModel):
@@ -78,7 +78,7 @@ cfg = AstrbotConfigEntry[AppConfig].bind(
 ### 安全密钥管理
 
 ```python
-from astrbot_config import AstrbotSecretKey
+from astrbot_canary_config import AstrbotSecretKey
 from pydantic import Field
 
 class SecureConfig(BaseModel):

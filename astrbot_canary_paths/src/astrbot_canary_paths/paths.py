@@ -55,7 +55,7 @@ class AstrbotPaths(IAstrbotPaths):
     def config(self) -> Path:
         """返回模块/插件配置目录.
 
-        搭配 astrbot_config 使用.
+        搭配 astrbot_canary_config 使用.
         """
         config_path = self.astrbot_root / "config" / self.name
         config_path.mkdir(parents=True, exist_ok=True)
@@ -83,7 +83,7 @@ class AstrbotPaths(IAstrbotPaths):
             getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")).absolute()
 
     @contextmanager
-    def chdir(self, cwd: str = "home") -> Generator[Path]:
+    def chdir(self, cwd: Path) -> Generator[Path]:
         """临时切换到指定目录, 子进程将继承此 CWD。"""
         original_cwd = Path.cwd()
         target_dir = self.root / cwd
@@ -94,9 +94,9 @@ class AstrbotPaths(IAstrbotPaths):
             os.chdir(original_cwd)
 
 
-    # 上面类型标注没错，这里mypy报错，但是这不应该错误，直接忽略掉
+    # 上面类型标注没错,这里mypy报错,但是这不应该错误,直接忽略掉
     @asynccontextmanager
-    async def achdir(self, cwd: str = "home") -> AsyncGenerator[Path]: # type: ignore
+    async def achdir(self, cwd: Path) -> AsyncGenerator[Path]: # type: ignore
         """异步上下文管理器: 临时切换到指定目录, 子进程将继承此 CWD。"""
         original_cwd = Path.cwd()
         target_dir = self.root / cwd

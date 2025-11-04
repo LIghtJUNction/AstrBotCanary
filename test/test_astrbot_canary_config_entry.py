@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, Field
 
-from astrbot_config.config import AstrbotConfigEntry
+from astrbot_canary_config.config import AstrbotConfigEntry
 
 
 class SubConfig(BaseModel):
@@ -42,7 +42,7 @@ def tmp_cfg_dir(tmp_path: Path) -> Path:
     return cfg_dir
 
 
-def test_astrbot_config_entry(tmp_cfg_dir: Path) -> None:
+def test_astrbot_canary_config_entry(tmp_cfg_dir: Path) -> None:
     nested_default = NestedConfig(
         type_1=Type1.OPTION_A.value,
         type_2=Type2.OPTION_X,

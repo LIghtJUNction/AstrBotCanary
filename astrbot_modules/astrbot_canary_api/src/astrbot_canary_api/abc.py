@@ -101,11 +101,11 @@ class IAstrbotPaths(ABC):
         """重新加载环境变量."""
 
     @abstractmethod
-    def chdir(self, cwd: str = "home") -> AbstractContextManager[Path]:
+    def chdir(self, cwd: Path) -> AbstractContextManager[Path]:
         """临时切换到指定目录, 子进程将继承此 CWD。"""
 
     @abstractmethod
-    async def achdir(self, cwd: str = "home") -> AbstractAsyncContextManager[Path]:
+    async def achdir(self, cwd: Path) -> AbstractAsyncContextManager[Path]:
         """异步临时切换到指定目录, 子进程将继承此 CWD。"""
 
 

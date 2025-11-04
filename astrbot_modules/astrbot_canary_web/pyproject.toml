@@ -6,7 +6,7 @@ authors = [
     { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
 ]
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "anyio>=4.11.0",
     "astrbot-canary-api",

@@ -7,7 +7,7 @@ authors = [
 ]
 dynamic = ["version","urls"]
 
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 license = { file = "LICENSE" }
 keywords = [
     "Astrbot",
@@ -41,9 +41,9 @@ dependencies = [
     "pydantic>=2.12.0",
     "types-orjson>=3.6.2",
     "hatch-vcs>=0.5.0",
-    "astrbot-config",
-    "astrbot-sdk",
-    "astrbot-paths",
+    "astrbot-canary-config",
+    "astrbot-canary-sdk",
+    "astrbot-canary-paths",
     "astrnet",
     "dishka>=1.7.2",
 ]
@@ -114,9 +114,9 @@ members = [
     "astrbot_modules/astrbot_canary_api",
     "astrbot_modules/astrbot_canary_tui",
     "astrbot_modules/astrbot_canary_helper",
-    "astrbot_config",
-    "astrbot_paths",
-    "astrbot_sdk",
+    "astrbot_canary_config",
+    "astrbot_canary_paths",
+    "astrbot_canary_sdk",
     "astrnet",
 ]
 
@@ -126,9 +126,9 @@ astrbot-canary-web = { workspace = true }
 astrbot-canary-tui = { workspace = true }
 astrbot-canary-loader = { workspace = true }
 astrbot-canary-helper = { workspace = true }
-astrbot-paths = { workspace = true }
-astrbot-config = { workspace = true }
-astrbot-sdk = { workspace = true }
+astrbot-canary-paths = { workspace = true }
+astrbot-canary-config = { workspace = true }
+astrbot-canary-sdk = { workspace = true }
 astrnet = { workspace = true }
 
 [tool.pytest.ini_options]
@@ -139,14 +139,14 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
 exclude = ["test/", "examples/", '.*\.pyi$', "__about__.py"]
-mypy_path = ["astrbot_modules/","astrbot_plugins", "src/", "astrbot_injector/", "astrbot_paths/", "astrbot_config/", "astrbot_sdk/"]
+mypy_path = ["astrbot_modules/","astrbot_plugins", "src/", "astrbot_injector/", "astrbot_canary_paths/", "astrbot_canary_config/", "astrbot_sdk/"]
 ignore_missing_imports = true
 disallow_untyped_calls = true
 disallow_incomplete_defs = true

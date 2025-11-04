@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from importlib.metadata import PackageMetadata
 from logging import Logger, getLogger
+from typing import TYPE_CHECKING
 
 from astrbot_canary_api import (
     AstrbotModuleType,
     IAstrbotModule,
     moduleimpl,
 )
+
+if TYPE_CHECKING:
+    from importlib.metadata import PackageMetadata
 
 logger: Logger = getLogger("astrbot.module.loader")
 
