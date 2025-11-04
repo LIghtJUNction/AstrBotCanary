@@ -46,6 +46,7 @@ dependencies = [
     "astrbot-canary-paths",
     "astrnet",
     "dishka>=1.7.2",
+    "astrbox",
 ]
 [dependency-groups]
 dev = [
@@ -118,6 +119,7 @@ members = [
     "astrbot_canary_paths",
     "astrbot_canary_sdk",
     "astrnet",
+    "astrbox",
 ]
 
 [tool.uv.sources]
@@ -130,6 +132,7 @@ astrbot-canary-paths = { workspace = true }
 astrbot-canary-config = { workspace = true }
 astrbot-canary-sdk = { workspace = true }
 astrnet = { workspace = true }
+astrbox = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -146,7 +149,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
 exclude = ["test/", "examples/", '.*\.pyi$', "__about__.py"]
-mypy_path = ["astrbot_modules/","astrbot_plugins", "src/", "astrbot_injector/", "astrbot_canary_paths/", "astrbot_canary_config/", "astrbot_sdk/"]
+mypy_path = ["astrbo*"]
 ignore_missing_imports = true
 disallow_untyped_calls = true
 disallow_incomplete_defs = true

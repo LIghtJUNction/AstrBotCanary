@@ -17,6 +17,7 @@ members = [
     "astrbot-canary-sdk",
     "astrbot-canary-tui",
     "astrbot-canary-web",
+    "astrbox",
     "astrnet",
 ]
 
@@ -215,6 +216,7 @@ dependencies = [
     { name = "astrbot-canary-helper" },
     { name = "astrbot-canary-paths" },
     { name = "astrbot-canary-sdk" },
+    { name = "astrbox" },
     { name = "astrnet" },
     { name = "asyncio" },
     { name = "click" },
@@ -296,6 +298,7 @@ requires-dist = [
     { name = "astrbot-canary-tui", marker = "extra == 'tui'", editable = "astrbot_modules/astrbot_canary_tui" },
     { name = "astrbot-canary-web", marker = "extra == 'all'", editable = "astrbot_modules/astrbot_canary_web" },
     { name = "astrbot-canary-web", marker = "extra == 'web'", editable = "astrbot_modules/astrbot_canary_web" },
+    { name = "astrbox", editable = "astrbox" },
     { name = "astrnet", editable = "astrnet" },
     { name = "asyncio", specifier = ">=4.0.0" },
     { name = "click", specifier = ">=8.3.0" },
@@ -456,6 +459,11 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "uvicorn", specifier = ">=0.37.0" },
 ]
+
+[[package]]
+name = "astrbox"
+version = "0.1.0"
+source = { editable = "astrbox" }
 
 [[package]]
 name = "astrnet"

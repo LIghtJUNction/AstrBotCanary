@@ -1,0 +1,23 @@
+[project]
+name = "astrbox"
+dynamic = ["version"]
+description = "astrbox: astrbot 高性能核心"
+readme = "README.md"
+authors = [
+    { name = "LIghtJUNction", email = "LIghtJUNction.me@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+astrbox = "astrbox:main"
+
+[tool.maturin]
+module-name = "astrbox.core"
+python-packages = ["astrbox"]
+python-source = "src"
+
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
