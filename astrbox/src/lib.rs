@@ -5,17 +5,16 @@ fn hello_from_bin() -> String {
     "Hello from astrbox!".to_string()
 }
 
-/// A Python module implemented in Rust. The name of this function must match
-/// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
-/// import the module.
 #[pymodule]
-fn core(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(hello_from_bin, m)?)?;
-    Ok(())
-}
+mod core {
+    use pyo3::prelude::*;
 
-#[pymodule]
-fn cli(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(hello_from_bin, m)?)?;
-    Ok(())
+    #[pymodule_export]
+    use super::hello_from_bin;
+
+    #[pymodule]
+    mod cli {
+        #[pymodule_export]
+        use super::hello_from_bin;
+    }
 }
