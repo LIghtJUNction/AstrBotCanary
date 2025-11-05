@@ -17,9 +17,10 @@ if TYPE_CHECKING:
 class AstrbotPaths(IAstrbotPaths):
     """Class to manage and provide paths used by Astrbot Canary."""
 
-    load_dotenv()
+    _: bool = load_dotenv()
     astrbot_root: ClassVar[Path] = Path(
-        getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")).absolute()
+        getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")
+    ).absolute()
 
     def __init__(self, name: str) -> None:
         self.name: str = name
@@ -37,9 +38,9 @@ class AstrbotPaths(IAstrbotPaths):
     @property
     def root(self) -> Path:
         """返回根目录."""
-        return self.astrbot_root \
-            if self.astrbot_root.exists() \
-            else Path.cwd() / ".astrbot"
+        return (
+            self.astrbot_root if self.astrbot_root.exists() else Path.cwd() / ".astrbot"
+        )
 
     @property
     def home(self) -> Path:
@@ -75,12 +76,12 @@ class AstrbotPaths(IAstrbotPaths):
         log_path.mkdir(parents=True, exist_ok=True)
         return log_path
 
-
     def reload(self) -> None:
         """重新加载环境变量."""
         load_dotenv()
         self.__class__.astrbot_root = Path(
-            getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")).absolute()
+            getenv("ASTRBOT_ROOT", Path.home() / ".astrbot")
+        ).absolute()
 
     @contextmanager
     def chdir(self, cwd: Path) -> Generator[Path]:
@@ -93,10 +94,9 @@ class AstrbotPaths(IAstrbotPaths):
         finally:
             os.chdir(original_cwd)
 
-
     # 上面类型标注没错,这里mypy报错,但是这不应该错误,直接忽略掉
     @asynccontextmanager
-    async def achdir(self, cwd: Path) -> AsyncGenerator[Path]: # type: ignore
+    async def achdir(self, cwd: Path) -> AsyncGenerator[Path]:  # type: ignore
         """异步上下文管理器: 临时切换到指定目录, 子进程将继承此 CWD。"""
         original_cwd = Path.cwd()
         target_dir = self.root / cwd
