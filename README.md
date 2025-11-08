@@ -63,7 +63,13 @@ print(cfg.value)  # Verify the saved configuration
 
 
 
-## Astrbot messages
+## Run
 
+- uv sync --dev
 
-...
+(通过入口点发现各个模块，因此需要将模块安装在当前虚拟环境，才能发现)
+
+- python -m astrbot_canary
+
+或者使用：
+- uv run -m astrbot_canary
