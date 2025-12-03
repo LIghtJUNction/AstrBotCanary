@@ -4,6 +4,19 @@
 
 注意：本项目为实验性分支，不是官方 AstrBot 版本。若需要稳定与兼容性更好的版本，请使用官方仓库：[Astrbot](https://github.com/AstrBotDevs/AstrBot)
 
+
+## Run
+
+- uv sync --dev
+
+(通过入口点发现各个模块，因此需要将模块安装在当前虚拟环境，才能发现)
+
+- python -m astrbot_canary
+
+或者使用：
+- uv run -m astrbot_canary
+
+
 ## Astrbot paths
 
 
@@ -61,15 +74,3 @@ print(cfg.value)  # Verify the saved configuration
 
 ```
 
-
-
-## Run
-
-- uv sync --dev
-
-(通过入口点发现各个模块，因此需要将模块安装在当前虚拟环境，才能发现)
-
-- python -m astrbot_canary
-
-或者使用：
-- uv run -m astrbot_canary
