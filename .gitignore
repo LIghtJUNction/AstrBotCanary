@@ -181,3 +181,10 @@ cython_debug/
 .cursorindexingignore
 /.git_submodules
 uv.lock
+
+.astrbot
+
+
+# Added by cargo
+
+/target
